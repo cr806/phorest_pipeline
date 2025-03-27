@@ -1,0 +1,15 @@
+[project]
+name = "phorest_pipeline"
+version = "0.1.0"
+description = "A multi-process pipeline for data collection, processing, and communication."
+requires-python = ">=3.8"
+dependencies = [
+    # No external dependencies needed for this initial step
+]
+
+# Optional: Add dev tools later if needed
+#[project.optional-dependencies]
+#dev = [
+#    "pytest",
+#    "ruff",
+#]
