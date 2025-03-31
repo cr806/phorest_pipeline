@@ -2,12 +2,28 @@
 name = "phorest_pipeline"
 version = "0.1.0"
 description = "A multi-process pipeline for data collection, processing, and communication."
-requires-python = ">=3.8"
+readme = "README.md"
+authors = [
+    { name = "cr806", email = "christopher.reardon@york.ac.uk" }
+]
+requires-python = ">=3.12"
 dependencies = [
-    # No external dependencies needed for this initial step
+    "ipykernel>=6.29.5",
+    "jupyterlab>=4.3.6",
+    "matplotlib>=3.10.1",
+    "opencv-python>=4.11.0.86",
 ]
 
-# Optional: Add dev tools later if needed
+[project.scripts]
+# run-collector = "phorest_pipeline.collector.logic:run_collector"
+# run-processor = "phorest_pipeline.processor.logic:run_processor"
+# run-communicator = "phorest_pipeline.communicator.logic:run_communicator"
+
+[tool.setuptools]
+# Tell setuptools exactly which top-level directories are packages
+packages = ["phorest_pipeline"]
+
+# Optional dev dependencies
 #[project.optional-dependencies]
 #dev = [
 #    "pytest",
