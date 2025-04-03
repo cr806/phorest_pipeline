@@ -80,3 +80,4 @@ flags/
 data/
 results/
 *.log
+compression_test/
