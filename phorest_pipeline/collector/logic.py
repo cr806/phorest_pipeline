@@ -9,6 +9,8 @@ from phorest_pipeline.shared.config import (
     COLLECTOR_INTERVAL,
     DATA_DIR,
     DATA_READY_FLAG,
+    ENABLE_CAMERA,
+    ENABLE_THERMOCOUPLE,
     FAILURE_LIMIT,
     IMAGE_BUFFER_SIZE,
     POLL_INTERVAL,
@@ -24,6 +26,7 @@ def ring_buffer_cleanup():
     try:
         # 1. Find relevant image files
         image_files = list(DATA_DIR.glob('*.png'))
+        image_files.extend(DATA_DIR.glob('*.webp'))
 
         # 2. Sort files by modification time (oldest first)
         image_files.sort(key=lambda p: p.stat().st_mtime)
@@ -91,17 +94,31 @@ def perform_collection(
             print(f'Collector ({datetime.datetime.now().isoformat()}): --- Running Collection ---')
             print(f'[COLLECTOR] Collection Attempt {updated_failure_count + 1}/{FAILURE_LIMIT}')
 
-            cam_status, cam_msg, cam_metadata = camera_controller(DATA_DIR)
-            print(cam_msg)
+            collection_successful = True
 
-            tc_status, tc_msg, tc_metadata = thermocouple_controller(DATA_DIR)
-            print(tc_msg)
+            cam_metadata = None
+            if ENABLE_CAMERA:
+                print('[COLLECTOR] Camera is enabled.')
+                cam_status, cam_msg, cam_metadata = camera_controller(DATA_DIR)
+                if cam_status != 0:
+                    collection_successful = False
+                print(cam_msg)
+
+            tc_metadata = None
+            if ENABLE_THERMOCOUPLE:
+                print('[COLLECTOR] Thermocouple is enabled.')
+                tc_status, tc_msg, tc_metadata = thermocouple_controller(DATA_DIR)
+                if tc_status != 0:
+                    collection_successful = False
+                print(tc_msg)
+
+            if not ENABLE_CAMERA and not ENABLE_THERMOCOUPLE:
+                print("[COLLECTOR] No components enabled. Skipping flag creation and buffer.")
+                next_state = CollectorState.IDLE
+                return next_state, 0
 
             # Pass the dictionaries directly to the metadata manager
             add_entry(data_dir=DATA_DIR, camera_meta=cam_metadata, temps_meta=tc_metadata)
-
-            # Success only if BOTH controllers returned status 0
-            collection_successful = (cam_status == 0 and tc_status == 0)
 
             if collection_successful:
                 print('[COLLECTOR] Data collection successful.')
@@ -129,7 +146,7 @@ def perform_collection(
                     next_state = CollectorState.FATAL_ERROR
                 else:
                     # Stay in COLLECTING state to retry immediately
-                    print('[COLLECTOR] Retrying collection immediately...')
+                    print('[COLLECTOR] Retrying collection...')
                     next_state = CollectorState.COLLECTING
                     print(f'[COLLECTOR] Waiting {RETRY_DELAY}s before retrying...')
                     time.sleep(RETRY_DELAY)
