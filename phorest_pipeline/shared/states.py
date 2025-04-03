@@ -19,3 +19,10 @@ class CommunicatorState(Enum):
     IDLE = auto()
     WAITING_FOR_RESULTS = auto()
     COMMUNICATING = auto()
+
+
+class CompressorState(Enum):
+    IDLE = 'IDLE'
+    CHECKING = 'CHECKING'
+    COMPRESSING = 'COMPRESSING'
+    WAITING = 'WAITING'
