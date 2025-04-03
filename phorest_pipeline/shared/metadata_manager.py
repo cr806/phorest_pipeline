@@ -71,6 +71,7 @@ def add_entry(data_dir: Path, camera_meta: dict | None, temps_meta: dict | None)
         'processing_timestamp_iso': None,
         'processing_error': None,
         'processing_error_msg': None,
+        'compression_attempted': False,
     }
 
     metadata_list.append(new_manifest_entry)
