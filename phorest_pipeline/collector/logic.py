@@ -1,10 +1,10 @@
 # process_pipeline/collector/logic.py
 import datetime
+import platform
 import sys
 import time
 from pathlib import Path
 
-from phorest_pipeline.collector.camera_controller import camera_controller
 from phorest_pipeline.collector.thermocouple_controller import thermocouple_controller
 from phorest_pipeline.shared.config import (
     COLLECTOR_INTERVAL,
@@ -20,6 +20,13 @@ from phorest_pipeline.shared.config import (
 )
 from phorest_pipeline.shared.metadata_manager import add_entry
 from phorest_pipeline.shared.states import CollectorState
+
+os_name = platform.system()
+if os_name == 'Darwin':  # macOS
+    from phorest_pipeline.collector.logi_camera_controller import camera_controller
+elif os_name == 'Linux':  # Linux
+    from phorest_pipeline.collector.logi_camera_controller import camera_controller
+
 
 METADATA_FILENAME = Path('processing_manifest.json')
 
