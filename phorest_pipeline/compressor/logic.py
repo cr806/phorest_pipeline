@@ -18,6 +18,8 @@ from phorest_pipeline.shared.metadata_manager import (
 )
 from phorest_pipeline.shared.states import CompressorState
 
+METADATA_FILENAME = Path('processing_manifest.json')
+
 
 def find_entry_to_compress(metadata_list: list) -> tuple[int, dict | None]:
     """
@@ -31,10 +33,11 @@ def find_entry_to_compress(metadata_list: list) -> tuple[int, dict | None]:
         # Check criteria: processed, has camera data, type is 'image', filename is PNG
         if (
             entry.get('processed')
-            and not entry.get('compression_attempted', True)
+            and not entry.get('compression_attempted', False)
             and camera_data
             and camera_data.get('type') == 'image'  # Check type
             and camera_data.get('filename', '').lower().endswith('.png')
+            and Path(camera_data.get('filepath'), camera_data.get('filename')).exists()
         ):
             return index, entry
     return -1, None
@@ -58,7 +61,7 @@ def perform_compression_cycle(current_state: CompressorState) -> CompressorState
             print(
                 f'[COMPRESSOR] ({datetime.datetime.now().isoformat()}) --- Checking Manifest for Compression Work ---'
             )
-            manifest_data = load_metadata(DATA_DIR)
+            manifest_data = load_metadata(DATA_DIR, METADATA_FILENAME)
             entry_index, entry_to_compress = find_entry_to_compress(manifest_data)
 
             if entry_to_compress:
@@ -73,7 +76,7 @@ def perform_compression_cycle(current_state: CompressorState) -> CompressorState
 
         case CompressorState.COMPRESSING:
             print('[COMPRESSOR] --- Starting Compression ---')
-            manifest_data = load_metadata(DATA_DIR)
+            manifest_data = load_metadata(DATA_DIR, METADATA_FILENAME)
             entry_index, entry_to_compress = find_entry_to_compress(manifest_data)
 
             if not entry_to_compress:
@@ -146,7 +149,7 @@ def perform_compression_cycle(current_state: CompressorState) -> CompressorState
 
             # Save the updated entry back into the list
             manifest_data[entry_index] = entry_to_compress
-            save_metadata(DATA_DIR, manifest_data)
+            save_metadata(DATA_DIR, METADATA_FILENAME, manifest_data)
 
             status = 'Success' if compression_error_msg is None else 'FAILED'
             print(f'[COMPRESSOR] Updated manifest for entry index {entry_index}. Status: {status}')

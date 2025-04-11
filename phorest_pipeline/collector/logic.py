@@ -2,6 +2,7 @@
 import datetime
 import sys
 import time
+from pathlib import Path
 
 from phorest_pipeline.collector.camera_controller import camera_controller
 from phorest_pipeline.collector.thermocouple_controller import thermocouple_controller
@@ -19,6 +20,8 @@ from phorest_pipeline.shared.config import (
 )
 from phorest_pipeline.shared.metadata_manager import add_entry
 from phorest_pipeline.shared.states import CollectorState
+
+METADATA_FILENAME = Path('processing_manifest.json')
 
 
 def ring_buffer_cleanup():
@@ -113,12 +116,17 @@ def perform_collection(
                 print(tc_msg)
 
             if not ENABLE_CAMERA and not ENABLE_THERMOCOUPLE:
-                print("[COLLECTOR] No components enabled. Skipping flag creation and buffer.")
+                print('[COLLECTOR] No components enabled. Skipping flag creation and buffer.')
                 next_state = CollectorState.IDLE
                 return next_state, 0
 
             # Pass the dictionaries directly to the metadata manager
-            add_entry(data_dir=DATA_DIR, camera_meta=cam_metadata, temps_meta=tc_metadata)
+            add_entry(
+                data_dir=DATA_DIR,
+                metadata_filename=METADATA_FILENAME,
+                camera_meta=cam_metadata,
+                temps_meta=tc_metadata,
+            )
 
             if collection_successful:
                 print('[COLLECTOR] Data collection successful.')

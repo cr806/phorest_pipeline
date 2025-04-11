@@ -4,12 +4,10 @@ import json
 import os
 from pathlib import Path
 
-METADATA_FILENAME = 'processing_manifest.json'
 
-
-def load_metadata(data_dir: Path) -> list:
+def load_metadata(data_dir: Path, metadata_filename: Path) -> list:
     # ... (load_metadata remains the same) ...
-    metadata_path = Path(data_dir, METADATA_FILENAME)
+    metadata_path = Path(data_dir, metadata_filename)
     if metadata_path.exists():
         try:
             with open(metadata_path, 'r') as f:
@@ -28,8 +26,8 @@ def load_metadata(data_dir: Path) -> list:
         return []
 
 
-def save_metadata(data_dir: Path, metadata_list: list):
-    metadata_path = Path(data_dir, METADATA_FILENAME)
+def save_metadata(data_dir: Path, metadata_filename: Path, metadata_list: list):
+    metadata_path = Path(data_dir, metadata_filename)
     temp_metadata_path = metadata_path.with_suffix(metadata_path.suffix + '.tmp')
     try:
         with open(temp_metadata_path, 'w') as f:
@@ -44,10 +42,12 @@ def save_metadata(data_dir: Path, metadata_list: list):
                 pass
 
 
-def add_entry(data_dir: Path, camera_meta: dict | None, temps_meta: dict | None):
+def add_entry(
+    data_dir: Path, metadata_filename: Path, camera_meta: dict | None, temps_meta: dict | None
+):
     """Adds a new combined entry based on controller metadata."""
     print('[METADATA] Updating metadata file...')
-    metadata_list = load_metadata(data_dir)
+    metadata_list = load_metadata(data_dir, metadata_filename)
 
     # Determine overall success based on *if both components ran and succeeded*
     # Note: Controllers now return metadata even on error, use their error_flag
@@ -67,15 +67,24 @@ def add_entry(data_dir: Path, camera_meta: dict | None, temps_meta: dict | None)
         'collection_error_msg': ' | '.join(error_messages) if error_messages else None,
         'camera_data': camera_meta,  # Embed the camera dict (or None)
         'temperature_data': temps_meta,  # Embed the temps dict (or None)
-        'processed': False,  # Initial state for the processor
-        'processing_timestamp_iso': None,
-        'processing_error': None,
-        'processing_error_msg': None,
-        'compression_attempted': False,
+        # 'processed': False,  # Initial state for the processor
+        # 'processing_timestamp_iso': None,
+        # 'processing_error': None,
+        # 'processing_error_msg': None,
+        # 'compression_attempted': False,
     }
 
     metadata_list.append(new_manifest_entry)
-    save_metadata(data_dir, metadata_list)
+    save_metadata(data_dir, metadata_filename, metadata_list)
     img_name = camera_meta.get('filename') if camera_meta else 'N/A'
     status = 'FAILED' if overall_collection_error else 'OK'
     print(f'[METADATA] Added entry: Status={status}, Image={img_name}')
+
+
+def append_metadata(data_dir: Path, metadata_filename: Path, metadata_dict: dict):
+    """Appends a new entry to the metadata file."""
+    print('[METADATA] Updating metadata file...')
+    metadata_list = load_metadata(data_dir, metadata_filename)
+    metadata_list.append(metadata_dict)
+    save_metadata(data_dir, metadata_filename, metadata_list)
+    print(f'[METADATA] Appended entry: {metadata_dict}')

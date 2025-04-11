@@ -1,7 +1,5 @@
 # phorest_pipeline/processor/logic.py
 import datetime
-import json
-import os
 import time
 from pathlib import Path
 
@@ -18,10 +16,11 @@ from phorest_pipeline.shared.config import (
 )
 
 # Assuming metadata_manager handles loading/saving the manifest
-from phorest_pipeline.shared.metadata_manager import load_metadata, save_metadata
+from phorest_pipeline.shared.metadata_manager import append_metadata, load_metadata, save_metadata
 from phorest_pipeline.shared.states import ProcessorState
 
-RESULTS_FILENAME = 'processing_results.json'
+METADATA_FILENAME = Path('processing_manifest.json')
+RESULTS_FILENAME = Path('processing_results.json')
 
 
 # Helper Function: Find next unprocessed entry
@@ -93,49 +92,6 @@ def process_image(image_meta: dict | None) -> tuple[dict | None, str | None]:
         return None, error_msg
 
 
-# Helper Function: Append results to JSON
-def append_result(result_data: dict):
-    """Loads existing results, appends new data, and saves back atomically."""
-    results_path = Path(RESULTS_DIR, RESULTS_FILENAME)
-    temp_results_path = results_path.with_suffix(results_path.suffix + '.tmp')
-    results_list = []
-
-    # Load existing results safely
-    if results_path.exists():
-        try:
-            with open(results_path, 'r') as f:
-                content = f.read()
-                if content:
-                    results_list = json.loads(content)
-                if not isinstance(results_list, list):
-                    print(
-                        f'[PROCESSOR] [WARN] Results file {results_path} did not contain a list. Overwriting.'
-                    )
-                    results_list = []
-        except (OSError, json.JSONDecodeError) as e:
-            print(
-                f'[PROCESSOR] [ERROR] Failed to load/read existing results file {results_path}: {e}. Starting fresh.'
-            )
-            results_list = []  # Start fresh if loading fails
-
-    # Append new result
-    results_list.append(result_data)
-
-    # Save back atomically
-    try:
-        with open(temp_results_path, 'w') as f:
-            json.dump(results_list, f, indent=4)
-        os.replace(temp_results_path, results_path)
-    except (OSError, TypeError) as e:
-        print(f'[PROCESSOR] [ERROR] Could not save results to {results_path}: {e}')
-        # Attempt cleanup
-        if temp_results_path.exists():
-            try:
-                temp_results_path.unlink()
-            except OSError:
-                pass
-
-
 # Main State Machine Logic
 def perform_processing(current_state: ProcessorState) -> ProcessorState:
     """State machine logic for the processor."""
@@ -173,7 +129,7 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
             print(
                 f'[PROCESSOR] ({datetime.datetime.now().isoformat()}) --- Checking for Unprocessed Data ---'
             )
-            manifest_data = load_metadata(DATA_DIR)
+            manifest_data = load_metadata(DATA_DIR, METADATA_FILENAME)
             entry_index, entry_to_process = find_unprocessed_entry(manifest_data)
 
             if entry_to_process:
@@ -206,7 +162,7 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
                     'image_analysis': image_results,
                     'temperature_readings': temps_results,
                 }
-                append_result(final_result_entry)
+                append_metadata(RESULTS_DIR, RESULTS_FILENAME, final_result_entry)
 
                 # --- Update Manifest ---
                 entry_to_process['processed'] = True
@@ -216,7 +172,7 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
                 # Replace the old entry with the updated one in the list
                 manifest_data[entry_index] = entry_to_process
                 # Save the entire updated manifest
-                save_metadata(DATA_DIR, manifest_data)
+                save_metadata(DATA_DIR, METADATA_FILENAME, manifest_data)
 
                 print(
                     f'[PROCESSOR] Processed entry index {entry_index}. Success: {processing_successful}'
