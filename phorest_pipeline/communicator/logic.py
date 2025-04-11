@@ -1,13 +1,79 @@
 # src/process_pipeline/communicator/logic.py
-import datetime
 import time
+from datetime import datetime
+from pathlib import Path
+
+import matplotlib.pyplot as plt
 
 from phorest_pipeline.shared.config import (
     POLL_INTERVAL,
+    RESULTS_DIR,
     RESULTS_READY_FLAG,
     settings,
 )
+from phorest_pipeline.shared.metadata_manager import load_metadata, save_metadata
 from phorest_pipeline.shared.states import CommunicatorState
+
+RESULTS_FILENAME = Path('processing_results.json')
+CSV_FILENAME = Path('communicating_results.csv')
+
+
+# Helper Function: Find all processed entries
+def find_processed_entries(metadata_list: list) -> list[int]:
+    """Finds all entry indexes with 'processed': True."""
+    processed_entries = []
+    for index, entry in enumerate(metadata_list):
+        # Find entry marked as processed and not yet transmitted
+        if entry.get('processing_successful', False) and not entry.get('data_transmitted', False):
+            processed_entries.append(index)
+    return processed_entries
+
+
+def communicate_results(processed_entries: list[int], results_data: list[dict]) -> None:
+    """Simulate communication of results to a CSV file."""
+    # If CSV does not exist create it and populate with headers
+    csv_path = Path(RESULTS_DIR, CSV_FILENAME)
+    if not csv_path.exists():
+        with open(csv_path, 'w') as f:
+            f.write('timestamp,mean_pixel_value,temperature\n')
+
+    # Append processed data to the CSV file
+    with open(csv_path, 'a') as f:
+        for idx in processed_entries:
+            timestamp = results_data[idx].get('image_timestamp', idx)
+            mean_pixel_value = (
+                results_data[idx].get('image_analysis', {}).get('mean_pixel_value', None)
+            )
+            temperature = results_data[idx].get('temperature_readings', {}).get('sensor_1', None)
+            f.write(f'{timestamp},{mean_pixel_value},{temperature}\n')
+
+    # Load the CSV data for plotting
+    timestamps = []
+    pixel_values = []
+    with open(csv_path, 'r') as f:
+        next(f)
+        for line in f:
+            if line.strip():
+                ts, pv, _ = line.strip().split(',')
+                timestamps.append(datetime.fromisoformat(ts))
+                pixel_values.append(float(pv))
+
+    # for idx, _ in enumerate(timestamps[1:]):
+    #     timestamps[idx] = (timestamps[idx] - timestamps[0]).total_seconds()
+    # timestamps[0] = 0
+
+    _, ax = plt.subplots()
+    ax.plot(timestamps, pixel_values, color='blue', label='Mean pixel values')
+    ax.set_xlabel('Timestamp')
+    ax.set_ylabel('Mean pixel value')
+    ax.set_title('Mean pixel value')
+    plt.savefig(Path(RESULTS_DIR, 'processed_data_plot.png'))
+
+    # Update the metadata to mark entries as transmitted
+    for idx in processed_entries:
+        results_data[idx]['data_transmitted'] = True
+    # Save the entire updated manifest
+    save_metadata(RESULTS_DIR, RESULTS_FILENAME, results_data)
 
 
 def perform_communication(current_state: CommunicatorState) -> CommunicatorState:
@@ -47,10 +113,14 @@ def perform_communication(current_state: CommunicatorState) -> CommunicatorState
 
         case CommunicatorState.COMMUNICATING:
             print(
-                f'Communicator ({datetime.datetime.now().isoformat()}): --- Running Communication ---'
+                f'Communicator ({datetime.now().isoformat()}): --- Running Communication ---'
             )
             # Simulate communicating results
-            time.sleep(1)
+            results_data = load_metadata(RESULTS_DIR, RESULTS_FILENAME)
+            processed_entries = find_processed_entries(results_data)
+
+            communicate_results(processed_entries, results_data)
+
             print('[COMMS] Results communicated (simulated).')
             print('[COMMS] --- Communication Done ---')
             print('[COMMS] COMMUNICATING -> IDLE')
@@ -70,9 +140,7 @@ def run_communicator():
             RESULTS_READY_FLAG.unlink(missing_ok=True)
             print(f'[COMMS] Ensured flag {RESULTS_READY_FLAG} is initially removed.')
         except OSError as e:
-            print(
-                f'[COMMS] WARNING - Could not remove initial flag {RESULTS_READY_FLAG}: {e}'
-            )
+            print(f'[COMMS] WARNING - Could not remove initial flag {RESULTS_READY_FLAG}: {e}')
 
     try:
         while True:
@@ -87,7 +155,5 @@ def run_communicator():
         try:
             RESULTS_READY_FLAG.unlink(missing_ok=True)
         except OSError as e:
-            print(
-                f'[COMMS] ERROR - Could not clean up flag {RESULTS_READY_FLAG} on exit: {e}'
-            )
+            print(f'[COMMS] ERROR - Could not clean up flag {RESULTS_READY_FLAG} on exit: {e}')
         print('--- Communicator Stopped ---')
