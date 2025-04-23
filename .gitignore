@@ -82,3 +82,4 @@ results/
 *.log
 compression_test/
 camera_calibration/
+RPi/

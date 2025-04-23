@@ -66,8 +66,9 @@ try:
 
     # --- Camera Settings ---
     CAMERA_INDEX = settings.getint('Camera', 'camera_id', fallback=1)
-    # Add other camera settings here
-    # CAMERA_EXPOSURE = settings.getfloat("Camera", "camera_exposure", fallback=None) # Example
+    CAMERA_EXPOSURE = settings.getint('Camera', 'camera_exposure', fallback=150)
+    CAMERA_BRIGHTNESS = settings.getint('Camera', 'camera_brightness', fallback=128)
+    CAMERA_CONTRAST = settings.getint('Camera', 'camera_contrast', fallback=32)
 
     # --- Temperature Settings ---
     # Parse the list string using ast.literal_eval

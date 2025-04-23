@@ -6,10 +6,13 @@ import cv2
 import numpy as np
 
 from phorest_pipeline.shared.config import (
+    CAMERA_BRIGHTNESS,
+    CAMERA_CONTRAST,
+    CAMERA_EXPOSURE,
     CAMERA_INDEX,
 )
 
-NUM_WARMUP_FRAMES = 2
+BUFFER_CLEAR_UP_FRAMES = 5
 
 
 def camera_controller(data_dir: Path) -> tuple[int, str, dict | None]:
@@ -36,16 +39,79 @@ def camera_controller(data_dir: Path) -> tuple[int, str, dict | None]:
         print(f'[CAMERA] Camera {CAMERA_INDEX} opened.')
         time.sleep(0.1)
 
-        # Set other parameters here
+        # --- Camera Settings ---
+        print('[CAMERA] Configuring camera settings...')
+        # 1. Disable Auto Exposure
+        success = cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 1)
+        if not success:
+            print('[CAMERA] [ERROR] Could not set CAP_PROP_AUTO_EXPOSURE to manual')
+        else:
+            current = cap.get(cv2.CAP_PROP_AUTO_EXPOSURE)
+            if current != 1:
+                print('[CAMERA] [ERROR] Auto exposure mode not set')
+        # 2. Disable Auto White Balance
+        success = cap.set(cv2.CAP_PROP_AUTO_WB, 0)
+        if not success:
+            print('[CAMERA] [ERROR] Could not disable CAP_PROP_AUTO_WB')
+        else:
+            # Set fixed White Balance Temperature: white_balance_temperature
+            wb_temp_default = 4000
+            success = cap.set(cv2.CAP_PROP_WB_TEMPERATURE, wb_temp_default)
+            if not success:
+                print(
+                    f'[CAMERA] [ERROR] Could not set CAP_PROP_WB_TEMPERATURE to {wb_temp_default}.'
+                )
+            else:
+                current = cap.get(cv2.CAP_PROP_WB_TEMPERATURE)
+                if current != wb_temp_default:
+                    print('[CAMERA] [ERROR] CAP_PROP_WB_TEMPERATURE not set')
+        # 3. Set fixed Gain: gain
+        gain_value = 32  # Low value to reduce noise
+        success = cap.set(cv2.CAP_PROP_GAIN, gain_value)
+        if not success:
+            print(f'[CAMERA] [ERRRO] Could not set CAP_PROP_GAIN to {gain_value}.')
+        else:
+            current = cap.get(cv2.CAP_PROP_GAIN)
+            if current != gain_value:
+                print('[CAMERA] [ERROR] CAP_PROP_GAIN not set')
+
+        # 4. Set Exposure: exposure
+        success = cap.set(cv2.CAP_PROP_EXPOSURE, CAMERA_EXPOSURE)
+        if not success:
+            print(f'[CAMERA] [ERROR] Could not set CAP_PROP_EXPOSURE to {CAMERA_EXPOSURE}.')
+        else:
+            current = cap.get(cv2.CAP_PROP_EXPOSURE)
+            if current != CAMERA_EXPOSURE:
+                print('[CAMERA] [ERROR] CAP_PROP_EXPOSURE not set')
+
+        # 5. Set Brightness: brightness
+        success = cap.set(cv2.CAP_PROP_BRIGHTNESS, CAMERA_BRIGHTNESS)
+        if not success:
+            print(f'[CAMERA] [ERROR] Could not set CAP_PROP_BRIGHTNESS to {CAMERA_BRIGHTNESS}.')
+        else:
+            current = cap.get(cv2.CAP_PROP_BRIGHTNESS)
+            if current != CAMERA_BRIGHTNESS:
+                print('[CAMERA] [ERROR] CAP_PROP_BRIGHTNESS not set')
+
+        # 6. Set Contrast: contrast
+        success = cap.set(cv2.CAP_PROP_CONTRAST, CAMERA_CONTRAST)
+        if not success:
+            print(f'[CAMERA] [ERROR] Could not set CAP_PROP_CONTRAST to {CAMERA_CONTRAST}.')
+        else:
+            current = cap.get(cv2.CAP_PROP_CONTRAST)
+            if current != CAMERA_CONTRAST:
+                print('[CAMERA] [ERROR] CAP_PROP_CONTRAST not set')
+
         # cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
         # cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
         # time.sleep(0.2) # Allow time for settings to apply
+        print('[CAMERA] Camera configuration complete.')
 
-        # --- Camera Warm-up ---
-        print(f'[CAMERA] Performing {NUM_WARMUP_FRAMES} warm-up captures...')
-        for i in range(NUM_WARMUP_FRAMES):
-            ret_warmup, _ = cap.read()  # Read and discard the frame
-            if not ret_warmup:
+        # --- Clear camera buffer ---
+        print(f'[CAMERA] Clearing camera buffer with {BUFFER_CLEAR_UP_FRAMES} captures...')
+        for i in range(BUFFER_CLEAR_UP_FRAMES):
+            ret, _ = cap.read()  # Read and discard the frame
+            if not ret:
                 print(f'[CAMERA] [WARN] Warm-up frame {i + 1} capture failed. Continuing...')
                 time.sleep(0.5)
             else:
@@ -98,7 +164,7 @@ def camera_controller(data_dir: Path) -> tuple[int, str, dict | None]:
                 try:
                     frame_gray_8bit = cv2.normalize(
                         frame_gray_intermediate,
-                        None, # type: ignore
+                        None,  # type: ignore
                         0,
                         255,
                         cv2.NORM_MINMAX,
