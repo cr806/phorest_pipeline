@@ -6,7 +6,6 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 
 from phorest_pipeline.shared.config import (
-    POLL_INTERVAL,
     RESULTS_DIR,
     RESULTS_READY_FLAG,
     settings,
@@ -16,7 +15,7 @@ from phorest_pipeline.shared.states import CommunicatorState
 
 RESULTS_FILENAME = Path('processing_results.json')
 CSV_FILENAME = Path('communicating_results.csv')
-
+POLL_INTERVAL = 2
 
 # Helper Function: Find all processed entries
 def find_processed_entries(metadata_list: list) -> list[int]:

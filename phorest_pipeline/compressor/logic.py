@@ -9,7 +9,6 @@ from phorest_pipeline.shared.config import (
     COMPRESSOR_INTERVAL,
     DATA_DIR,
     ENABLE_COMPRESSOR,
-    POLL_INTERVAL,
     settings,
 )
 from phorest_pipeline.shared.metadata_manager import (
@@ -19,7 +18,7 @@ from phorest_pipeline.shared.metadata_manager import (
 from phorest_pipeline.shared.states import CompressorState
 
 METADATA_FILENAME = Path('processing_manifest.json')
-
+POLL_INTERVAL = 2
 
 def find_entry_to_compress(metadata_list: list) -> tuple[int, dict | None]:
     """
