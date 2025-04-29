@@ -4,6 +4,8 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+DUMMY_IMAGE_PATH = Path('phorest_pipeline/collector/dummy_image.tif')
+
 
 def camera_controller(data_dir: Path) -> tuple[int, str, dict | None]:
     """
@@ -21,7 +23,7 @@ def camera_controller(data_dir: Path) -> tuple[int, str, dict | None]:
 
     try:
         print('[CAMERA] Loading image ...')
-        frame_raw = cv2.imread('dummy_image.tif')
+        frame_raw = cv2.imread(DUMMY_IMAGE_PATH.as_posix(), cv2.IMREAD_UNCHANGED)
         capture_timestamp = datetime.datetime.now()
 
         if frame_raw is None:
