@@ -25,7 +25,7 @@ def camera_controller(data_dir: Path) -> tuple[int, str, dict | None]:
         message: Status message string.
         metadata_dict: Dictionary with capture details on success, None on failure.
     """
-    print('[CAMERA] --- Starting Camera Controller ---')
+    print('[CAMERA] --- Starting Logitech Camera Controller ---')
     cap = None
     filepath = None
     metadata_dict = None

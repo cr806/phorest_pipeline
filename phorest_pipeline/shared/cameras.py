@@ -5,3 +5,4 @@ from enum import Enum, auto
 class CameraType(Enum):
     LOGITECH = auto()
     ARGUS = auto()
+    DUMMY = auto()
