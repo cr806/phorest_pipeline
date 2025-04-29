@@ -13,6 +13,7 @@ class ProcessorState(Enum):
     IDLE = auto()
     WAITING_FOR_DATA = auto()
     PROCESSING = auto()
+    FATAL_ERROR = auto()
 
 
 class CommunicatorState(Enum):

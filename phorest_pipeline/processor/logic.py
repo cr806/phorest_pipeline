@@ -1,15 +1,16 @@
 # phorest_pipeline/processor/logic.py
 import datetime
+import sys
 import time
-from pathlib import Path
 
+from pathlib import Path
 import cv2
 import numpy as np
 
 from phorest_pipeline.shared.config import (
     DATA_DIR,
     DATA_READY_FLAG,
-    POLL_INTERVAL,
+    PROCESSOR_INTERVAL,
     RESULTS_DIR,
     RESULTS_READY_FLAG,
     settings,  # Check if config loaded
@@ -99,7 +100,7 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
 
     if settings is None:
         print('[PROCESSOR] Configuration error. Halting.')
-        time.sleep(POLL_INTERVAL * 5)
+        time.sleep(PROCESSOR_INTERVAL * 5)
         # Consider adding a FATAL_ERROR state for the processor too
         return current_state
 
@@ -119,10 +120,10 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
                 except (FileNotFoundError, OSError) as e:
                     print(f'[PROCESSOR] ERROR - Could not delete flag {DATA_READY_FLAG}: {e}')
                     # Stay waiting, maybe the flag is gone or perms issue
-                    time.sleep(POLL_INTERVAL)
+                    time.sleep(5)
                     next_state = ProcessorState.WAITING_FOR_DATA
             else:
-                time.sleep(POLL_INTERVAL)
+                time.sleep(PROCESSOR_INTERVAL)
                 next_state = ProcessorState.WAITING_FOR_DATA
 
         case ProcessorState.PROCESSING:
@@ -141,7 +142,7 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
                 image_meta = entry_to_process.get('camera_data')
                 image_results, img_proc_error_msg = process_image(image_meta)
 
-                temps_results = entry_to_process.get('temperature_data', {}).get('data')
+                temperature_results = entry_to_process.get('temperature_data', {}).get('data')
 
                 processing_timestamp = datetime.datetime.now().isoformat()
                 processing_successful = img_proc_error_msg is None
@@ -160,7 +161,7 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
                     'processing_successful': processing_successful,
                     'processing_error_message': img_proc_error_msg,
                     'image_analysis': image_results,
-                    'temperature_readings': temps_results,
+                    'temperature_readings': temperature_results,
                 }
                 append_metadata(RESULTS_DIR, RESULTS_FILENAME, final_result_entry)
 
@@ -193,8 +194,13 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
                     next_state = ProcessorState.IDLE
                 except OSError as e:
                     print(f'[PROCESSOR] [ERROR] Could not create flag {RESULTS_READY_FLAG}: {e}')
-                    time.sleep(POLL_INTERVAL)
+                    time.sleep(5)
                     next_state = ProcessorState.PROCESSING  # Retry flag creation
+
+        case ProcessorState.FATAL_ERROR:
+            # Should not technically be called again once in this state if loop breaks
+            print('[PROCESSOR] [FATAL ERROR] Shutting down processor.')
+            time.sleep(10)  # Sleep long if it somehow gets called
 
     return next_state
 
@@ -218,6 +224,12 @@ def run_processor():
     try:
         while True:
             current_state = perform_processing(current_state)
+
+            # --- Check for FATAL_ERROR state to exit ---
+            if current_state == ProcessorState.FATAL_ERROR:
+                print('[PROCESSOR] Exiting due to FATAL_ERROR state.')
+                break  # Exit the while loop
+
             # Sleep only when waiting, processing loop handles its own pacing/delays
             if (
                 current_state == ProcessorState.WAITING_FOR_DATA
@@ -237,4 +249,7 @@ def run_processor():
                     f'[PROCESSOR] ERROR - Could not clean up flag {DATA_READY_FLAG} on exit: {e}'
                 )
         print('--- Processor Stopped ---')
-        # Optional: sys.exit based on state if adding FATAL_ERROR
+        if current_state == ProcessorState.FATAL_ERROR:
+            sys.exit(1)
+        else:
+            sys.exit(0)
