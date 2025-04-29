@@ -13,7 +13,6 @@ from phorest_pipeline.shared.config import (
     ENABLE_THERMOCOUPLE,
     FAILURE_LIMIT,
     IMAGE_BUFFER_SIZE,
-    POLL_INTERVAL,
     RETRY_DELAY,
     settings,  # Import settings to check if config loaded ok
 )
@@ -27,10 +26,12 @@ if ENABLE_CAMERA:
         from phorest_pipeline.collector.logi_camera_controller import camera_controller
     elif CAMERA_TYPE == CameraType.ARGUS:
         from phorest_pipeline.collector.argus_camera_controller import camera_controller
+    elif CAMERA_TYPE == CameraType.DUMMY:
+        from phorest_pipeline.collector.dummy_camera_controller import camera_controller
     print(f'[COLLECTOR] Camera type: {CAMERA_TYPE}')
 
 METADATA_FILENAME = Path('processing_manifest.json')
-
+POLL_INTERVAL = 2
 
 def ring_buffer_cleanup():
     print('[COLLECTOR] Performing ring buffer cleanup...')
