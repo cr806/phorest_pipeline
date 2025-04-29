@@ -4,9 +4,7 @@ import sys
 import time
 from pathlib import Path
 
-import cv2
-import numpy as np
-
+from phorest_pipeline.processor.process_image import process_image
 from phorest_pipeline.shared.config import (
     DATA_DIR,
     DATA_READY_FLAG,
@@ -42,55 +40,6 @@ def find_unprocessed_entry(metadata_list: list) -> tuple[int, dict | None]:
                     f'[PROCESSOR] [WARN] Entry {index} found unprocessed but missing key data. Skipping.'
                 )
     return -1, None
-
-
-# Helper Function: Process Image
-def process_image(image_meta: dict | None) -> tuple[dict | None, str | None]:
-    """Loads image and calculates basic statistics."""
-    if not image_meta or not image_meta.get('filename') or not image_meta.get('filepath'):
-        return None, 'Missing image metadata or filename.'  # No image to process
-
-    image_filename = image_meta['filename']
-    data_filepath = image_meta['filepath']
-    image_filepath = Path(data_filepath, image_filename)
-    processing_results = {}
-
-    try:
-        if not image_filepath.exists():
-            return None, f'Image file not found: {image_filepath}'
-
-        # Load image in grayscale for analysis
-        image = cv2.imread(str(image_filepath), cv2.IMREAD_GRAYSCALE)
-
-        if image is None:
-            return None, f'Failed to load image file (may be corrupt): {image_filepath}'
-
-        # 1. Size
-        height, width = image.shape
-        processing_results['height'] = height
-        processing_results['width'] = width
-
-        # 2. Min/Max Pixel Value and Location
-        min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(image)
-        processing_results['min_pixel_value'] = float(min_val)
-        processing_results['max_pixel_value'] = float(max_val)
-        processing_results['min_pixel_loc_xy'] = list(min_loc)  # (x, y) tuple -> list
-        processing_results['max_pixel_loc_xy'] = list(max_loc)  # (x, y) tuple -> list
-
-        # 3. Mean and Standard Deviation
-        mean, std_dev = cv2.meanStdDev(image)
-        processing_results['mean_pixel_value'] = float(mean.item())  # Extract scalar
-        processing_results['stddev_pixel_value'] = float(std_dev.item())  # Extract scalar
-
-        # 4. Median
-        processing_results['median_pixel_value'] = float(np.median(image))  # type:ignore
-
-        return processing_results, None
-
-    except Exception as e:
-        error_msg = f'Error processing image {image_filepath}: {e}'
-        print(f'[PROCESSOR] [ERROR] {error_msg}')
-        return None, error_msg
 
 
 # Main State Machine Logic

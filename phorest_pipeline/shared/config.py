@@ -37,6 +37,13 @@ def get_flag_path(config, flag_name_key: str) -> Path:
 try:
     settings = load_config()  # Make sure load_config loads 'config.ini'
 
+    # --- Data analysis ---
+    ROI_MANIFEST_PATH = Path(
+        settings.get('Data_Analysis', 'roi_manifest_path', fallback='roi_manifest.json')
+    )
+    METHOD = settings.get('Data_Analysis', 'method', fallback='gaussian')
+    NUMBER_SUB_ROIS = settings.getint('Data_Analysis', 'number_sub_rois', fallback=1)
+
     # --- Flags ---
     DATA_READY_FLAG = get_flag_path(settings, 'data_ready')
     RESULTS_READY_FLAG = get_flag_path(settings, 'results_ready')
