@@ -1,6 +1,5 @@
 # process_pipeline/collector/logic.py
 import datetime
-import platform
 import sys
 import time
 from pathlib import Path
@@ -21,12 +20,14 @@ from phorest_pipeline.shared.config import (
 from phorest_pipeline.shared.metadata_manager import add_entry
 from phorest_pipeline.shared.states import CollectorState
 
-os_name = platform.system()
-if os_name == 'Darwin':  # macOS
-    from phorest_pipeline.collector.logi_camera_controller import camera_controller
-elif os_name == 'Linux':  # Linux
-    from phorest_pipeline.collector.logi_camera_controller import camera_controller
-
+if ENABLE_CAMERA:
+    from phorest_pipeline.shared.config import CAMERA_TYPE
+    from phorest_pipeline.shared.cameras import CameraType
+    if CAMERA_TYPE == CameraType.LOGITECH:
+        from phorest_pipeline.collector.logi_camera_controller import camera_controller
+    elif CAMERA_TYPE == CameraType.ARGUS:
+        from phorest_pipeline.collector.argus_camera_controller import camera_controller
+    print(f'[COLLECTOR] Camera type: {CAMERA_TYPE}')
 
 METADATA_FILENAME = Path('processing_manifest.json')
 

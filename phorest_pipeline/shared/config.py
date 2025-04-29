@@ -3,6 +3,8 @@ import ast
 import configparser
 from pathlib import Path
 
+from phorest_pipeline.shared.cameras import CameraType
+
 CONFIG_FILE = Path('config.ini')
 
 
@@ -47,8 +49,8 @@ try:
 
     # --- Timing ---
     COLLECTOR_INTERVAL = settings.getint('Timing', 'collector_interval_seconds', fallback=300)
-    POLL_INTERVAL = settings.getint('Timing', 'poll_interval_seconds', fallback=2)
     RETRY_DELAY = settings.getint('Timing', 'collector_retry_delay_seconds', fallback=2)
+    PROCESSOR_INTERVAL = settings.getint('Timing', 'processor_interval_seconds', fallback=2)
     ENABLE_COMPRESSOR = settings.getboolean('Timing', 'enable_image_compression', fallback=False)
     COMPRESSOR_INTERVAL = settings.getint('Timing', 'compress_interval_seconds', fallback=60)
 
@@ -65,6 +67,14 @@ try:
     ENABLE_BRIGHTFIELD = settings.getboolean('Brightfield', 'brightfield', fallback=False)
 
     # --- Camera Settings ---
+    camera_type_str = settings.get('Camera', 'camera_type', fallback='LOGITECH')
+    camera_type_str = camera_type_str.upper().strip().replace("'", "").replace('"', '')
+    try:
+        CAMERA_TYPE = CameraType[camera_type_str] #try to return the enum
+    except KeyError:
+        print(f"[CONFIG] Invalid camera type: {camera_type_str}.")
+        print(f"Please use one of {', '.join(CameraType.__members__.keys())}")
+        exit(1)
     CAMERA_INDEX = settings.getint('Camera', 'camera_id', fallback=1)
     CAMERA_EXPOSURE = settings.getint('Camera', 'camera_exposure', fallback=150)
     CAMERA_BRIGHTNESS = settings.getint('Camera', 'camera_brightness', fallback=128)
