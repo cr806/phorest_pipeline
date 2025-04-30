@@ -87,4 +87,3 @@ def append_metadata(data_dir: Path, metadata_filename: Path, metadata_dict: dict
     metadata_list = load_metadata(data_dir, metadata_filename)
     metadata_list.append(metadata_dict)
     save_metadata(data_dir, metadata_filename, metadata_list)
-    print(f'[METADATA] Appended entry: {metadata_dict}')
