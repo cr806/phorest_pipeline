@@ -68,6 +68,11 @@ def process_image(image_meta: dict | None) -> tuple[list | None, str | None]:
 
         brightness, contrast = get_image_brightness_contrast(image_data)
 
+        processing_results.append({
+            'brightness' : brightness,
+            'contrast' : contrast,
+        })
+
         # Normalise image data
         image_data = cv2.normalize(
             image_data,
@@ -91,7 +96,7 @@ def process_image(image_meta: dict | None) -> tuple[list | None, str | None]:
             print(f'[ANALYSER] [INFO] Processing ROI "{ROI_ID}"')
 
             # Add ROI label to results dictionary
-            results = {'ROI-label' : ROI_dictionary[ROI_ID]['label'] }
+            results = { 'ROI-label' : ROI_dictionary[ROI_ID]['label'] }
 
             # Slice image to ROI
             ROI_data = extract_roi_data(image_data, ROI_ID, ROI_dictionary)
