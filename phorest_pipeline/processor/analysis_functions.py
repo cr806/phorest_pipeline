@@ -234,4 +234,10 @@ def postprocess_roi_results(data: Dict) -> Dict:
         data[key]['Median'] = np.round(np.quantile(temp, 0.50), decimals=dp)
         data[key]['UQ'] = np.round(np.quantile(temp, 0.75), decimals=dp)
         data[key]['Max'] = np.round(np.max(temp), decimals=dp)
+        data[key]['Min'] = np.round(np.min(temp), decimals=dp)
+        data_range = data[key]['Max'] - data[key]['Min']
+        if data_range == 0:
+            data[key]['Smoothness'] = 0.0
+        else:
+            data[key]['Smoothness'] = np.round(np.std(np.diff(temp)) / data_range, decimals=dp)  # Smoothness i.e. Variation
     return data
