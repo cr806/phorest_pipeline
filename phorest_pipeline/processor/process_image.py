@@ -78,6 +78,12 @@ def process_image(image_meta: dict | None) -> tuple[list | None, str | None]:
             dtype=cv2.CV_8U,
         )
 
+        # Rotate image
+        h, w = image_data.shape
+        rot_centre = (w // 2, h // 2)
+        rotation_matrix = cv2.getRotationMatrix2D(rot_centre, -ROI_dictionary['image_angle'], 1.0)
+        image_data = cv2.warpAffine(image_data, rotation_matrix, (w, h))
+
         # Begin loop over ROIs
         for ROI_ID in ROI_dictionary:
             if 'ROI' not in ROI_ID:
