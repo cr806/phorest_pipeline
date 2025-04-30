@@ -42,7 +42,7 @@ try:
         settings.get('Data_Analysis', 'roi_manifest_path', fallback='roi_manifest.json')
     )
     METHOD = settings.get('Data_Analysis', 'method', fallback='gaussian')
-    NUMBER_SUB_ROIS = settings.getint('Data_Analysis', 'number_sub_rois', fallback=1)
+    NUMBER_SUB_ROIS = settings.getint('Data_Analysis', 'number_of_subROIs', fallback=1)
 
     # --- Flags ---
     DATA_READY_FLAG = get_flag_path(settings, 'data_ready')
