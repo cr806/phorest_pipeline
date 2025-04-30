@@ -96,6 +96,10 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
                 processing_timestamp = datetime.datetime.now().isoformat()
                 processing_successful = img_proc_error_msg is None
 
+                if not processing_successful:
+                    print(f'[PROCESSOR] [ERROR] Image processing failed: {img_proc_error_msg}')
+                    # Optionally, you could set a flag or take other actions here
+
                 # --- Aggregate Results ---
                 final_result_entry = {
                     'manifest_entry_timestamp': entry_to_process.get('entry_timestamp_iso'),
@@ -125,7 +129,7 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
                 save_metadata(DATA_DIR, METADATA_FILENAME, manifest_data)
 
                 print(
-                    f'[PROCESSOR] Processed entry index {entry_index}. Success: {processing_successful}'
+                    f'[PROCESSOR] Processed entry index {entry_index}. Success: {processing_successful}\n\n'
                 )
                 # --- Stay in PROCESSING state ---
                 # Immediately check for the next unprocessed entry without waiting for the flag
