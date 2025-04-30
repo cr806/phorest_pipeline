@@ -31,20 +31,25 @@ from phorest_pipeline.shared.config import (
     ROI_MANIFEST_PATH,
 )
 
-IMAGE_SIZE_THRESHOLD = 5_000_000  # Bits
+IMAGE_SIZE_THRESHOLD = 1_000_000  # Bits
 
 
-def process_image(image_meta: dict | None) -> tuple[dict | None, str | None]:
+def process_image(image_meta: dict | None) -> tuple[list | None, str | None]:
+    print('[ANALYSER] [INFO] Processing image...')
+    print(f'[ANALYSER] [INFO] Number of subROIs: {NUMBER_SUB_ROIS}')
     if not image_meta or not image_meta.get('filename') or not image_meta.get('filepath'):
         return None, 'Missing image metadata or filename.'
 
+    if not ROI_MANIFEST_PATH.exists():
+        return None, f'ROI manifest file not found: {ROI_MANIFEST_PATH}'
+    
     with open(ROI_MANIFEST_PATH, 'r') as file:
         ROI_dictionary = json.load(file)
 
     image_filename = image_meta['filename']
     data_filepath = image_meta['filepath']
     image_filepath = Path(data_filepath, image_filename)
-    processing_results = {}
+    processing_results = []
 
     try:
         if not image_filepath.exists():
@@ -79,6 +84,9 @@ def process_image(image_meta: dict | None) -> tuple[dict | None, str | None]:
                 continue
             print(f'[ANALYSER] [INFO] Processing ROI "{ROI_ID}"')
 
+            # Add ROI label to results dictionary
+            results = {'ROI-label' : ROI_dictionary[ROI_ID]['label'] }
+
             # Slice image to ROI
             ROI_data = extract_roi_data(image_data, ROI_ID, ROI_dictionary)
 
@@ -93,10 +101,9 @@ def process_image(image_meta: dict | None) -> tuple[dict | None, str | None]:
                 continue
 
             # Post-process results to add statistical analysis
-            processing_results.update(postprocess_roi_results(result))
+            results.update(postprocess_roi_results(result))
 
-            # Add ROI label to results dictionary
-            processing_results['ROI-label'] = ROI_dictionary[ROI_ID]['label']
+            processing_results.append(results)
 
         return processing_results, None
 
