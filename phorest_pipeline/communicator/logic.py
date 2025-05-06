@@ -4,6 +4,7 @@ from datetime import datetime
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 
 from phorest_pipeline.shared.config import (
     RESULTS_DIR,
@@ -34,38 +35,59 @@ def communicate_results(processed_entries: list[int], results_data: list[dict]) 
     csv_path = Path(RESULTS_DIR, CSV_FILENAME)
     if not csv_path.exists():
         with open(csv_path, 'w') as f:
-            f.write('timestamp,mean_pixel_value,temperature\n')
+            f.write('image_timestamp,roi_label,mean_resonance_position,temperature_timestamp,temperature_1,temperature_2\n')
 
     # Append processed data to the CSV file
     with open(csv_path, 'a') as f:
         for idx in processed_entries:
-            timestamp = results_data[idx].get('image_timestamp', idx)
+            image_timestamp = results_data[idx].get('image_timestamp', idx)
+            temperature_timestamp = results_data[idx].get('temperature_timestamp', idx)
+            image_analysis_list = results_data[idx].get('image_analysis', [])
             mean_pixel_value = (
-                results_data[idx].get('image_analysis', {}).get('mean_pixel_value', None)
+                image_analysis_list[1].get('mu', None).get('Mean', None)
             )
-            temperature = results_data[idx].get('temperature_readings', {}).get('sensor_1', None)
-            f.write(f'{timestamp},{mean_pixel_value},{temperature}\n')
+            roi_label = image_analysis_list[1].get('ROI-label', None)
+            temperature_1 = results_data[idx].get('temperature_readings', {}).get('Sensor 1', None)
+            temperature_2 = results_data[idx].get('temperature_readings', {}).get('Sensor 2', None)
+            f.write(f'{image_timestamp},{roi_label},{mean_pixel_value},{temperature_timestamp},{temperature_1},{temperature_2}\n')
 
     # Load the CSV data for plotting
-    timestamps = []
+    img_timestamps = []
+    temp_timestamps = []
     pixel_values = []
+    roi_labels = []
+    temp_1 = []
+    temp_2 = []
     with open(csv_path, 'r') as f:
         next(f)
         for line in f:
             if line.strip():
-                ts, pv, _ = line.strip().split(',')
-                timestamps.append(datetime.fromisoformat(ts))
+                i_ts, rl, pv, t_ts, t1, t2 = line.strip().split(',')
+                img_timestamps.append(datetime.fromisoformat(i_ts))
+                temp_timestamps.append(datetime.fromisoformat(t_ts))
                 pixel_values.append(float(pv))
+                roi_labels.append(rl)
+                temp_1.append(float(t1))
+                temp_2.append(float(t2))
 
     # for idx, _ in enumerate(timestamps[1:]):
     #     timestamps[idx] = (timestamps[idx] - timestamps[0]).total_seconds()
     # timestamps[0] = 0
 
     _, ax = plt.subplots()
-    ax.plot(timestamps, pixel_values, color='blue', label='Mean pixel values')
+    ax.plot(img_timestamps, pixel_values, color='blue', label=f'{roi_labels[0]}')
     ax.set_xlabel('Timestamp')
     ax.set_ylabel('Mean pixel value')
-    ax.set_title('Mean pixel value')
+    ax2 = ax.twinx()
+    ax2.plot(temp_timestamps, temp_1, color='red', label='Temperature 1')
+    ax2.plot(temp_timestamps, temp_2, color='green', label='Temperature 2')
+    ax2.set_ylabel('Temperature (°C)')
+    ax2.set_ylim(0, 100)
+    ax.legend(loc='upper left')
+    ax2.legend(loc='upper right')
+    plt.gca().xaxis.set_major_locator(mdates.MinuteLocator(interval=30))
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout()
     plt.savefig(Path(RESULTS_DIR, 'processed_data_plot.png'))
 
     # Update the metadata to mark entries as transmitted
@@ -131,7 +153,7 @@ def perform_communication(current_state: CommunicatorState) -> CommunicatorState
 def run_communicator():
     """Main loop for the communicator process."""
     print('--- Starting Communicator ---')
-    current_state = CommunicatorState.IDLE
+    current_state = CommunicatorState.COMMUNICATING
 
     # Initial cleanup: remove results flag if it exists on startup
     if settings:
