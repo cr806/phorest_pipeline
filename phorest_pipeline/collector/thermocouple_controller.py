@@ -10,7 +10,9 @@ DEVICE_DICT= {
 }
 
 def start_w1():
-    pass
+    import os
+    os.system('modprobe w1-gpio')
+    os.system('modprobe w1-therm')
 
 
 def check_device_connection(device_dict) -> bool:
@@ -57,16 +59,35 @@ def thermocouple_controller(data_dir: Path) -> tuple[int, str, dict | None]:
     try:
         print('[THERMOCOUPLE] Checking sensor connections ...')
         if not check_device_connection(DEVICE_DICT):
-            return (1, '[THERMOCOUPLE] [ERROR] Sensor(s) not found.', None)
+            print('[THERMOCOUPLE] [INFO] Attempting to connect sensors manually.')
+            start_w1()
+            time.sleep(0.5)
+            if not check_device_connection(DEVICE_DICT):
+                return (1, '[THERMOCOUPLE] [ERROR] Sensor(s) not found.', None)
 
         print('[THERMOCOUPLE] Taking temperature measurements ...')
-        time.sleep(0.5)
+        temp_data = {}
+        error = False
+        error_message = 'Error reading temperature from:'
+        for sensor_id, sensor_name in DEVICE_DICT.items():
+            temperature = read_temp(sensor_id)
+            if temperature is None:
+                error = True
+                ''.join(error_message, f'{sensor_name} ({sensor_id})')
+                print(f'[THERMOCOUPLE] [ERROR] Error reading temperature from: {sensor_name} ({sensor_id})')
+            temp_data[sensor_name] = temperature
+
+        if error:
+            metadata = {
+                'type': 'temperature',
+                'timestamp_iso': measurement_timestamp.isoformat(),
+                'data': None,
+                'error_flag': True,
+                'error_message': f'Error reading from: {e}',
+            }
+            return (1, f'[THERMOCOUPLE] [ERROR] {error_message}', None)
 
         measurement_timestamp = datetime.datetime.now()
-        temp_data = {
-            'sensor_1': 25.5 + (time.time() % 1),
-            'sensor_2': 30.1 - (time.time() % 0.5),
-        }
         print(f'[THERMOCOUPLE] Measured: {temp_data}')
 
         metadata_dict = {
