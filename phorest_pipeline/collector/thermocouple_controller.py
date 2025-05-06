@@ -60,6 +60,7 @@ def thermocouple_controller(data_dir: Path) -> tuple[int, str, dict | None]:
 
     try:
         print('[THERMOCOUPLE] Checking sensor connections ...')
+        measurement_timestamp = datetime.datetime.now()
         if not check_device_connection(THERMOCOUPLE_IDS):
             print('[THERMOCOUPLE] [INFO] Attempting to connect sensors manually.')
             start_w1()
@@ -75,7 +76,7 @@ def thermocouple_controller(data_dir: Path) -> tuple[int, str, dict | None]:
                 return (1, '[THERMOCOUPLE] [ERROR] Sensor(s) not found.', None)
 
         print('[THERMOCOUPLE] [INFO] Taking temperature measurements ...')
-        
+
         error = False
         error_message = 'Error reading temperature from:'
         for sensor_id, sensor_name in THERMOCOUPLE_IDS.items():
@@ -96,7 +97,6 @@ def thermocouple_controller(data_dir: Path) -> tuple[int, str, dict | None]:
             }
             return (1, f'[THERMOCOUPLE] [ERROR] {error_message}', None)
 
-        measurement_timestamp = datetime.datetime.now()
         print(f'[THERMOCOUPLE] [INFO] Measured: {temp_data}')
 
         metadata_dict = {
