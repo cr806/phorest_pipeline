@@ -3,11 +3,11 @@ import datetime
 import time
 from pathlib import Path
 
+from phorest_pipeline.shared.config import (
+    THERMOCOUPLE_IDS,
+)
+
 DEVICE_LOC = Path('/sys/bus/w1/devices/')
-DEVICE_DICT= {
-    '28-00000ff8fa16': 'Sensor 1',
-    '28-00000ff82fc2': 'Sensor 2',
-}
 
 def start_w1():
     import os
@@ -21,7 +21,8 @@ def check_device_connection(device_dict) -> bool:
             print(f'[THERMOCOUPLE] [ERROR] Device {sensor_id} not found at {DEVICE_LOC}.')
             return False
         else:
-            print(f'[THERMOCOUPLE] Device {sensor_id} found at {DEVICE_LOC}.')
+            print(f'[THERMOCOUPLE] [INFO] Device {sensor_id} found at {DEVICE_LOC}.')
+    return True
 
 
 def read_sensor_ROM(device_id):
@@ -53,23 +54,31 @@ def thermocouple_controller(data_dir: Path) -> tuple[int, str, dict | None]:
     Returns:
         tuple[int, str, dict | None]: (status_code, message, metadata_dict)
     """
-    print('[THERMOCOUPLE] --- Starting Thermocouple Controller ---')
+    print('[THERMOCOUPLE] [INFO] --- Starting Thermocouple Controller ---')
     metadata_dict = None
+    temp_data = {}
 
     try:
         print('[THERMOCOUPLE] Checking sensor connections ...')
-        if not check_device_connection(DEVICE_DICT):
+        if not check_device_connection(THERMOCOUPLE_IDS):
             print('[THERMOCOUPLE] [INFO] Attempting to connect sensors manually.')
             start_w1()
             time.sleep(0.5)
-            if not check_device_connection(DEVICE_DICT):
+            if not check_device_connection(THERMOCOUPLE_IDS):
+                metadata_dict = {
+                    'type': 'temperature',
+                    'timestamp_iso': measurement_timestamp.isoformat(),
+                    'data': None,
+                    'error_flag': True,
+                    'error_message': '[THERMOCOUPLE] [ERROR] Sensor(s) not found.',
+                }
                 return (1, '[THERMOCOUPLE] [ERROR] Sensor(s) not found.', None)
 
-        print('[THERMOCOUPLE] Taking temperature measurements ...')
-        temp_data = {}
+        print('[THERMOCOUPLE] [INFO] Taking temperature measurements ...')
+        
         error = False
         error_message = 'Error reading temperature from:'
-        for sensor_id, sensor_name in DEVICE_DICT.items():
+        for sensor_id, sensor_name in THERMOCOUPLE_IDS.items():
             temperature = read_temp(sensor_id)
             if temperature is None:
                 error = True
@@ -83,12 +92,12 @@ def thermocouple_controller(data_dir: Path) -> tuple[int, str, dict | None]:
                 'timestamp_iso': measurement_timestamp.isoformat(),
                 'data': None,
                 'error_flag': True,
-                'error_message': f'Error reading from: {e}',
+                'error_message': f'[THERMOCOUPLE] [ERROR] {error_message}',
             }
             return (1, f'[THERMOCOUPLE] [ERROR] {error_message}', None)
 
         measurement_timestamp = datetime.datetime.now()
-        print(f'[THERMOCOUPLE] Measured: {temp_data}')
+        print(f'[THERMOCOUPLE] [INFO] Measured: {temp_data}')
 
         metadata_dict = {
             'type': 'temperature',
@@ -97,7 +106,7 @@ def thermocouple_controller(data_dir: Path) -> tuple[int, str, dict | None]:
             'error_flag': False,
             'error_message': None,
         }
-        return (0, '[THERMOCOUPLE] Data captured successfully.', metadata_dict)
+        return (0, '[THERMOCOUPLE] [INFO] Data captured successfully.', metadata_dict)
 
     except Exception as e:
         print(f'[THERMOCOUPLE] [ERROR] Unexpected error: {e}')
@@ -110,4 +119,4 @@ def thermocouple_controller(data_dir: Path) -> tuple[int, str, dict | None]:
         }
         return (1, f'[THERMOCOUPLE] [ERROR] Failed during operation: {e}', metadata)
     finally:
-        print('[THERMOCOUPLE] --- Thermocouple Controller Done ---')
+        print('[THERMOCOUPLE] [INFO] --- Thermocouple Controller Done ---')
