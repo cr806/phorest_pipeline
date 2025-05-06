@@ -88,20 +88,21 @@ try:
     CAMERA_CONTRAST = settings.getint('Camera', 'camera_contrast', fallback=32)
 
     # --- Temperature Settings ---
-    # Parse the list string using ast.literal_eval
-    tc_id_str = settings.get('Temperature', 'thermocouple_id', fallback='[]')
+    # Parse the dictionary string using ast.literal_eval
+    THERMOCOUPLE_IDS = {}
+    tc_id_str = settings.get('Temperature', 'thermocouple_sensors', fallback='{}')
     try:
-        THERMOCOUPLE_IDS = ast.literal_eval(tc_id_str)
-        if not isinstance(THERMOCOUPLE_IDS, list):
+        parsed_data = ast.literal_eval(tc_id_str)
+        if isinstance(parsed_data, dict):
+            THERMOCOUPLE_IDS = parsed_data
+        else:
             print(
-                f"[CONFIG] [WARN] 'thermocouple_id' in config is not a list: {tc_id_str}. Using default []."
+                f"[CONFIG] [WARN] 'thermocouple_sensors' in config is not a dictionary: {tc_id_str}. Using default {{}}."
             )
-            THERMOCOUPLE_IDS = []
     except (ValueError, SyntaxError) as e:
         print(
-            f"[CONFIG] [WARN] Could not parse 'thermocouple_id': {tc_id_str}. Error: {e}. Using default []."
+            f"[CONFIG] [WARN] Could not parse 'thermocouple_id': {tc_id_str}. Error: {e}. Using default {{}}."
         )
-        THERMOCOUPLE_IDS = []  # Default to empty list on parsing error
 
     # --- Brightfield Settings ---
     # Example reading brightfield specific camera ID
