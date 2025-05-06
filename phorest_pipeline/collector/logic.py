@@ -20,8 +20,8 @@ from phorest_pipeline.shared.metadata_manager import add_entry
 from phorest_pipeline.shared.states import CollectorState
 
 if ENABLE_CAMERA:
-    from phorest_pipeline.shared.config import CAMERA_TYPE
     from phorest_pipeline.shared.cameras import CameraType
+    from phorest_pipeline.shared.config import CAMERA_TYPE
     if CAMERA_TYPE == CameraType.LOGITECH:
         from phorest_pipeline.collector.logi_camera_controller import camera_controller
     elif CAMERA_TYPE == CameraType.ARGUS:
