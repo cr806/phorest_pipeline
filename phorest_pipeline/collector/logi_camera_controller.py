@@ -14,6 +14,8 @@ from phorest_pipeline.shared.config import (
 
 BUFFER_CLEAR_UP_FRAMES = 5
 
+GAIN_VALUE = 32  # Low value to reduce noise
+
 
 def camera_controller(data_dir: Path) -> tuple[int, str, dict | None]:
     """
@@ -66,13 +68,12 @@ def camera_controller(data_dir: Path) -> tuple[int, str, dict | None]:
                 if current != wb_temp_default:
                     print('[CAMERA] [ERROR] CAP_PROP_WB_TEMPERATURE not set')
         # 3. Set fixed Gain: gain
-        gain_value = 32  # Low value to reduce noise
-        success = cap.set(cv2.CAP_PROP_GAIN, gain_value)
+        success = cap.set(cv2.CAP_PROP_GAIN, GAIN_VALUE)
         if not success:
-            print(f'[CAMERA] [ERRRO] Could not set CAP_PROP_GAIN to {gain_value}.')
+            print(f'[CAMERA] [ERRRO] Could not set CAP_PROP_GAIN to {GAIN_VALUE}.')
         else:
             current = cap.get(cv2.CAP_PROP_GAIN)
-            if current != gain_value:
+            if current != GAIN_VALUE:
                 print('[CAMERA] [ERROR] CAP_PROP_GAIN not set')
 
         # 4. Set Exposure: exposure
