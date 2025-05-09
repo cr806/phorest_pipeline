@@ -26,6 +26,8 @@ if ENABLE_CAMERA:
         from phorest_pipeline.collector.logi_camera_controller import camera_controller
     elif CAMERA_TYPE == CameraType.ARGUS:
         from phorest_pipeline.collector.argus_camera_controller import camera_controller
+    elif CAMERA_TYPE == CameraType.TIS:
+        from phorest_pipeline.collector.tis_camera_controller import camera_controller
     elif CAMERA_TYPE == CameraType.DUMMY:
         from phorest_pipeline.collector.dummy_camera_controller import camera_controller
     print(f'[COLLECTOR] Camera type: {CAMERA_TYPE}')
