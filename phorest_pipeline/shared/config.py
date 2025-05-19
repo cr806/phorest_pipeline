@@ -3,7 +3,7 @@ import ast
 import configparser
 from pathlib import Path
 
-from phorest_pipeline.shared.cameras import CameraType
+from phorest_pipeline.shared.cameras import CameraType, CameraTransform
 
 CONFIG_FILE = Path('config.ini')
 
@@ -52,16 +52,19 @@ try:
     DATA_DIR = Path(settings.get('Paths', 'data_dir', fallback='data'))
     CONTINUOUS_DIR = Path(settings.get('Paths', 'continuous_capture_dir', fallback='continuous_capture'))
     RESULTS_DIR = Path(settings.get('Paths', 'results_dir', fallback='results'))
+    LOGS_DIR = Path(settings.get('Paths', 'logs_dir', fallback='results'))
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     CONTINUOUS_DIR.mkdir(parents=True, exist_ok=True)
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    LOGS_DIR.mkdir(parents=True, exist_ok=True)
 
     # --- Timing ---
     COLLECTOR_INTERVAL = settings.getint('Timing', 'collector_interval_seconds', fallback=300)
     RETRY_DELAY = settings.getint('Timing', 'collector_retry_delay_seconds', fallback=2)
     PROCESSOR_INTERVAL = settings.getint('Timing', 'processor_interval_seconds', fallback=2)
     ENABLE_COMPRESSOR = settings.getboolean('Timing', 'enable_image_compression', fallback=False)
-    COMPRESSOR_INTERVAL = settings.getint('Timing', 'compress_interval_seconds', fallback=60)
+    COMPRESSOR_INTERVAL = settings.getint('Timing', 'compress_interval_seconds', fallback=3600)
+    LOGS_COMPRESSOR_INTERVAL = settings.getint('Timing', 'log_file_interval_seconds', fallback=3600)
 
     # --- Retries ---
     FAILURE_LIMIT = settings.getint('Retries', 'collector_failure_limit', fallback=5)
@@ -88,6 +91,15 @@ try:
     CAMERA_EXPOSURE = settings.getint('Camera', 'camera_exposure', fallback=150)
     CAMERA_BRIGHTNESS = settings.getint('Camera', 'camera_brightness', fallback=128)
     CAMERA_CONTRAST = settings.getint('Camera', 'camera_contrast', fallback=32)
+    
+    camera_transform_str = settings.get('Camera', 'camera_transform', fallback='NONE')
+    camera_transform_str = camera_transform_str.upper().strip().replace("'", "").replace('"', '')
+    try:
+        CAMERA_TRANFORM = CameraTransform[camera_transform_str] #try to return the enum
+    except KeyError:
+        print(f"[CONFIG] Invalid camera image transofrm: {camera_transform_str}.")
+        print(f"Please use one of {', '.join(CameraTransform.__members__.keys())}")
+        exit(1)
 
     # --- Temperature Settings ---
     # Parse the dictionary string using ast.literal_eval

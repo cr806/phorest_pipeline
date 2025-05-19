@@ -23,7 +23,8 @@ class CommunicatorState(Enum):
 
 
 class CompressorState(Enum):
-    IDLE = 'IDLE'
-    CHECKING = 'CHECKING'
-    COMPRESSING = 'COMPRESSING'
-    WAITING = 'WAITING'
+    IDLE = auto()
+    CHECKING = auto()
+    COMPRESSING_IMAGES = auto()
+    COMPRESSING_LOGS = auto()
+    WAITING_TO_RUN = auto()

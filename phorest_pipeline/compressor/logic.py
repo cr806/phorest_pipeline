@@ -1,13 +1,17 @@
 # phorest_pipeline/compressor/logic.py
 import datetime
 import time
+import shutil
 from pathlib import Path
+import gzip
 
 import cv2
 
 from phorest_pipeline.shared.config import (
     COMPRESSOR_INTERVAL,
+    LOGS_COMPRESSOR_INTERVAL,
     DATA_DIR,
+    LOGS_DIR,
     ENABLE_COMPRESSOR,
     settings,
 )
@@ -20,13 +24,38 @@ from phorest_pipeline.shared.states import CompressorState
 METADATA_FILENAME = Path('processing_manifest.json')
 POLL_INTERVAL = 2
 
+def compress_log_files():
+    output_dir = Path(LOGS_DIR, 'compressed')
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    log_files = Path(LOGS_DIR).glob('*.log')
+    if not log_files:
+        print('[COMPRESSOR] [INFO] No log files to compress.')
+        return
+
+    for log_file in log_files:
+        try:
+            # Create a temporary copy to avoid interrupting ongoing writes
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            temp_log_file = f'{log_file}.temp_{timestamp}'
+            shutil.copy2(log_file, temp_log_file)
+
+            output_file = Path(output_dir, f'{log_file.name}.{timestamp}.gz')
+            with open(temp_log_file, 'rb') as f_in, gzip.open(output_file, 'wb') as f_out:
+                shutil.copyfileobj(f_in, f_out)
+
+            temp_log_file.unlink(missing_ok=True)
+            print(f'[COMPRESSOR] Successfully compressed: {log_file} to {output_file}')
+        except Exception as e:
+            print(f'[COMPRESSOR] [ERROR] Error compressing {log_file}: {e}')
+
 def find_entry_to_compress(metadata_list: list) -> tuple[int, dict | None]:
-    """
+    '''
     Finds index/data of first entry that meets criteria:
     - processed is True
     - compression_attempted is False
     - has camera_data with a .png filename
-    """
+    '''
     for index, entry in enumerate(metadata_list):
         camera_data = entry.get('camera_data')
         # Check criteria: processed, has camera data, type is 'image', filename is PNG
@@ -43,7 +72,7 @@ def find_entry_to_compress(metadata_list: list) -> tuple[int, dict | None]:
 
 
 def perform_compression_cycle(current_state: CompressorState) -> CompressorState:
-    """State machine logic for the compressor."""
+    '''State machine logic for the compressor.'''
     next_state = current_state
 
     if settings is None:
@@ -55,6 +84,8 @@ def perform_compression_cycle(current_state: CompressorState) -> CompressorState
         case CompressorState.IDLE:
             print('[COMPRESSOR] IDLE -> CHECKING')
             next_state = CompressorState.CHECKING
+            global next_run_time
+            next_run_time = time.monotonic() + LOGS_COMPRESSOR_INTERVAL
 
         case CompressorState.CHECKING:
             print(
@@ -68,12 +99,12 @@ def perform_compression_cycle(current_state: CompressorState) -> CompressorState
                 print(
                     f'[COMPRESSOR] Found entry to compress at index {entry_index} (Image: {img_filename})'
                 )
-                next_state = CompressorState.COMPRESSING
+                next_state = CompressorState.COMPRESSING_IMAGES
             else:
                 print('[COMPRESSOR] No entries found requiring compression.')
-                next_state = CompressorState.WAITING
+                next_state = CompressorState.WAITING_TO_RUN
 
-        case CompressorState.COMPRESSING:
+        case CompressorState.COMPRESSING_IMAGES:
             print('[COMPRESSOR] --- Starting Compression ---')
             manifest_data = load_metadata(DATA_DIR, METADATA_FILENAME)
             entry_index, entry_to_compress = find_entry_to_compress(manifest_data)
@@ -158,23 +189,30 @@ def perform_compression_cycle(current_state: CompressorState) -> CompressorState
             next_state = CompressorState.CHECKING
             time.sleep(0.1)  # Small pause before checking again
 
-        case CompressorState.WAITING:
+        case CompressorState.WAITING_TO_RUN:
             print(f'[COMPRESSOR] Waiting for {COMPRESSOR_INTERVAL} seconds until next check...')
             time.sleep(COMPRESSOR_INTERVAL)
             print('[COMPRESSOR] WAITING -> CHECKING')
-            next_state = CompressorState.CHECKING
+            now = time.monotonic()
+            if now >= next_run_time:
+                compress_log_files()
+                next_state = CompressorState.IDLE
+            else:
+                next_state = CompressorState.CHECKING
 
     return next_state
 
 
 def run_compressor():
-    """Main loop for the compressor process."""
+    '''Main loop for the compressor process.'''
     print('--- Starting Compressor ---')
     if not ENABLE_COMPRESSOR:
         print('[COMPRESSOR] Compressor is disabled in config. Exiting.')
         return
 
     current_state = CompressorState.IDLE
+    global next_run_time  # Needs to be accessible across state calls
+    next_run_time = 0
     try:
         while True:
             current_state = perform_compression_cycle(current_state)
