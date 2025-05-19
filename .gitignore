@@ -79,6 +79,7 @@ dmypy.json
 flags/
 data/
 results/
+continuous_capture/
 *.log
 compression_test/
 *_camera_calibration/
