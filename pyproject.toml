@@ -12,7 +12,6 @@ dependencies = [
     "jupyterlab>=4.3.6",
     "matplotlib>=3.10.1",
     "numpy>=2.2.4",
-    "opencv-python>=4.11.0.86",
     "scipy>=1.15.2",
 ]
 
@@ -20,10 +19,11 @@ dependencies = [
 # run-collector = "phorest_pipeline.collector.logic:run_collector"
 # run-processor = "phorest_pipeline.processor.logic:run_processor"
 # run-communicator = "phorest_pipeline.communicator.logic:run_communicator"
+# run-comntinuous-capture = "phorest_pipeline.collector.continuous_capture_logic:run_continuous_capture"
 
 [tool.setuptools]
 # Tell setuptools exactly which top-level directories are packages
-packages = ["phorest_pipeline"]
+packages = ["phorest_pipeline", "config_file_preparation"]
 
 # Optional dev dependencies
 #[project.optional-dependencies]
