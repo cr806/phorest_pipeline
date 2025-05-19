@@ -20,6 +20,9 @@ from phorest_pipeline.shared.metadata_manager import (
     save_metadata,
 )
 from phorest_pipeline.shared.states import CompressorState
+from phorest_pipeline.shared.logger_config import configure_logger
+
+logger = configure_logger(name=__name__, rotate_daily=True, log_filename='compressor.log')
 
 METADATA_FILENAME = Path('processing_manifest.json')
 POLL_INTERVAL = 2
@@ -30,7 +33,7 @@ def compress_log_files():
 
     log_files = Path(LOGS_DIR).glob('*.log')
     if not log_files:
-        print('[COMPRESSOR] [INFO] No log files to compress.')
+        logger.info('No log files to compress.')
         return
 
     for log_file in log_files:
@@ -45,9 +48,9 @@ def compress_log_files():
                 shutil.copyfileobj(f_in, f_out)
 
             temp_log_file.unlink(missing_ok=True)
-            print(f'[COMPRESSOR] Successfully compressed: {log_file} to {output_file}')
+            logger.info(f'Successfully compressed: {log_file} to {output_file}')
         except Exception as e:
-            print(f'[COMPRESSOR] [ERROR] Error compressing {log_file}: {e}')
+            logger.info(f'[ERROR] Error compressing {log_file}: {e}')
 
 def find_entry_to_compress(metadata_list: list) -> tuple[int, dict | None]:
     '''
@@ -76,41 +79,41 @@ def perform_compression_cycle(current_state: CompressorState) -> CompressorState
     next_state = current_state
 
     if settings is None:
-        print('[COMPRESSOR] Configuration error. Halting.')
+        logger.info('Configuration error. Halting.')
         time.sleep(POLL_INTERVAL * 5)
         return current_state  # Consider a FATAL_ERROR state
 
     match current_state:
         case CompressorState.IDLE:
-            print('[COMPRESSOR] IDLE -> CHECKING')
+            logger.info('IDLE -> CHECKING')
             next_state = CompressorState.CHECKING
             global next_run_time
             next_run_time = time.monotonic() + LOGS_COMPRESSOR_INTERVAL
 
         case CompressorState.CHECKING:
-            print(
-                f'[COMPRESSOR] ({datetime.datetime.now().isoformat()}) --- Checking Manifest for Compression Work ---'
+            logger.info(
+                f'({datetime.datetime.now().isoformat()}) --- Checking Manifest for Compression Work ---'
             )
             manifest_data = load_metadata(DATA_DIR, METADATA_FILENAME)
             entry_index, entry_to_compress = find_entry_to_compress(manifest_data)
 
             if entry_to_compress:
                 img_filename = entry_to_compress.get('camera_data', {}).get('filename', 'N/A')
-                print(
-                    f'[COMPRESSOR] Found entry to compress at index {entry_index} (Image: {img_filename})'
+                logger.info(
+                    f'Found entry to compress at index {entry_index} (Image: {img_filename})'
                 )
                 next_state = CompressorState.COMPRESSING_IMAGES
             else:
-                print('[COMPRESSOR] No entries found requiring compression.')
+                logger.info('No entries found requiring compression.')
                 next_state = CompressorState.WAITING_TO_RUN
 
         case CompressorState.COMPRESSING_IMAGES:
-            print('[COMPRESSOR] --- Starting Compression ---')
+            logger.info('--- Starting Compression ---')
             manifest_data = load_metadata(DATA_DIR, METADATA_FILENAME)
             entry_index, entry_to_compress = find_entry_to_compress(manifest_data)
 
             if not entry_to_compress:
-                print('[COMPRESSOR] [WARN] Entry to compress disappeared. -> CHECKING')
+                logger.info('[WARN] Entry to compress disappeared. -> CHECKING')
                 next_state = CompressorState.CHECKING
                 return next_state
 
@@ -128,7 +131,7 @@ def perform_compression_cycle(current_state: CompressorState) -> CompressorState
                 if not original_filepath.exists():
                     raise FileNotFoundError(f'Original file {original_filepath} not found!')
 
-                print(f'[COMPRESSOR] Loading image: {original_filepath}')
+                logger.info(f'Loading image: {original_filepath}')
                 image_gray = cv2.imread(str(original_filepath), cv2.IMREAD_GRAYSCALE)
 
                 if image_gray is None:
@@ -136,7 +139,7 @@ def perform_compression_cycle(current_state: CompressorState) -> CompressorState
                         f'Failed to load image file (may be corrupt): {original_filepath}'
                     )
 
-                print(f'[COMPRESSOR] Compressing to Lossless WebP: {webp_filepath}...')
+                logger.info(f'Compressing to Lossless WebP: {webp_filepath}...')
                 # Quality 100 triggers lossless mode for cv2.imwrite with webp
                 write_params = [cv2.IMWRITE_WEBP_QUALITY, 100]
                 saved = cv2.imwrite(str(webp_filepath), image_gray, write_params)
@@ -144,21 +147,21 @@ def perform_compression_cycle(current_state: CompressorState) -> CompressorState
                 if not saved:
                     raise OSError(f'cv2.imwrite failed to save Lossless WebP {webp_filepath}')
 
-                print('[COMPRESSOR] Lossless WebP compression successful.')
+                logger.info('Lossless WebP compression successful.')
 
                 # --- Delete Original File ---
-                print(f'[COMPRESSOR] Deleting original file: {original_filepath}')
+                logger.info(f'Deleting original file: {original_filepath}')
                 try:
                     original_filepath.unlink()
-                    print('[COMPRESSOR] Original file deleted.')
+                    logger.info('Original file deleted.')
                 except OSError as del_err:
                     # Log warning but continue, compression itself succeeded
-                    print(
-                        f'[COMPRESSOR] [WARN] Failed to delete original file {original_filepath}: {del_err}. Manifest will still be updated.'
+                    logger.warning(
+                        f'Failed to delete original file {original_filepath}: {del_err}. Manifest will still be updated.'
                     )
 
             except Exception as e:
-                print(f'[COMPRESSOR] [ERROR] Compression failed for {original_filename}: {e}')
+                logger.info(f'[ERROR] Compression failed for {original_filename}: {e}')
                 compression_error_msg = f'Compression failed: {e}'
 
             # --- Update Manifest Entry (update after attempt) ---
@@ -182,17 +185,17 @@ def perform_compression_cycle(current_state: CompressorState) -> CompressorState
             save_metadata(DATA_DIR, METADATA_FILENAME, manifest_data)
 
             status = 'Success' if compression_error_msg is None else 'FAILED'
-            print(f'[COMPRESSOR] Updated manifest for entry index {entry_index}. Status: {status}')
+            logger.info(f'Updated manifest for entry index {entry_index}. Status: {status}')
 
             # --- Decide Next Step ---
-            print('[COMPRESSOR] COMPRESSING -> CHECKING (for more work)')
+            logger.info('COMPRESSING -> CHECKING (for more work)')
             next_state = CompressorState.CHECKING
             time.sleep(0.1)  # Small pause before checking again
 
         case CompressorState.WAITING_TO_RUN:
-            print(f'[COMPRESSOR] Waiting for {COMPRESSOR_INTERVAL} seconds until next check...')
+            logger.info(f'Waiting for {COMPRESSOR_INTERVAL} seconds until next check...')
             time.sleep(COMPRESSOR_INTERVAL)
-            print('[COMPRESSOR] WAITING -> CHECKING')
+            logger.info('WAITING -> CHECKING')
             now = time.monotonic()
             if now >= next_run_time:
                 compress_log_files()
@@ -205,9 +208,9 @@ def perform_compression_cycle(current_state: CompressorState) -> CompressorState
 
 def run_compressor():
     '''Main loop for the compressor process.'''
-    print('--- Starting Compressor ---')
+    logger.info('--- Starting Compressor ---')
     if not ENABLE_COMPRESSOR:
-        print('[COMPRESSOR] Compressor is disabled in config. Exiting.')
+        logger.info('Compressor is disabled in config. Exiting.')
         return
 
     current_state = CompressorState.IDLE
@@ -219,6 +222,6 @@ def run_compressor():
             if current_state == CompressorState.IDLE or current_state == CompressorState.CHECKING:
                 time.sleep(0.1)
     except KeyboardInterrupt:
-        print('\n[COMPRESSOR] Shutdown requested.')
+        logger.info('Shutdown requested.')
     finally:
-        print('--- Compressor Stopped ---')
+        logger.info('--- Compressor Stopped ---')

@@ -3,6 +3,10 @@ from typing import Dict
 import numpy as np
 from scipy.optimize import curve_fit
 
+from phorest_pipeline.shared.logger_config import configure_logger
+
+logger = configure_logger(name=__name__, rotate_daily=True, log_filename='processor.log')
+
 
 def max_intensity(data: np.ndarray) -> Dict:
     """
@@ -97,7 +101,7 @@ def gaussian(data: np.ndarray) -> Dict:
     try:
         popt, _ = curve_fit(gaussian_func, xdata, data, p0=p0)
     except (RuntimeError, ValueError) as e:
-        print(f'[FUNCTION FITTER] [ERROR] Curve fitting failed {e}')
+        logger.error(f'[FUNCTION FITTING] Curve fitting failed {e}')
         return {}
 
     error = RMSE(data, gaussian_func(xdata, *popt))
@@ -146,7 +150,7 @@ def fano(data: np.ndarray) -> Dict:
     try:
         popt, _ = curve_fit(fano_func, xdata, data, p0=p0)
     except (RuntimeError, ValueError) as e:
-        print(f'[FUNCTION FITTER] [ERROR] Curve fitting failed {e}')
+        logger.error(f'[FUNCTION FITTING] Curve fitting failed {e}')
         return {}
 
     error = RMSE(data, fano_func(xdata, *popt))

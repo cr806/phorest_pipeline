@@ -13,6 +13,9 @@ from phorest_pipeline.shared.config import (
 )
 from phorest_pipeline.shared.metadata_manager import load_metadata, save_metadata
 from phorest_pipeline.shared.states import CommunicatorState
+from phorest_pipeline.shared.logger_config import configure_logger
+
+logger = configure_logger(name=__name__, rotate_daily=True, log_filename='comms.log')
 
 RESULTS_FILENAME = Path('processing_results.json')
 CSV_FILENAME = Path('communicating_results.csv')
@@ -102,38 +105,38 @@ def perform_communication(current_state: CommunicatorState) -> CommunicatorState
     next_state = current_state
 
     if settings is None:
-        print('[COMMS] Configuration error. Halting.')
+        logger.info('Configuration error. Halting.')
         time.sleep(POLL_INTERVAL * 5)
         return current_state
 
     match current_state:
         case CommunicatorState.IDLE:
-            print('[COMMS] IDLE -> WAITING_FOR_RESULTS')
+            logger.info('IDLE -> WAITING_FOR_RESULTS')
             next_state = CommunicatorState.WAITING_FOR_RESULTS
 
         case CommunicatorState.WAITING_FOR_RESULTS:
             if RESULTS_READY_FLAG.exists():
-                print(f'[COMMS] Found flag {RESULTS_READY_FLAG}.')
+                logger.info(f'Found flag {RESULTS_READY_FLAG}.')
                 # Consume the flag
                 try:
                     RESULTS_READY_FLAG.unlink()
-                    print(f'[COMMS] Deleted flag {RESULTS_READY_FLAG}.')
-                    print('[COMMS] WAITING_FOR_RESULTS -> COMMUNICATING')
+                    logger.info(f'Deleted flag {RESULTS_READY_FLAG}.')
+                    logger.info('WAITING_FOR_RESULTS -> COMMUNICATING')
                     next_state = CommunicatorState.COMMUNICATING
                 except FileNotFoundError:
-                    print('[COMMS] Flag disappeared before deletion. Re-checking...')
+                    logger.info('Flag disappeared before deletion. Re-checking...')
                     next_state = CommunicatorState.WAITING_FOR_RESULTS
                 except OSError as e:
-                    print(f'[COMMS] ERROR - Could not delete flag {RESULTS_READY_FLAG}: {e}')
+                    logger.error(f'- Could not delete flag {RESULTS_READY_FLAG}: {e}')
                     time.sleep(POLL_INTERVAL)
                     next_state = CommunicatorState.WAITING_FOR_RESULTS
             else:
-                print('[COMMS] Waiting for results flag...')
+                logger.info('Waiting for results flag...')
                 time.sleep(POLL_INTERVAL)
                 next_state = CommunicatorState.WAITING_FOR_RESULTS
 
         case CommunicatorState.COMMUNICATING:
-            print(
+            logger.info(
                 f'Communicator ({datetime.now().isoformat()}): --- Running Communication ---'
             )
             # Simulate communicating results
@@ -142,9 +145,9 @@ def perform_communication(current_state: CommunicatorState) -> CommunicatorState
 
             communicate_results(processed_entries, results_data)
 
-            print('[COMMS] Results communicated (simulated).')
-            print('[COMMS] --- Communication Done ---')
-            print('[COMMS] COMMUNICATING -> IDLE')
+            logger.info('Results communicated (simulated).')
+            logger.info('--- Communication Done ---')
+            logger.info('COMMUNICATING -> IDLE')
             next_state = CommunicatorState.IDLE
 
     return next_state
@@ -152,29 +155,29 @@ def perform_communication(current_state: CommunicatorState) -> CommunicatorState
 
 def run_communicator():
     """Main loop for the communicator process."""
-    print('--- Starting Communicator ---')
+    logger.info('--- Starting Communicator ---')
     current_state = CommunicatorState.COMMUNICATING
 
     # Initial cleanup: remove results flag if it exists on startup
     if settings:
         try:
             RESULTS_READY_FLAG.unlink(missing_ok=True)
-            print(f'[COMMS] Ensured flag {RESULTS_READY_FLAG} is initially removed.')
+            logger.info(f'Ensured flag {RESULTS_READY_FLAG} is initially removed.')
         except OSError as e:
-            print(f'[COMMS] WARNING - Could not remove initial flag {RESULTS_READY_FLAG}: {e}')
+            logger.warning(f'Could not remove initial flag {RESULTS_READY_FLAG}: {e}')
 
     try:
         while True:
             current_state = perform_communication(current_state)
             time.sleep(0.1)  # Small sleep to prevent busy-looping
     except KeyboardInterrupt:
-        print('\n[COMMS] Shutdown requested.')
+        logger.info('Shutdown requested.')
     finally:
         # Cleanup on exit
         if settings:
-            print('[COMMS] Cleaning up flags...')
+            logger.info('Cleaning up flags...')
         try:
             RESULTS_READY_FLAG.unlink(missing_ok=True)
         except OSError as e:
-            print(f'[COMMS] ERROR - Could not clean up flag {RESULTS_READY_FLAG} on exit: {e}')
-        print('--- Communicator Stopped ---')
+            logger.error(f'Could not clean up flag {RESULTS_READY_FLAG} on exit: {e}')
+        logger.info('--- Communicator Stopped ---')

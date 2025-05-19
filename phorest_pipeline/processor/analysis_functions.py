@@ -9,6 +9,9 @@ from phorest_pipeline.processor.analysis_methods import (
     gaussian,
     max_intensity,
 )
+from phorest_pipeline.shared.logger_config import configure_logger
+
+logger = configure_logger(name=__name__, rotate_daily=True, log_filename='processor.log')
 
 
 def get_image_brightness_contrast(data: np.ndarray) -> Tuple[float, float]:
@@ -63,7 +66,7 @@ def extract_roi_data(data: np.ndarray, ID: str, ROIs: Dict) -> np.ndarray:
         end_coord = [x + y for x, y in zip(ROIs[ID]['coords'], ROIs[ID]['size'])]
         data = data[start_coord[0] : end_coord[0], start_coord[1] : end_coord[1]]
     except KeyError as e:
-        print(f'[ANALYSER] [ERROR] An error occured when reading ROI metadata - {e}')
+        logger.error(f'An error occured when reading ROI metadata - {e}')
         exit(1)
 
     # Flip array left-to-right if it is the left grating of bow-tie
@@ -168,14 +171,14 @@ def analyse_roi_data(data: np.ndarray, analysis_method: str) -> Dict:
     error_count = 0
     for idx, d in enumerate(data):
         d_std = np.std(d)
-        print(f'[ANALYSER] [INFO] Row {idx}, STD {d_std}')
+        logger.info(f'Row {idx}, STD {d_std}')
         if d_std < 0.1:
-            print(f'[ANALYSER] [WARNING] Row {idx}, peak contrast too low')
+            logger.warning(f'Row {idx}, peak contrast too low')
             error_count += 1
             continue
         result_dict = analysis[analysis_method](d)
         if not bool(result_dict):
-            print(f'[ANALYSER] [WARNING] Row {idx}, fitting function failed')
+            logger.warning(f'Row {idx}, fitting function failed')
             error_count += 1
             continue
         for key, value in result_dict.items():
@@ -186,7 +189,7 @@ def analyse_roi_data(data: np.ndarray, analysis_method: str) -> Dict:
                 continue
             results[key]['Values'].append(value)
 
-    print(f'[ANALYSER] [INFO] {error_count} / {data.shape[0]} rows excluded from analysis')
+    logger.info(f'{error_count} / {data.shape[0]} rows excluded from analysis')
     return results
 
 

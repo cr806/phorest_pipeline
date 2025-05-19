@@ -80,6 +80,7 @@ flags/
 data/
 results/
 continuous_capture/
+logs/
 *.log
 compression_test/
 *_camera_calibration/

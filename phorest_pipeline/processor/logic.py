@@ -17,6 +17,9 @@ from phorest_pipeline.shared.config import (
 # Assuming metadata_manager handles loading/saving the manifest
 from phorest_pipeline.shared.metadata_manager import append_metadata, load_metadata, save_metadata
 from phorest_pipeline.shared.states import ProcessorState
+from phorest_pipeline.shared.logger_config import configure_logger
+
+logger = configure_logger(name=__name__, rotate_daily=True, log_filename='processor.log')
 
 METADATA_FILENAME = Path('processing_manifest.json')
 RESULTS_FILENAME = Path('processing_results.json')
@@ -32,12 +35,12 @@ def find_unprocessed_entry(metadata_list: list) -> tuple[int, dict | None]:
                 return index, entry
             elif entry.get('temperature_data'):
                 # We need the image.
-                print(
-                    f'[PROCESSOR] [WARN] Entry {index} found unprocessed but missing camera data filename. Skipping.'
+                logger.warning(
+                    f'Entry {index} found unprocessed but missing camera data filename. Skipping.'
                 )
             else:
-                print(
-                    f'[PROCESSOR] [WARN] Entry {index} found unprocessed but missing key data. Skipping.'
+                logger.warning(
+                    f'Entry {index} found unprocessed but missing key data. Skipping.'
                 )
     return -1, None
 
@@ -48,26 +51,26 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
     next_state = current_state
 
     if settings is None:
-        print('[PROCESSOR] Configuration error. Halting.')
+        logger.info('Configuration error. Halting.')
         time.sleep(PROCESSOR_INTERVAL * 5)
         # Consider adding a FATAL_ERROR state for the processor too
         return current_state
 
     match current_state:
         case ProcessorState.IDLE:
-            print('[PROCESSOR] IDLE -> WAITING_FOR_DATA')
+            logger.info('IDLE -> WAITING_FOR_DATA')
             next_state = ProcessorState.WAITING_FOR_DATA
 
         case ProcessorState.WAITING_FOR_DATA:
             if DATA_READY_FLAG.exists():
-                print(f'[PROCESSOR] Found flag {DATA_READY_FLAG}. Consuming.')
+                logger.info(f'Found flag {DATA_READY_FLAG}. Consuming.')
                 try:
                     DATA_READY_FLAG.unlink()
-                    print(f'[PROCESSOR] Deleted flag {DATA_READY_FLAG}.')
-                    print('[PROCESSOR] WAITING_FOR_DATA -> PROCESSING')
+                    logger.info(f'Deleted flag {DATA_READY_FLAG}.')
+                    logger.info('WAITING_FOR_DATA -> PROCESSING')
                     next_state = ProcessorState.PROCESSING
                 except (FileNotFoundError, OSError) as e:
-                    print(f'[PROCESSOR] ERROR - Could not delete flag {DATA_READY_FLAG}: {e}')
+                    logger.error(f'Could not delete flag {DATA_READY_FLAG}: {e}')
                     # Stay waiting, maybe the flag is gone or perms issue
                     time.sleep(5)
                     next_state = ProcessorState.WAITING_FOR_DATA
@@ -76,15 +79,15 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
                 next_state = ProcessorState.WAITING_FOR_DATA
 
         case ProcessorState.PROCESSING:
-            print(
-                f'[PROCESSOR] ({datetime.datetime.now().isoformat()}) --- Checking for Unprocessed Data ---'
+            logger.info(
+                f'({datetime.datetime.now().isoformat()}) --- Checking for Unprocessed Data ---'
             )
             manifest_data = load_metadata(DATA_DIR, METADATA_FILENAME)
             entry_index, entry_to_process = find_unprocessed_entry(manifest_data)
 
             if entry_to_process:
-                print(
-                    f'[PROCESSOR] Found unprocessed entry at index {entry_index} (Image: {entry_to_process.get("camera_data", {}).get("filename")})'
+                logger.info(
+                    f'Found unprocessed entry at index {entry_index} (Image: {entry_to_process.get("camera_data", {}).get("filename")})'
                 )
 
                 # --- Attempt Processing ---
@@ -97,7 +100,7 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
                 processing_successful = img_proc_error_msg is None
 
                 if not processing_successful:
-                    print(f'[PROCESSOR] [ERROR] Image processing failed: {img_proc_error_msg}')
+                    logger.error(f'Image processing failed: {img_proc_error_msg}')
                     # Optionally, you could set a flag or take other actions here
 
                 # --- Aggregate Results ---
@@ -128,8 +131,8 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
                 # Save the entire updated manifest
                 save_metadata(DATA_DIR, METADATA_FILENAME, manifest_data)
 
-                print(
-                    f'[PROCESSOR] Processed entry index {entry_index}. Success: {processing_successful}\n\n'
+                logger.info(
+                    f'Processed entry index {entry_index}. Success: {processing_successful}\n\n'
                 )
                 # --- Stay in PROCESSING state ---
                 # Immediately check for the next unprocessed entry without waiting for the flag
@@ -139,20 +142,20 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
 
             else:
                 # No unprocessed entries found
-                print('[PROCESSOR] No more unprocessed entries found in manifest.')
-                print(f'[PROCESSOR] Creating flag: {RESULTS_READY_FLAG}')
+                logger.info('No more unprocessed entries found in manifest.')
+                logger.info(f'Creating flag: {RESULTS_READY_FLAG}')
                 try:
                     RESULTS_READY_FLAG.touch()
-                    print('[PROCESSOR] PROCESSING -> IDLE')
+                    logger.info('PROCESSING -> IDLE')
                     next_state = ProcessorState.IDLE
                 except OSError as e:
-                    print(f'[PROCESSOR] [ERROR] Could not create flag {RESULTS_READY_FLAG}: {e}')
+                    logger.error(f'Could not create flag {RESULTS_READY_FLAG}: {e}')
                     time.sleep(5)
                     next_state = ProcessorState.PROCESSING  # Retry flag creation
 
         case ProcessorState.FATAL_ERROR:
             # Should not technically be called again once in this state if loop breaks
-            print('[PROCESSOR] [FATAL ERROR] Shutting down processor.')
+            logger.error('[FATAL ERROR] Shutting down processor.')
             time.sleep(10)  # Sleep long if it somehow gets called
 
     return next_state
@@ -161,7 +164,7 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
 # Main execution loop function
 def run_processor():
     """Main loop for the processor process."""
-    print('--- Starting Processor ---')
+    logger.info('--- Starting Processor ---')
     # Start in PROCESSING state to immediately clear any backlog
     current_state = ProcessorState.PROCESSING
 
@@ -169,10 +172,10 @@ def run_processor():
     if settings:
         try:
             DATA_READY_FLAG.unlink(missing_ok=True)
-            print(f'[PROCESSOR] Ensured flag {DATA_READY_FLAG} is initially removed.')
+            logger.info(f'Ensured flag {DATA_READY_FLAG} is initially removed.')
             # We don't create RESULTS_READY_FLAG anymore in this design
         except OSError as e:
-            print(f'[PROCESSOR] WARNING - Could not remove initial flag {DATA_READY_FLAG}: {e}')
+            logger.warning(f'Could not remove initial flag {DATA_READY_FLAG}: {e}')
 
     try:
         while True:
@@ -180,7 +183,7 @@ def run_processor():
 
             # --- Check for FATAL_ERROR state to exit ---
             if current_state == ProcessorState.FATAL_ERROR:
-                print('[PROCESSOR] Exiting due to FATAL_ERROR state.')
+                logger.info('Exiting due to FATAL_ERROR state.')
                 break  # Exit the while loop
 
             # Sleep only when waiting, processing loop handles its own pacing/delays
@@ -190,18 +193,18 @@ def run_processor():
             ):
                 time.sleep(0.1)  # Prevent busy-looping when idle/waiting
     except KeyboardInterrupt:
-        print('\n[PROCESSOR] Shutdown requested.')
+        logger.info('Shutdown requested.')
     finally:
         # No flags need specific cleanup here unless DATA_READY might be left mid-operation
         if settings:
-            print('[PROCESSOR] Cleaning up flags...')
+            logger.info('Cleaning up flags...')
             try:
                 DATA_READY_FLAG.unlink(missing_ok=True)
             except OSError as e:
-                print(
-                    f'[PROCESSOR] ERROR - Could not clean up flag {DATA_READY_FLAG} on exit: {e}'
+                logger.error(
+                    f'Could not clean up flag {DATA_READY_FLAG} on exit: {e}'
                 )
-        print('--- Processor Stopped ---')
+        logger.info('--- Processor Stopped ---')
         if current_state == ProcessorState.FATAL_ERROR:
             sys.exit(1)
         else:

@@ -30,13 +30,16 @@ from phorest_pipeline.shared.config import (
     NUMBER_SUB_ROIS,
     ROI_MANIFEST_PATH,
 )
+from phorest_pipeline.shared.logger_config import configure_logger
+
+logger = configure_logger(name=__name__, rotate_daily=True, log_filename='processor.log')
 
 IMAGE_SIZE_THRESHOLD = 1_000_000  # Bits
 
 
 def process_image(image_meta: dict | None) -> tuple[list | None, str | None]:
-    print('[ANALYSER] [INFO] Processing image...')
-    print(f'[ANALYSER] [INFO] Number of subROIs: {NUMBER_SUB_ROIS}')
+    logger.info('[ANALYSER] Processing image...')
+    logger.info(f'[ANALYSER] Number of subROIs: {NUMBER_SUB_ROIS}')
     if not image_meta or not image_meta.get('filename') or not image_meta.get('filepath'):
         return None, 'Missing image metadata or filename.'
 
@@ -93,7 +96,7 @@ def process_image(image_meta: dict | None) -> tuple[list | None, str | None]:
         for ROI_ID in ROI_dictionary:
             if 'ROI' not in ROI_ID:
                 continue
-            print(f'[ANALYSER] [INFO] Processing ROI "{ROI_ID}"')
+            logger.info(f'[ANALYSER] Processing ROI "{ROI_ID}"')
 
             # Add ROI label to results dictionary
             results = { 'ROI-label' : ROI_dictionary[ROI_ID]['label'] }
@@ -108,7 +111,7 @@ def process_image(image_meta: dict | None) -> tuple[list | None, str | None]:
             result = analyse_roi_data(ROI_data, METHOD)
 
             if not result:
-                print(f'[ANALYSER] [WARNING] ROI {ROI_ID} - Resonance not visible')
+                logger.warning(f'[ANALYSER] ROI {ROI_ID} - Resonance not visible')
                 continue
 
             # Post-process results to add statistical analysis
@@ -120,7 +123,7 @@ def process_image(image_meta: dict | None) -> tuple[list | None, str | None]:
 
     except Exception as e:
         error_msg = f'Error processing image {image_filepath}: {e}'
-        print(f'[PROCESSOR] [ERROR] {error_msg}')
+        logger.error(f'[ANALYSER] {error_msg}')
         return None, error_msg
 
 
@@ -129,6 +132,6 @@ if __name__ == '__main__':
     image_meta = {'filename': 'example_image.png', 'filepath': '/path/to/image/directory'}
     results, error = process_image(image_meta)
     if error:
-        print(f'Error: {error}')
+        logger.error(f'Error: {error}')
     else:
-        print(f'Processing results: {results}')
+        logger.info(f'Processing results: {results}')

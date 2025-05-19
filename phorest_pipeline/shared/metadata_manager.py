@@ -3,7 +3,9 @@ import datetime
 import json
 import os
 from pathlib import Path
+from phorest_pipeline.shared.logger_config import configure_logger
 
+logger = configure_logger(name=__name__, rotate_daily=True, log_filename='shared.log')
 
 def load_metadata(data_dir: Path, metadata_filename: Path) -> list:
     # ... (load_metadata remains the same) ...
@@ -16,11 +18,11 @@ def load_metadata(data_dir: Path, metadata_filename: Path) -> list:
                     return []
                 return json.loads(content)
         except json.JSONDecodeError:
-            print(f'[METADATA] [ERROR] Corrupt JSON in {metadata_path}. Returning empty list.')
+            logger.error(f'[METADATA] Corrupt JSON in {metadata_path}. Returning empty list.')
             # Backup corrupted file: metadata_path.rename(metadata_path.with_suffix(".corrupt"))
             return []
         except OSError as e:
-            print(f'[METADATA] [ERROR] Read error {metadata_path}: {e}. Returning empty list.')
+            logger.error(f'[METADATA] Read error {metadata_path}: {e}. Returning empty list.')
             return []
     else:
         return []
@@ -34,7 +36,7 @@ def save_metadata(data_dir: Path, metadata_filename: Path, metadata_list: list):
             json.dump(metadata_list, f, indent=4)
         os.replace(temp_metadata_path, metadata_path)
     except (OSError, TypeError) as e:
-        print(f'[METADATA] [ERROR] Save error {metadata_path}: {e}')
+        logger.error(f'[METADATA] Save error {metadata_path}: {e}')
         if temp_metadata_path.exists():
             try:
                 temp_metadata_path.unlink()
@@ -46,7 +48,7 @@ def add_entry(
     data_dir: Path, metadata_filename: Path, camera_meta: dict | None, temps_meta: dict | None
 ):
     """Adds a new combined entry based on controller metadata."""
-    print('[METADATA] Updating metadata file...')
+    logger.info('[METADATA] Updating metadata file...')
     metadata_list = load_metadata(data_dir, metadata_filename)
 
     # Determine overall success based on *if both components ran and succeeded*
@@ -78,12 +80,12 @@ def add_entry(
     save_metadata(data_dir, metadata_filename, metadata_list)
     img_name = camera_meta.get('filename') if camera_meta else 'N/A'
     status = 'FAILED' if overall_collection_error else 'OK'
-    print(f'[METADATA] Added entry: Status={status}, Image={img_name}')
+    logger.info(f'[METADATA] Added entry: Status={status}, Image={img_name}')
 
 
 def append_metadata(data_dir: Path, metadata_filename: Path, metadata_dict: dict):
     """Appends a new entry to the metadata file."""
-    print('[METADATA] Updating metadata file...')
+    logger.info('[METADATA] Updating metadata file...')
     metadata_list = load_metadata(data_dir, metadata_filename)
     metadata_list.append(metadata_dict)
     save_metadata(data_dir, metadata_filename, metadata_list)
