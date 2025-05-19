@@ -50,8 +50,10 @@ try:
 
     # --- Paths ---
     DATA_DIR = Path(settings.get('Paths', 'data_dir', fallback='data'))
+    CONTINUOUS_DIR = Path(settings.get('Paths', 'continuous_capture_dir', fallback='continuous_capture'))
     RESULTS_DIR = Path(settings.get('Paths', 'results_dir', fallback='results'))
     DATA_DIR.mkdir(parents=True, exist_ok=True)
+    CONTINUOUS_DIR.mkdir(parents=True, exist_ok=True)
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
     # --- Timing ---

@@ -85,3 +85,4 @@ compression_test/
 *_camera_parameter_scan/
 RPi/
 *.log
+*.ipynb
