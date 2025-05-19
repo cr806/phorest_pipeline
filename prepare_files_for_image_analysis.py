@@ -4,17 +4,11 @@ from pathlib import Path
 
 from config_file_preparation.generate_ROI_JSON import generate_ROI_JSON
 
-###############################################################################
-## EDIT THESE VALUES ##########################################################
 
-ROOT_PATH =      '/Volumes/krauss/Callum/03_Data/17_array_testing'
-PATH_TO_IMAGES = '/Volumes/krauss/Callum/03_Data/17_array_testing/ethanol_full_array_test_240425_flipped'
-IMAGE_TYPE =     'png'
-IMAGE_NAME_FOR_ROI_PLOTS = 'image_20250424_160317'
-
-###############################################################################
-###############################################################################
-
+ROOT_PATH =      '.'
+PATH_TO_IMAGES = './continuous_capture'
+IMAGE_TYPE =     'jpg'
+IMAGE_NAME_FOR_ROI_PLOTS = 'continuous_capture_frame'
 ROI_METADATA_NAME = 'ROI_manifest.json'
 
 
@@ -62,7 +56,7 @@ print('Have you updated the filepaths in this script?')
 print('##############################################')
 
 # 1. Confirm root, image, ROI, and server_root variables
-print('\nStep 4: Are these locations correct?')
+print('\nThese locations will be used:')
 print(f'\t{"Root folder:":<30} {ROOT_PATH}')
 print(f'\t{"Image folder:":<30} {PATH_TO_IMAGES}')
 print(f'\t{"Image type:":<30} {IMAGE_TYPE}')
@@ -74,14 +68,14 @@ input('Press Enter to continue...')
 Path('Generated_files').mkdir(parents=True, exist_ok=True)
 if Path('Generated_files', 'ImageFeatures.csv').exists():
     Path('Generated_files', 'ImageFeatures.csv').unlink()
-print('\nStep 6: Generating ROI metadata...')
+print('\nStep 1: Generating ROI metadata...')
 generate_ROI_JSON(
     Path(PATH_TO_IMAGES, f'{IMAGE_NAME_FOR_ROI_PLOTS}.{IMAGE_TYPE}'),
     Path(f'{ROI_METADATA_NAME}.json'),
 )
 
 # 3. Confirm ROI locations
-print('\nStep 8: Please check the saved ROI location plots.')
+print('\nStep 2: Please check the saved ROI location plots.')
 roi_correct = input('\tAre the ROI locations correct? (y/n): ').lower()
 if roi_correct != 'y':
     print('\nROI locations not confirmed. Please adjust and rerun. Exiting.')
@@ -89,7 +83,7 @@ if roi_correct != 'y':
 
 
 # 4. Back-up generated files to location of experiment
-print('\nStep 9: Backing-up all generated files to experiment directory...')
+print('\nStep 3: Backing-up all generated files to experiment directory...')
 dest_path = Path(ROOT_PATH, 'Image_analysis_files_BACKUP')
 dest_path.mkdir(parents=True, exist_ok=True)
 files_src_dest_name = []
