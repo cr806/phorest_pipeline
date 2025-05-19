@@ -1,0 +1,2492 @@
+{
+    "chip" : [
+        {
+            "chip_type": "UoY",
+            "auto_locate_grating": false
+        },
+        {
+            "chip_type": "IMEC-I",
+            "auto_locate_grating": true,
+            "labels": [
+                {
+                    "label": "1L",
+                    "x-size": 57,
+                    "y-size": 80,
+                    "label_origin": [-1127, 1335]
+                },
+                {
+                    "label": "1R",
+                    "x-size": 57,
+            "y-size": 80,
+                    "label_origin": [-27, 1335]
+                },
+                {
+                    "label": "2L",
+                    "x-size": 57,
+            "y-size": 80,
+                    "label_origin": [-1127, 785]
+                },
+                {
+                    "label": "2R",
+                    "x-size": 57,
+            "y-size": 80,
+                    "label_origin": [-27, 785]
+                },
+                {
+                    "label": "3L",
+                    "x-size": 57,
+            "y-size": 80,
+                    "label_origin": [-1127, 235]
+                },
+                {
+                    "label": "3R",
+                    "x-size": 57,
+            "y-size": 80,
+                    "label_origin": [-27, 235]
+                },
+                {
+                    "label": "4L",
+                    "x-size": 57,
+            "y-size": 80,
+                    "label_origin": [-1127, -315]
+                },
+                {
+                    "label": "4R",
+                    "x-size": 57,
+            "y-size": 80,
+                    "label_origin": [-27, -315]
+                },
+                {
+                    "label": "5L",
+                    "x-size": 57,
+            "y-size": 80,
+                    "label_origin": [-1127, -865]
+                },
+                {
+                    "label": "5R",
+                    "x-size": 57,
+                    "y-size": 80,
+                    "label_origin": [-27, -865]
+                }
+            ],
+            "gratings": [
+                {"x-size": 1000, "y-size": 450, "label": "1", "grating_origin": [
+                        -1050,
+                        875
+                    ]
+                },
+                {"x-size": 1000, "y-size": 450, "label": "1", "grating_origin": [
+                        50,
+                        875
+                    ]
+                },
+                {"x-size": 1000, "y-size": 450, "label": "2", "grating_origin": [
+                        -1050,
+                        325
+                    ]
+                },
+                {"x-size": 1000, "y-size": 450, "label": "2", "grating_origin": [
+                        50,
+                        325
+                    ]
+                },
+                {"x-size": 1000, "y-size": 450, "label": "3", "grating_origin": [
+                        -1050,
+                        -225
+                    ]
+                },
+                {"x-size": 1000, "y-size": 450, "label": "3", "grating_origin": [
+                        50,
+                        -225
+                    ]
+                },
+                {"x-size": 1000, "y-size": 450, "label": "4", "grating_origin": [
+                        -1050,
+                        -775
+                    ]
+                },
+                {"x-size": 1000, "y-size": 450, "label": "4", "grating_origin": [
+                        50,
+                        -775
+                    ]
+                },
+                {"x-size": 1000, "y-size": 450, "label": "5", "grating_origin": [
+                        -1050,
+                        -1325
+                    ]
+                },
+                {"x-size": 1000, "y-size": 450, "label": "5", "grating_origin": [
+                        50,
+                        -1325
+                    ]
+                }
+            ]
+        },
+        {
+            "chip_type": "IMECII_3",
+            "auto_locate_grating": true,
+            "labels": [
+                {
+                    "label": "3_large",
+                    "x-size": 500,
+                    "y-size": 700,
+                    "label_origin": [-2300, 1500]
+                },
+                {
+                    "label": "1A",
+                    "x-size": 127,
+            "y-size": 80,
+                    "label_origin": [
+                        -1657,
+                        1985
+                    ]
+                },
+                {
+                    "label": "1B",
+                    "x-size": 127,
+            "y-size": 80,
+                    "label_origin": [
+                        -1657,
+                        1535
+                    ]
+                },{
+                    "label": "1C",
+                    "x-size": 127,
+            "y-size": 80,
+                    "label_origin": [
+                        -1657,
+                        1085
+                    ]
+                },
+                {
+                    "label": "1D",
+                    "x-size": 127,
+            "y-size": 80,
+                    "label_origin": [
+                        -1657,
+                        635
+                    ]
+                },{
+                    "label": "1E",
+                    "x-size": 127,
+            "y-size": 80,
+                    "label_origin": [
+                        -1657,
+                        185
+                    ]
+                },
+                {
+                    "label": "1F",
+                    "x-size": 127,
+            "y-size": 80,
+                    "label_origin": [
+                        -1657,
+                        -265
+                    ]
+                },{
+                    "label": "1G",
+                    "x-size": 127,
+            "y-size": 80,
+                    "label_origin": [
+                        -1657,
+                        -715
+                    ]
+                },
+                {
+                    "label": "1H",
+                    "x-size": 127,
+                    "y-size": 80,
+                    "label_origin": [
+                        -1657,
+                        -1165
+                    ]
+                },
+                {
+                    "label": "1I",
+                    "x-size": 110,
+            "y-size": 80,
+                    "label_origin": [
+                        -1657,
+                        -1615
+                    ]
+                },
+                {
+                    "label": "2A",
+                    "x-size": 127,
+            "y-size": 80,
+                    "label_origin": [
+                        -557,
+                        1985
+                    ]
+                },
+                {
+                    "label": "2B",
+                    "x-size": 127,
+            "y-size": 80,
+                    "label_origin": [
+                        -557,
+                        1535
+                    ]
+                },
+                {
+                    "label": "2C",
+                    "x-size": 127,
+                    "y-size": 80,
+                    "label_origin": [
+                        -557,
+                        1085
+                    ]
+                },
+                {
+                    "label": "2D",
+                    "x-size": 127,
+            "y-size": 80,
+                    "label_origin": [
+                        -557,
+                        635
+                    ]
+                },
+                {
+                    "label": "2E",
+                    "x-size": 127,
+            "y-size": 80,
+                    "label_origin": [
+                        -557,
+                        185
+                    ]
+                },
+                {
+                    "label": "2F",
+                    "x-size": 127,
+            "y-size": 80,
+                    "label_origin": [
+                        -557,
+                        -265
+                    ]
+                },
+                {
+                    "label": "2G",
+                    "x-size": 127,
+            "y-size": 80,
+                    "label_origin": [
+                        -557,
+                        -715
+                    ]
+                },
+                {
+                    "label": "2H",
+                    "x-size": 127,
+            "y-size": 80,
+                    "label_origin": [
+                        -557,
+                        -1165
+                    ]
+                },
+                {
+                    "label": "2I",
+                    "x-size": 110,
+            "y-size": 80,
+                    "label_origin": [
+                        -557,
+                        -1615
+                    ]
+                },
+                {
+                    "label": "3A",
+                    "x-size": 127,
+            "y-size": 80,
+                    "label_origin": [
+                        543,
+                        1985
+                    ]
+                },
+                {
+                    "label": "3B",
+                    "x-size": 127,
+            "y-size": 80,
+                    "label_origin": [
+                        543,
+                        1535
+                    ]
+                },
+                {
+                    "label": "3C",
+                    "x-size": 127,
+            "y-size": 80,
+                    "label_origin": [
+                        543,
+                        1085
+                    ]
+                },
+                {
+                    "label": "3D",
+                    "x-size": 127,
+            "y-size": 80,
+                    "label_origin": [
+                        543,
+                        635
+                    ]
+                },
+                {
+                    "label": "3E",
+                    "x-size": 127,
+            "y-size": 80,
+                    "label_origin": [
+                        543,
+                        185
+                    ]
+                },
+                {
+                    "label": "3F",
+                    "x-size": 127,
+            "y-size": 80,
+                    "label_origin": [
+                        543,
+                        -265
+                    ]
+                },
+                {
+                    "label": "3G",
+                    "x-size": 127,
+            "y-size": 80,
+                    "label_origin": [
+                        543,
+                        -715
+                    ]
+                },
+                {
+                    "label": "3H",
+                    "x-size": 127,
+            "y-size": 80,
+                    "label_origin": [
+                        543,
+                        -1165
+                    ]
+                },
+                {
+                    "label": "3I",
+                    "x-size": 110,
+            "y-size": 80,
+                    "label_origin": [
+                        543,
+                        -1615
+                    ]
+                }
+            ],
+            "gratings": [
+                {"x-size": 1000, "y-size": 350, "label": "1A", "grating_origin": [
+                        -1600,
+                        1625
+                    ]
+                },
+                {"x-size": 1000, "y-size": 350, "label": "2A", "grating_origin": [
+                        -500,
+                        1625
+                    ]
+                },
+                {"x-size": 1000, "y-size": 350, "label": "3A", "grating_origin": [
+                        600,
+                        1625
+                    ]
+                },
+                {"x-size": 1000, "y-size": 350, "label": "1B", "grating_origin": [
+                        -1600,
+                        1175
+                    ]
+                },
+                {"x-size": 1000, "y-size": 350, "label": "2B", "grating_origin": [
+                        -500,
+                        1175
+                    ]
+                },
+                {"x-size": 1000, "y-size": 350, "label": "3B", "grating_origin": [
+                        600,
+                        1175
+                    ]
+                },
+                {"x-size": 1000, "y-size": 350, "label": "1C", "grating_origin": [
+                        -1600,
+                        725
+                    ]
+                },
+                {"x-size": 1000, "y-size": 350, "label": "2C", "grating_origin": [
+                        -500,
+                        725
+                    ]
+                },
+                {"x-size": 1000, "y-size": 350, "label": "3C", "grating_origin": [
+                        600,
+                        725
+                    ]
+                },
+                {"x-size": 1000, "y-size": 350, "label": "1D", "grating_origin": [
+                        -1600,
+                        275
+                    ]
+                },
+                {"x-size": 1000, "y-size": 350, "label": "2D", "grating_origin": [
+                        -500,
+                        275
+                    ]
+                },
+                {"x-size": 1000, "y-size": 350, "label": "3D", "grating_origin": [
+                        600,
+                        275
+                    ]
+                },
+                {"x-size": 1000, "y-size": 350, "label": "1E", "grating_origin": [
+                        -1600,
+                        -175
+                    ]
+                },
+                {"x-size": 1000, "y-size": 350, "label": "2E", "grating_origin": [
+                        -500,
+                        -175
+                    ]
+                },
+                {"x-size": 1000, "y-size": 350, "label": "3E", "grating_origin": [
+                        600,
+                        -175
+                    ]
+                },
+                {"x-size": 1000, "y-size": 350, "label": "1F", "grating_origin": [
+                        -1600,
+                        -625
+                    ]
+                },
+                {"x-size": 1000, "y-size": 350, "label": "2F", "grating_origin": [
+                        -500,
+                        -625
+                    ]
+                },
+                {"x-size": 1000, "y-size": 350, "label": "3F", "grating_origin": [
+                        600,
+                        -625
+                    ]
+                },
+                {"x-size": 1000, "y-size": 350, "label": "1G", "grating_origin": [
+                        -1600,
+                        -1075
+                    ]
+                },
+                {"x-size": 1000, "y-size": 350, "label": "2G", "grating_origin": [
+                        -500,
+                        -1075
+                    ]
+                },
+                {"x-size": 1000, "y-size": 350, "label": "3G", "grating_origin": [
+                        600,
+                        -1075
+                    ]
+                },
+                {"x-size": 1000, "y-size": 350, "label": "1H", "grating_origin": [
+                        -1600,
+                        -1525
+                    ]
+                },
+                {"x-size": 1000, "y-size": 350, "label": "2H", "grating_origin": [
+                        -500,
+                        -1525
+                    ]
+                },
+                {"x-size": 1000, "y-size": 350, "label": "3H", "grating_origin": [
+                        600,
+                        -1525
+                    ]
+                },
+                {"x-size": 1000, "y-size": 350, "label": "1I", "grating_origin": [
+                        -1600,
+                        -1975
+                    ]
+                },
+                {"x-size": 1000, "y-size": 350, "label": "2I", "grating_origin": [
+                        -500,
+                        -1975
+                    ]
+                },
+                {"x-size": 1000, "y-size": 350, "label": "3I", "grating_origin": [
+                        600,
+                        -1975
+                    ]
+                }
+            ]
+        },
+        {
+            "chip_type": "IMECII_4",
+            "auto_locate_grating": true,
+            "labels": [
+                {"x-size": 500, "y-size": 700, "label": "4_large", "grating_origin": [
+                        -2300,
+                        1500
+                    ]},
+                {"x-size": 127, "y-size": 80, "label": "1A", "grating_origin": [
+                        -1657,
+                        1210
+                    ]
+                },
+                {"x-size": 127, "y-size": 80, "label": "1B", "grating_origin": [
+                        -557,
+                        1210
+                    ]
+                },
+                {"x-size": 127, "y-size": 80, "label": "1C", "grating_origin": [
+                        543,
+                        1210
+                    ]
+                },
+                {"x-size": 127, "y-size": 80, "label": "2A", "grating_origin": [
+                        -1657,
+                        710
+                    ]
+                },
+                {"x-size": 127, "y-size": 80, "label": "2B", "grating_origin": [
+                        -557,
+                        710
+                    ]
+                },
+                {"x-size": 127, "y-size": 80, "label": "2C", "grating_origin": [
+                        543,
+                        710
+                    ]
+                },
+                {"x-size": 127, "y-size": 80, "label": "3A", "grating_origin": [
+                        -1657,
+                        210
+                    ]
+                },
+                {"x-size": 127, "y-size": 80, "label": "3B", "grating_origin": [
+                        -557,
+                        210
+                    ]
+                },
+                {"x-size": 127, "y-size": 80, "label": "3C", "grating_origin": [
+                        543,
+                        210
+                    ]
+                },
+                {"x-size": 127, "y-size": 80, "label": "4A", "grating_origin": [
+                        -1657,
+                        -290
+                    ]
+                },
+                {"x-size": 127, "y-size": 80, "label": "4B", "grating_origin": [
+                        -557,
+                        -290
+                    ]
+                },
+                {"x-size": 127, "y-size": 80, "label": "4C", "grating_origin": [
+                        543,
+                        -290
+                    ]
+                },
+                {"x-size": 127, "y-size": 80, "label": "5A", "grating_origin": [
+                        -1657,
+                        -790
+                    ]
+                },
+                {"x-size": 127, "y-size": 80, "label": "5B", "grating_origin": [
+                        -557,
+                        -790
+                    ]
+                },
+                {"x-size": 127, "y-size": 80, "label": "5C", "grating_origin": [
+                        543,
+                        -790
+                    ]
+                }
+            ],
+            "gratings": [
+                {"x-size": 1000, "y-size": 400, "label": "1A", "grating_origin": [
+                        -1600,
+                        800
+                    ]
+                },
+                {"x-size": 1000, "y-size": 400, "label": "1B", "grating_origin": [
+                        -500,
+                        800
+                    ]
+                },
+                {"x-size": 1000, "y-size": 400, "label": "1C", "grating_origin": [
+                        600,
+                        800
+                    ]
+                },
+                {"x-size": 1000, "y-size": 400, "label": "2A", "grating_origin": [
+                        -1600,
+                        300
+                    ]
+                },
+                {"x-size": 1000, "y-size": 400, "label": "2B", "grating_origin": [
+                        -500,
+                        300
+                    ]
+                },
+                {"x-size": 1000, "y-size": 400, "label": "2C", "grating_origin": [
+                        600,
+                        300
+                    ]
+                },
+                {"x-size": 1000, "y-size": 400, "label": "3A", "grating_origin": [
+                        -1600,
+                        -200
+                    ]
+                },
+                {"x-size": 1000, "y-size": 400, "label": "3B", "grating_origin": [
+                        -500,
+                        -200
+                    ]
+                },
+                {"x-size": 1000, "y-size": 400, "label": "3C", "grating_origin": [
+                        600,
+                        -200
+                    ]
+                },
+                {"x-size": 1000, "y-size": 400, "label": "4A", "grating_origin": [
+                        -1600,
+                        -700
+                    ]
+                },
+                {"x-size": 1000, "y-size": 400, "label": "4B", "grating_origin": [
+                        -500,
+                        -700
+                    ]
+                },
+                {"x-size": 1000, "y-size": 400, "label": "4C", "grating_origin": [
+                        600,
+                        -700
+                    ]
+                },
+                {"x-size": 1000, "y-size": 400, "label": "5A", "grating_origin": [
+                        -1600,
+                        -1200
+                    ]
+                },
+                {"x-size": 1000, "y-size": 400, "label": "5B", "grating_origin": [
+                        -500,
+                        -1200
+                    ]
+                },
+                {"x-size": 1000, "y-size": 400, "label": "5C", "grating_origin": [
+                        600,
+                        -1200
+                    ]
+                }
+            ]
+        },
+        {
+            "chip_type": "IMECII_2",
+            "auto_locate_grating": true,
+            "labels": [{
+                    "x-size": 500,
+                    "y-size": 700,
+                    "label": "2-Large",
+                    "label_origin": [
+                        -2300,
+                        1500
+                    ]
+                },
+                {
+                    "x-size": 347,
+                    "y-size": 375,
+                    "label": "5--A_corner",
+                    "label_origin": [
+                        1971,
+                        1960
+                    ]
+                },
+                {
+                    "x-size": 347,
+                    "y-size": 375,
+                    "label": "5--E_corner",
+                    "label_origin": [
+                        1971,
+                        -2335
+                    ]
+                },
+                {
+                    "x-size": 341,
+                    "y-size": 375,
+                    "label": "E--1_corner",
+                    "label_origin": [
+                        -2312,
+                        -2335
+                    ]
+                },
+                {
+                    "x-size": 57,
+                    "y-size": 80,
+                    "label": "B-Left",
+                    "label_origin": [
+                        -2312,
+                        960
+                    ]
+                },
+                {
+                    "x-size": 57,
+                    "y-size": 80,
+                    "label": "C-Left",
+                    "label_origin": [
+                        -2312,
+                        -40
+                    ]
+                },
+                {
+                    "x-size": 57,
+                    "y-size": 80,
+                    "label": "D-Left",
+                    "label_origin": [
+                        -2312,
+                        -1040
+                    ]
+                },
+                {
+                    "x-size": 57,
+                    "y-size": 80,
+                    "label": "E-Left",
+                    "label_origin": [
+                        -2312,
+                        -2040
+                    ]
+                },
+                {
+                    "x-size": 57,
+                    "y-size": 80,
+                    "label": "A-Right",
+                    "label_origin": [
+                        2261,
+                        1960
+                    ]
+                },
+                {
+                    "x-size": 57,
+                    "y-size": 80,
+                    "label": "B-Right",
+                    "label_origin": [
+                        2261,
+                        960
+                    ]
+                },
+                {
+                    "x-size": 57,
+                    "y-size": 80,
+                    "label": "C-Right",
+                    "label_origin": [
+                        2261,
+                        -40
+                    ]
+                },
+                {
+                    "x-size": 57,
+                    "y-size": 80,
+                    "label": "D-Right",
+                    "label_origin": [
+                        2261,
+                        -1040
+                    ]
+                },
+                {
+                    "x-size": 57,
+                    "y-size": 80,
+                    "label": "E-Right",
+                    "label_origin": [
+                        2261,
+                        -2040
+                    ]
+                },
+                {
+                    "x-size": 57,
+                    "y-size": 80,
+                    "label": "2-Top",
+                    "label_origin": [
+                        -1029,
+                        2255
+                    ]
+                },
+                {
+                    "x-size": 57,
+                    "y-size": 80,
+                    "label": "3-Top",
+                    "label_origin": [
+                        -29,
+                        2255
+                    ]
+                },
+                {
+                    "x-size": 57,
+                    "y-size": 80,
+                    "label": "4-Top",
+                    "label_origin": [
+                        971,
+                        2255
+                    ]
+                },
+                {
+                    "x-size": 57,
+                    "y-size": 80,
+                    "label": "5-Top",
+                    "label_origin": [
+                        1971,
+                        2255
+                    ]
+                },
+                {
+                    "x-size": 57,
+                    "y-size": 80,
+                    "label": "1-Bottom",
+                    "label_origin": [
+                        -2029,
+                        -2335
+                    ]
+                },
+                {
+                    "x-size": 57,
+                    "y-size": 80,
+                    "label": "2-Bottom",
+                    "label_origin": [
+                        -1029,
+                        -2335
+                    ]
+                },
+                {
+                    "x-size": 57,
+                    "y-size": 80,
+                    "label": "3-Bottom",
+                    "label_origin": [
+                        -29,
+                        -2335
+                    ]
+                },
+                {
+                    "x-size": 57,
+                    "y-size": 80,
+                    "label": "4-Bottom",
+                    "label_origin": [
+                        971,
+                        -2335
+                    ]
+                },
+                {
+                    "x-size": 57,
+                    "y-size": 80,
+                    "label": "5-Bottom",
+                    "label_origin": [
+                        1971,
+                        -2335
+                    ]
+                }
+            ],
+            "gratings": [
+                {"x-size": 250, "y-size": 205, "label": "001A", "grating_origin": [
+                        -1555,
+                        1940
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "002A", "grating_origin": [
+                        -1035,
+                        1940
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "003A", "grating_origin": [
+                        -515,
+                        1940
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "004A", "grating_origin": [
+                        5,
+                        1940
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "005A", "grating_origin": [
+                        525,
+                        1940
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "006A", "grating_origin": [
+                        1045,
+                        1940
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "007A", "grating_origin": [
+                        1565,
+                        1940
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "011A", "grating_origin": [
+                        -1685,
+                        1725
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "012A", "grating_origin": [
+                        -1165,
+                        1725
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "013A", "grating_origin": [
+                        -645,
+                        1725
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "014A", "grating_origin": [
+                        -125,
+                        1725
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "015A", "grating_origin": [
+                        395,
+                        1725
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "016A", "grating_origin": [
+                        915,
+                        1725
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "017A", "grating_origin": [
+                        1435,
+                        1725
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "018A", "grating_origin": [
+                        1955,
+                        1725
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "021A", "grating_origin": [
+                        -1555,
+                        1510
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "022A", "grating_origin": [
+                        -1035,
+                        1510
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "023A", "grating_origin": [
+                        -515,
+                        1510
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "024A", "grating_origin": [
+                        5,
+                        1510
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "025A", "grating_origin": [
+                        525,
+                        1510
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "026A", "grating_origin": [
+                        1045,
+                        1510
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "027A", "grating_origin": [
+                        1565,
+                        1510
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "031A", "grating_origin": [
+                        -1685,
+                        1295
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "032A", "grating_origin": [
+                        -1165,
+                        1295
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "033A", "grating_origin": [
+                        -645,
+                        1295
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "034A", "grating_origin": [
+                        -125,
+                        1295
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "035A", "grating_origin": [
+                        395,
+                        1295
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "036A", "grating_origin": [
+                        915,
+                        1295
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "037A", "grating_origin": [
+                        1435,
+                        1295
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "038A", "grating_origin": [
+                        1955,
+                        1295
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "040A", "grating_origin": [
+                        -2075,
+                        1080
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "041A", "grating_origin": [
+                        -1555,
+                        1080
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "042A", "grating_origin": [
+                        -1035,
+                        1080
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "043A", "grating_origin": [
+                        -515,
+                        1080
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "044A", "grating_origin": [
+                        5,
+                        1080
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "045A", "grating_origin": [
+                        525,
+                        1080
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "046A", "grating_origin": [
+                        1045,
+                        1080
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "047A", "grating_origin": [
+                        1565,
+                        1080
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "050A", "grating_origin": [
+                        -2205,
+                        865
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "051A", "grating_origin": [
+                        -1685,
+                        865
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "052A", "grating_origin": [
+                        -1165,
+                        865
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "053A", "grating_origin": [
+                        -645,
+                        865
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "054A", "grating_origin": [
+                        -125,
+                        865
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "055A", "grating_origin": [
+                        395,
+                        865
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "056A", "grating_origin": [
+                        915,
+                        865
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "057A", "grating_origin": [
+                        1435,
+                        865
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "058A", "grating_origin": [
+                        1955,
+                        865
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "060A", "grating_origin": [
+                        -2075,
+                        650
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "061A", "grating_origin": [
+                        -1555,
+                        650
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "062A", "grating_origin": [
+                        -1035,
+                        650
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "063A", "grating_origin": [
+                        -515,
+                        650
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "064A", "grating_origin": [
+                        5,
+                        650
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "065A", "grating_origin": [
+                        525,
+                        650
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "066A", "grating_origin": [
+                        1045,
+                        650
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "067A", "grating_origin": [
+                        1565,
+                        650
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "070A", "grating_origin": [
+                        -2205,
+                        435
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "071A", "grating_origin": [
+                        -1685,
+                        435
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "072A", "grating_origin": [
+                        -1165,
+                        435
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "073A", "grating_origin": [
+                        -645,
+                        435
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "074A", "grating_origin": [
+                        -125,
+                        435
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "075A", "grating_origin": [
+                        395,
+                        435
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "076A", "grating_origin": [
+                        915,
+                        435
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "077A", "grating_origin": [
+                        1435,
+                        435
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "078A", "grating_origin": [
+                        1955,
+                        435
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "080A", "grating_origin": [
+                        -2075,
+                        220
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "081A", "grating_origin": [
+                        -1555,
+                        220
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "082A", "grating_origin": [
+                        -1035,
+                        220
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "083A", "grating_origin": [
+                        -515,
+                        220
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "084A", "grating_origin": [
+                        5,
+                        220
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "085A", "grating_origin": [
+                        525,
+                        220
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "086A", "grating_origin": [
+                        1045,
+                        220
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "087A", "grating_origin": [
+                        1565,
+                        220
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "090A", "grating_origin": [
+                        -2205,
+                        5
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "091A", "grating_origin": [
+                        -1685,
+                        5
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "092A", "grating_origin": [
+                        -1165,
+                        5
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "093A", "grating_origin": [
+                        -645,
+                        5
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "094A", "grating_origin": [
+                        -125,
+                        5
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "095A", "grating_origin": [
+                        395,
+                        5
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "096A", "grating_origin": [
+                        915,
+                        5
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "097A", "grating_origin": [
+                        1435,
+                        5
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "098A", "grating_origin": [
+                        1955,
+                        5
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "100A", "grating_origin": [
+                        -2075,
+                        -210
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "101A", "grating_origin": [
+                        -1555,
+                        -210
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "102A", "grating_origin": [
+                        -1035,
+                        -210
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "103A", "grating_origin": [
+                        -515,
+                        -210
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "104A", "grating_origin": [
+                        5,
+                        -210
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "105A", "grating_origin": [
+                        525,
+                        -210
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "106A", "grating_origin": [
+                        1045,
+                        -210
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "107A", "grating_origin": [
+                        1565,
+                        -210
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "110A", "grating_origin": [
+                        -2205,
+                        -425
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "111A", "grating_origin": [
+                        -1685,
+                        -425
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "112A", "grating_origin": [
+                        -1165,
+                        -425
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "113A", "grating_origin": [
+                        -645,
+                        -425
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "114A", "grating_origin": [
+                        -125,
+                        -425
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "115A", "grating_origin": [
+                        395,
+                        -425
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "116A", "grating_origin": [
+                        915,
+                        -425
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "117A", "grating_origin": [
+                        1435,
+                        -425
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "118A", "grating_origin": [
+                        1955,
+                        -425
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "120A", "grating_origin": [
+                        -2075,
+                        -640
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "121A", "grating_origin": [
+                        -1555,
+                        -640
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "122A", "grating_origin": [
+                        -1035,
+                        -640
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "123A", "grating_origin": [
+                        -515,
+                        -640
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "124A", "grating_origin": [
+                        5,
+                        -640
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "125A", "grating_origin": [
+                        525,
+                        -640
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "126A", "grating_origin": [
+                        1045,
+                        -640
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "127A", "grating_origin": [
+                        1565,
+                        -640
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "130A", "grating_origin": [
+                        -2205,
+                        -855
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "131A", "grating_origin": [
+                        -1685,
+                        -855
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "132A", "grating_origin": [
+                        -1165,
+                        -855
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "133A", "grating_origin": [
+                        -645,
+                        -855
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "134A", "grating_origin": [
+                        -125,
+                        -855
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "135A", "grating_origin": [
+                        395,
+                        -855
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "136A", "grating_origin": [
+                        915,
+                        -855
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "137A", "grating_origin": [
+                        1435,
+                        -855
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "138A", "grating_origin": [
+                        1955,
+                        -855
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "140A", "grating_origin": [
+                        -2075,
+                        -1070
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "141A", "grating_origin": [
+                        -1555,
+                        -1070
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "142A", "grating_origin": [
+                        -1035,
+                        -1070
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "143A", "grating_origin": [
+                        -515,
+                        -1070
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "144A", "grating_origin": [
+                        5,
+                        -1070
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "145A", "grating_origin": [
+                        525,
+                        -1070
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "146A", "grating_origin": [
+                        1045,
+                        -1070
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "147A", "grating_origin": [
+                        1565,
+                        -1070
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "150A", "grating_origin": [
+                        -2205,
+                        -1285
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "151A", "grating_origin": [
+                        -1685,
+                        -1285
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "152A", "grating_origin": [
+                        -1165,
+                        -1285
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "153A", "grating_origin": [
+                        -645,
+                        -1285
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "154A", "grating_origin": [
+                        -125,
+                        -1285
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "155A", "grating_origin": [
+                        395,
+                        -1285
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "156A", "grating_origin": [
+                        915,
+                        -1285
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "157A", "grating_origin": [
+                        1435,
+                        -1285
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "158A", "grating_origin": [
+                        1955,
+                        -1285
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "160A", "grating_origin": [
+                        -2075,
+                        -1500
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "161A", "grating_origin": [
+                        -1555,
+                        -1500
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "162A", "grating_origin": [
+                        -1035,
+                        -1500
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "163A", "grating_origin": [
+                        -515,
+                        -1500
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "164A", "grating_origin": [
+                        5,
+                        -1500
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "165A", "grating_origin": [
+                        525,
+                        -1500
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "166A", "grating_origin": [
+                        1045,
+                        -1500
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "167A", "grating_origin": [
+                        1565,
+                        -1500
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "170A", "grating_origin": [
+                        -2205,
+                        -1715
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "171A", "grating_origin": [
+                        -1685,
+                        -1715
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "172A", "grating_origin": [
+                        -1165,
+                        -1715
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "173A", "grating_origin": [
+                        -645,
+                        -1715
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "174A", "grating_origin": [
+                        -125,
+                        -1715
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "175A", "grating_origin": [
+                        395,
+                        -1715
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "176A", "grating_origin": [
+                        915,
+                        -1715
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "177A", "grating_origin": [
+                        1435,
+                        -1715
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "178A", "grating_origin": [
+                        1955,
+                        -1715
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "180A", "grating_origin": [
+                        -2075,
+                        -1930
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "181A", "grating_origin": [
+                        -1555,
+                        -1930
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "182A", "grating_origin": [
+                        -1035,
+                        -1930
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "183A", "grating_origin": [
+                        -515,
+                        -1930
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "184A", "grating_origin": [
+                        5,
+                        -1930
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "185A", "grating_origin": [
+                        525,
+                        -1930
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "186A", "grating_origin": [
+                        1045,
+                        -1930
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "187A", "grating_origin": [
+                        1565,
+                        -1930
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "190A", "grating_origin": [
+                        -2205,
+                        -2145
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "191A", "grating_origin": [
+                        -1685,
+                        -2145
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "192A", "grating_origin": [
+                        -1165,
+                        -2145
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "193A", "grating_origin": [
+                        -645,
+                        -2145
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "194A", "grating_origin": [
+                        -125,
+                        -2145
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "195A", "grating_origin": [
+                        395,
+                        -2145
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "196A", "grating_origin": [
+                        915,
+                        -2145
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "197A", "grating_origin": [
+                        1435,
+                        -2145
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "198A", "grating_origin": [
+                        1955,
+                        -2145
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "001B", "grating_origin": [
+                        -1295,
+                        1940
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "002B", "grating_origin": [
+                        -775,
+                        1940
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "003B", "grating_origin": [
+                        -255,
+                        1940
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "004B", "grating_origin": [
+                        265,
+                        1940
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "005B", "grating_origin": [
+                        785,
+                        1940
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "006B", "grating_origin": [
+                        1305,
+                        1940
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "007B", "grating_origin": [
+                        1825,
+                        1940
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "011B", "grating_origin": [
+                        -1425,
+                        1725
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "012B", "grating_origin": [
+                        -905,
+                        1725
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "013B", "grating_origin": [
+                        -385,
+                        1725
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "014B", "grating_origin": [
+                        135,
+                        1725
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "015B", "grating_origin": [
+                        655,
+                        1725
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "016B", "grating_origin": [
+                        1175,
+                        1725
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "017B", "grating_origin": [
+                        1695,
+                        1725
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "021B", "grating_origin": [
+                        -1295,
+                        1510
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "022B", "grating_origin": [
+                        -775,
+                        1510
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "023B", "grating_origin": [
+                        -255,
+                        1510
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "024B", "grating_origin": [
+                        265,
+                        1510
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "025B", "grating_origin": [
+                        785,
+                        1510
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "026B", "grating_origin": [
+                        1305,
+                        1510
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "027B", "grating_origin": [
+                        1825,
+                        1510
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "031B", "grating_origin": [
+                        -1425,
+                        1295
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "032B", "grating_origin": [
+                        -905,
+                        1295
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "033B", "grating_origin": [
+                        -385,
+                        1295
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "034B", "grating_origin": [
+                        135,
+                        1295
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "035B", "grating_origin": [
+                        655,
+                        1295
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "036B", "grating_origin": [
+                        1175,
+                        1295
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "037B", "grating_origin": [
+                        1695,
+                        1295
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "040B", "grating_origin": [
+                        -1815,
+                        1080
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "041B", "grating_origin": [
+                        -1295,
+                        1080
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "042B", "grating_origin": [
+                        -775,
+                        1080
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "043B", "grating_origin": [
+                        -255,
+                        1080
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "044B", "grating_origin": [
+                        265,
+                        1080
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "045B", "grating_origin": [
+                        785,
+                        1080
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "046B", "grating_origin": [
+                        1305,
+                        1080
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "047B", "grating_origin": [
+                        1825,
+                        1080
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "050B", "grating_origin": [
+                        -1945,
+                        865
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "051B", "grating_origin": [
+                        -1425,
+                        865
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "052B", "grating_origin": [
+                        -905,
+                        865
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "053B", "grating_origin": [
+                        -385,
+                        865
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "054B", "grating_origin": [
+                        135,
+                        865
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "055B", "grating_origin": [
+                        655,
+                        865
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "056B", "grating_origin": [
+                        1175,
+                        865
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "057B", "grating_origin": [
+                        1695,
+                        865
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "060B", "grating_origin": [
+                        -1815,
+                        650
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "061B", "grating_origin": [
+                        -1295,
+                        650
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "062B", "grating_origin": [
+                        -775,
+                        650
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "063B", "grating_origin": [
+                        -255,
+                        650
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "064B", "grating_origin": [
+                        265,
+                        650
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "065B", "grating_origin": [
+                        785,
+                        650
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "066B", "grating_origin": [
+                        1305,
+                        650
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "067B", "grating_origin": [
+                        1825,
+                        650
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "070B", "grating_origin": [
+                        -1945,
+                        435
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "071B", "grating_origin": [
+                        -1425,
+                        435
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "072B", "grating_origin": [
+                        -905,
+                        435
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "073B", "grating_origin": [
+                        -385,
+                        435
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "074B", "grating_origin": [
+                        135,
+                        435
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "075B", "grating_origin": [
+                        655,
+                        435
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "076B", "grating_origin": [
+                        1175,
+                        435
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "077B", "grating_origin": [
+                        1695,
+                        435
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "080B", "grating_origin": [
+                        -1815,
+                        220
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "081B", "grating_origin": [
+                        -1295,
+                        220
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "082B", "grating_origin": [
+                        -775,
+                        220
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "083B", "grating_origin": [
+                        -255,
+                        220
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "084B", "grating_origin": [
+                        265,
+                        220
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "085B", "grating_origin": [
+                        785,
+                        220
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "086B", "grating_origin": [
+                        1305,
+                        220
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "087B", "grating_origin": [
+                        1825,
+                        220
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "090B", "grating_origin": [
+                        -1945,
+                        5
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "091B", "grating_origin": [
+                        -1425,
+                        5
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "092B", "grating_origin": [
+                        -905,
+                        5
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "093B", "grating_origin": [
+                        -385,
+                        5
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "094B", "grating_origin": [
+                        135,
+                        5
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "095B", "grating_origin": [
+                        655,
+                        5
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "096B", "grating_origin": [
+                        1175,
+                        5
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "097B", "grating_origin": [
+                        1695,
+                        5
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "100B", "grating_origin": [
+                        -1815,
+                        -210
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "101B", "grating_origin": [
+                        -1295,
+                        -210
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "102B", "grating_origin": [
+                        -775,
+                        -210
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "103B", "grating_origin": [
+                        -255,
+                        -210
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "104B", "grating_origin": [
+                        265,
+                        -210
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "105B", "grating_origin": [
+                        785,
+                        -210
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "106B", "grating_origin": [
+                        1305,
+                        -210
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "107B", "grating_origin": [
+                        1825,
+                        -210
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "110B", "grating_origin": [
+                        -1945,
+                        -425
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "111B", "grating_origin": [
+                        -1425,
+                        -425
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "112B", "grating_origin": [
+                        -905,
+                        -425
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "113B", "grating_origin": [
+                        -385,
+                        -425
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "114B", "grating_origin": [
+                        135,
+                        -425
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "115B", "grating_origin": [
+                        655,
+                        -425
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "116B", "grating_origin": [
+                        1175,
+                        -425
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "117B", "grating_origin": [
+                        1695,
+                        -425
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "120B", "grating_origin": [
+                        -1815,
+                        -640
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "121B", "grating_origin": [
+                        -1295,
+                        -640
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "122B", "grating_origin": [
+                        -775,
+                        -640
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "123B", "grating_origin": [
+                        -255,
+                        -640
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "124B", "grating_origin": [
+                        265,
+                        -640
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "125B", "grating_origin": [
+                        785,
+                        -640
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "126B", "grating_origin": [
+                        1305,
+                        -640
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "127B", "grating_origin": [
+                        1825,
+                        -640
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "130B", "grating_origin": [
+                        -1945,
+                        -855
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "131B", "grating_origin": [
+                        -1425,
+                        -855
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "132B", "grating_origin": [
+                        -905,
+                        -855
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "133B", "grating_origin": [
+                        -385,
+                        -855
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "134B", "grating_origin": [
+                        135,
+                        -855
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "135B", "grating_origin": [
+                        655,
+                        -855
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "136B", "grating_origin": [
+                        1175,
+                        -855
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "137B", "grating_origin": [
+                        1695,
+                        -855
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "140B", "grating_origin": [
+                        -1815,
+                        -1070
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "141B", "grating_origin": [
+                        -1295,
+                        -1070
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "142B", "grating_origin": [
+                        -775,
+                        -1070
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "143B", "grating_origin": [
+                        -255,
+                        -1070
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "144B", "grating_origin": [
+                        265,
+                        -1070
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "145B", "grating_origin": [
+                        785,
+                        -1070
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "146B", "grating_origin": [
+                        1305,
+                        -1070
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "147B", "grating_origin": [
+                        1825,
+                        -1070
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "150B", "grating_origin": [
+                        -1945,
+                        -1285
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "151B", "grating_origin": [
+                        -1425,
+                        -1285
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "152B", "grating_origin": [
+                        -905,
+                        -1285
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "153B", "grating_origin": [
+                        -385,
+                        -1285
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "154B", "grating_origin": [
+                        135,
+                        -1285
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "155B", "grating_origin": [
+                        655,
+                        -1285
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "156B", "grating_origin": [
+                        1175,
+                        -1285
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "157B", "grating_origin": [
+                        1695,
+                        -1285
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "160B", "grating_origin": [
+                        -1815,
+                        -1500
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "161B", "grating_origin": [
+                        -1295,
+                        -1500
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "162B", "grating_origin": [
+                        -775,
+                        -1500
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "163B", "grating_origin": [
+                        -255,
+                        -1500
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "164B", "grating_origin": [
+                        265,
+                        -1500
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "165B", "grating_origin": [
+                        785,
+                        -1500
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "166B", "grating_origin": [
+                        1305,
+                        -1500
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "167B", "grating_origin": [
+                        1825,
+                        -1500
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "170B", "grating_origin": [
+                        -1945,
+                        -1715
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "171B", "grating_origin": [
+                        -1425,
+                        -1715
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "172B", "grating_origin": [
+                        -905,
+                        -1715
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "173B", "grating_origin": [
+                        -385,
+                        -1715
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "174B", "grating_origin": [
+                        135,
+                        -1715
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "175B", "grating_origin": [
+                        655,
+                        -1715
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "176B", "grating_origin": [
+                        1175,
+                        -1715
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "177B", "grating_origin": [
+                        1695,
+                        -1715
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "180B", "grating_origin": [
+                        -1815,
+                        -1930
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "181B", "grating_origin": [
+                        -1295,
+                        -1930
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "182B", "grating_origin": [
+                        -775,
+                        -1930
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "183B", "grating_origin": [
+                        -255,
+                        -1930
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "184B", "grating_origin": [
+                        265,
+                        -1930
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "185B", "grating_origin": [
+                        785,
+                        -1930
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "186B", "grating_origin": [
+                        1305,
+                        -1930
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "187B", "grating_origin": [
+                        1825,
+                        -1930
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "190B", "grating_origin": [
+                        -1945,
+                        -2145
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "191B", "grating_origin": [
+                        -1425,
+                        -2145
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "192B", "grating_origin": [
+                        -905,
+                        -2145
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "193B", "grating_origin": [
+                        -385,
+                        -2145
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "194B", "grating_origin": [
+                        135,
+                        -2145
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "195B", "grating_origin": [
+                        655,
+                        -2145
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "196B", "grating_origin": [
+                        1175,
+                        -2145
+                    ]
+                },
+                {"x-size": 250, "y-size": 205, "label": "197B", "grating_origin": [
+                        1695,
+                        -2145
+                    ]
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,139 @@
+{
+    "chip_type": "IMECII_2",
+    "features": [
+        {
+            "label": "B-Left",
+            "user_location": [
+                1320,
+                5022
+            ],
+            "chip_location": [
+                -2312,
+                960
+            ],
+            "refined_location": [
+                1258,
+                4865
+            ],
+            "match_quality": 1.700259804725647,
+            "label_locating_success": true,
+            "feature_offset": [
+                4519.860590575554,
+                3510.5942184461364
+            ]
+        },
+        {
+            "label": "C-Left",
+            "user_location": [
+                1296,
+                3588
+            ],
+            "chip_location": [
+                -2312,
+                -40
+            ],
+            "refined_location": [
+                1260,
+                3452
+            ],
+            "match_quality": 2.08968448638916,
+            "label_locating_success": true,
+            "feature_offset": [
+                4521.860590575554,
+                3508.433574231411
+            ]
+        },
+        {
+            "label": "D-Left",
+            "user_location": [
+                1254,
+                2178
+            ],
+            "chip_location": [
+                -2312,
+                -1040
+            ],
+            "refined_location": [
+                1261,
+                2040
+            ],
+            "match_quality": 2.1281793117523193,
+            "label_locating_success": true,
+            "feature_offset": [
+                4522.860590575554,
+                3507.272930016685
+            ]
+        },
+        {
+            "label": "E-Left",
+            "user_location": [
+                1206,
+                768
+            ],
+            "chip_location": [
+                -2312,
+                -2040
+            ],
+            "refined_location": [
+                1255,
+                636
+            ],
+            "match_quality": 2.4637951850891113,
+            "label_locating_success": true,
+            "feature_offset": [
+                4516.860590575554,
+                3514.1122858019594
+            ]
+        }
+    ],
+    "user_location_all_rotation_angles": [
+        -90.95883566124951,
+        -91.32941027315728,
+        -91.53506251875962,
+        -91.706178294447,
+        -91.82796824430501,
+        -91.94974167210688
+    ],
+    "chip_location_all_rotation_angles": [
+        -90.0,
+        -90.0,
+        -90.0,
+        -90.0,
+        -90.0,
+        -90.0
+    ],
+    "user_location_rotation_angle": 1.620620406603308,
+    "rotation_angle": 1.4582091838080729,
+    "user_location_all_scale_factors": [
+        1.4342008227580962,
+        1.4223828598517347,
+        1.4185090764602106,
+        1.4106253932210353,
+        1.4107179023461778,
+        1.4108167847031026
+    ],
+    "user_location_scale_factor": 1.4146629305816565,
+    "scale_factor": 1.4108393557852743,
+    "refined_location_all_rotation_angles": [
+        -89.75670728173516,
+        -89.77690251701587,
+        -89.87806544404611,
+        -89.79711211036341,
+        -89.93896048525875,
+        -90.0816178643279
+    ],
+    "refined_location_rotation_angle": 1.4582091838080729,
+    "refined_location_all_scale_factors": [
+        1.4130127387960805,
+        1.4125107079240142,
+        1.4096698589070815,
+        1.4120088526634669,
+        1.408000799005455,
+        1.404001424500702
+    ],
+    "refined_location_scale_factor": 1.4108393557852743,
+    "offset": [
+        4520.860590575554,
+        3509.5138963387735
+    ]
+}

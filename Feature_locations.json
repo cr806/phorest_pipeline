@@ -1,0 +1,33 @@
+{
+    "chip_type": "IMECII_2",
+    "features": [
+        {
+            "label": "B-Left",
+            "feature_location": [
+                1320,
+                5022
+            ]
+        },
+        {
+            "label": "C-Left",
+            "feature_location": [
+                1296,
+                3588
+            ]
+        },
+        {
+            "label": "D-Left",
+            "feature_location": [
+                1254,
+                2178
+            ]
+        },
+        {
+            "label": "E-Left",
+            "feature_location": [
+                1206,
+                768
+            ]
+        }
+    ]
+}
