@@ -3,6 +3,8 @@ import datetime
 import sys
 import time
 
+from pathlib import Path
+
 from phorest_pipeline.shared.config import (
     CONTINUOUS_DIR,
     ENABLE_CAMERA,
@@ -25,9 +27,10 @@ if ENABLE_CAMERA:
         from phorest_pipeline.collector.dummy_camera_controller import camera_controller
     print(f'[CONTINUOUS CAPTURE] Camera type: {CAMERA_TYPE}')
 
+SAVENAME = 'continuous_capture_frame.jpg'
 
 def perform_continuous_capture(
-    current_state: CollectorState, failure_count: int
+    current_state: CollectorState, failure_count: int, filename: Path = None
 ) -> tuple[CollectorState, int]:
     """State machine logic for the continuous capture. Returns (next_state, updated_failure_count)."""
     next_state = current_state
@@ -56,7 +59,7 @@ def perform_continuous_capture(
 
             if ENABLE_CAMERA:
                 print('[CONTINUOUS CAPTURE] Camera is enabled.')
-                cam_status, cam_msg, _ = camera_controller(CONTINUOUS_DIR)
+                cam_status, cam_msg, _ = camera_controller(CONTINUOUS_DIR, savename=filename)
                 if cam_status != 0:
                     collection_successful = False
                 print(cam_msg)
@@ -101,7 +104,7 @@ def run_continuous_capture():
 
     try:
         while True:
-            current_state, failure_count = perform_continuous_capture(current_state, failure_count)
+            current_state, failure_count = perform_continuous_capture(current_state, failure_count, filename=SAVENAME)
 
             # --- Check for FATAL_ERROR state to exit ---
             if current_state == CollectorState.FATAL_ERROR:
