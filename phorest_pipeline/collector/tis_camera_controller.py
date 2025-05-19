@@ -54,6 +54,7 @@ def camera_controller(data_dir: Path) -> tuple[int, str, dict | None]:
 
         # --- Camera Settings ---
         # 0. Set resolution and image format
+        print('[CAMERA] [INFO] Attempting to set resolution')
         success = cap.set(cv2.CAP_PROP_FRAME_WIDTH, RESOLTION[0])
         success = success and cap.set(cv2.CAP_PROP_FRAME_HEIGHT, RESOLTION[1])
         if not success:
@@ -63,22 +64,27 @@ def camera_controller(data_dir: Path) -> tuple[int, str, dict | None]:
             height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
             if width != RESOLTION[0] or height != RESOLTION[1]:
                 print(f"[CAMERA] [ERROR] Camera resolution not set correctly: {width}x{height}")
-
+        print('[CAMERA] [INFO] Camera resolution set')
+        
+        print('[CAMERA] [INFO] Attempting to set image format')
         fourcc = cv2.VideoWriter_fourcc(*IMAGE_FORMAT)
         success = cap.set(cv2.CAP_PROP_FOURCC, fourcc)
         if not success:
             print(f"[CAMERA] [ERROR] Failed to set the IMAGE_FORMAT to: {IMAGE_FORMAT}")
         else:
-            fourcc = cap.get(cv2.CAP_PROP_FOURCC)
+            fourcc = int(cap.get(cv2.CAP_PROP_FOURCC))
             fourcc_str = (
                 chr((fourcc & 0xFF))
                 + chr((fourcc >> 8) & 0xFF)
                 + chr((fourcc >> 16) & 0xFF)
                 + chr((fourcc >> 24) & 0xFF)
             )
+
             if fourcc_str != IMAGE_FORMAT:
                 print(f"[CAMERA] [ERROR] Camera image format not set correctly: {fourcc_str}")
+        print('[CAMERA] [INFO] Camera image format set')
 
+        print('[CAMERA] [INFO] Attempting to set camera auto exposure to manual')
         success = cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 1)
         if not success:
             return (1, f'[CAMERA] [ERROR] Could not set CAP_PROP_AUTO_EXPOSURE to manual', None)
@@ -86,7 +92,8 @@ def camera_controller(data_dir: Path) -> tuple[int, str, dict | None]:
             current = cap.get(cv2.CAP_PROP_AUTO_EXPOSURE)
             if current != 1:
                 return (1, f'[CAMERA] [ERROR] Could not set CAP_PROP_AUTO_EXPOSURE to manual', None)
-
+        print('[CAMERA] [INFO] Camera auto exposure set to manual')
+        
         # 1. Set Brightness: brightness
         success = cap.set(cv2.CAP_PROP_BRIGHTNESS, CAMERA_BRIGHTNESS)
         if not success:
