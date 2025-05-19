@@ -5,7 +5,9 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+from phorest_pipeline.shared.cameras import CameraTransform
 from phorest_pipeline.shared.config import (
+    CAMERA_TRANFORM,
     CAMERA_EXPOSURE,
     CAMERA_INDEX,
 )
@@ -18,7 +20,7 @@ GAIN_VALUE = 32  # Low value to reduce noise
 CAMERA_BRIGHTNESS = 500
 
 
-def camera_controller(data_dir: Path) -> tuple[int, str, dict | None]:
+def camera_controller(data_dir: Path, savename: Path = None) -> tuple[int, str, dict | None]:
     """
     Controls camera, captures image, saves, returns status and metadata dict.
 
@@ -201,13 +203,20 @@ def camera_controller(data_dir: Path) -> tuple[int, str, dict | None]:
             if frame_gray_8bit.max() == 0:
                 print('[CAMERA] [WARN] Captured frame all black (max pixel value is 0)!')
 
-            # --- Save the 8-bit Grayscale Frame ---
-            filename = (
-                f'image_{capture_timestamp.strftime("%Y%m%d_%H%M%S_%f")}_cam{CAMERA_INDEX}.png'
-            )
-            filepath = Path(data_dir, filename)
-            filepath.parent.mkdir(parents=True, exist_ok=True)  # Ensure data_dir exists
+            # --- Apply Image Transform ---
+            print(f'[CAMERA] Applying image transform: {CAMERA_TRANFORM}...')
+            frame_gray_8bit = CAMERA_TRANFORM.apply_transform(frame_gray_8bit)
 
+            # --- Save the 8-bit Grayscale Frame ---
+            if not savename:
+                filename = (
+                    f'image_{capture_timestamp.strftime("%Y%m%d_%H%M%S_%f")}_cam{CAMERA_INDEX}.png'
+                )
+            else:
+                filename = savename
+            
+            filepath = Path(data_dir, filename)
+            filepath.parent.mkdir(parents=True, exist_ok=True)
             print(f'[CAMERA] Saving image to {filepath} ...')
             saved = cv2.imwrite(str(filepath), frame_gray_8bit)  # Use original BGR frame
 
