@@ -20,7 +20,6 @@ def load_config():
 def get_path(config, dir_name_key: str, fallback: str) -> Path:
     """Gets the full path from a key in config."""
     new_dir = Path(config.get('Paths', dir_name_key, fallback=fallback))
-    new_dir.mkdir(parents=True, exist_ok=True)  # Ensure directory exists
     return new_dir
 
 
@@ -53,10 +52,6 @@ try:
     CONTINUOUS_DIR = Path(settings.get('Paths', 'continuous_capture_dir', fallback='continuous_capture'))
     RESULTS_DIR = Path(settings.get('Paths', 'results_dir', fallback='results'))
     LOGS_DIR = Path(settings.get('Paths', 'logs_dir', fallback='results'))
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    CONTINUOUS_DIR.mkdir(parents=True, exist_ok=True)
-    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    LOGS_DIR.mkdir(parents=True, exist_ok=True)
 
     # --- Timing ---
     COLLECTOR_INTERVAL = settings.getint('Timing', 'collector_interval_seconds', fallback=300)
