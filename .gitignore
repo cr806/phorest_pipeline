@@ -76,12 +76,6 @@ dmypy.json
 .DS_Store
 
 # Project specific
-flags/
-data/
-results/
-continuous_capture/
-logs/
-generated_files/
 *.log
 compression_test/
 *_camera_calibration/
@@ -89,3 +83,19 @@ compression_test/
 RPi/
 *.log
 *.ipynb
+
+# Directories to store actual data locally
+continuous_capture/
+data/
+flags/
+generated_files/
+logs/
+results/
+
+# Ignore symlinks of data direcories too
+continuous_capture
+data
+flags
+generated_files
+logs
+results
