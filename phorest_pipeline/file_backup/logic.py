@@ -48,7 +48,7 @@ def backup_and_empty__original_file(files_to_process: list[Path]):
             logger.info(f'Copied {original_file_path} to backup {backup_file_path}')
 
             # 3. Replace the original file with an empty file
-            with open(original_file_path, 'w') as f:
+            with original_file_path.open('w') as f:
                 f.write('')  # Write an empty string to ensure it's empty
             logger.info(f'Emptied original file: {original_file_path}')
         except PermissionError:

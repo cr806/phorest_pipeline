@@ -1,7 +1,6 @@
 # phorest_pipeline/shared/metadata_manager.py
 import datetime
 import json
-import os
 from pathlib import Path
 
 from phorest_pipeline.shared.logger_config import configure_logger
@@ -34,7 +33,7 @@ def save_metadata(data_dir: Path, metadata_filename: Path, metadata_list: list):
     try:
         with temp_metadata_path.open('w') as f:
             json.dump(metadata_list, f, indent=4)
-        os.replace(temp_metadata_path, metadata_path)
+        temp_metadata_path.replace(metadata_path)
     except (OSError, TypeError) as e:
         logger.error(f'[METADATA] Save error {metadata_path}: {e}')
         if temp_metadata_path.exists():

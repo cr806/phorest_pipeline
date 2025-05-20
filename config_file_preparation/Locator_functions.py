@@ -63,7 +63,7 @@ def load_json(file_path):
             raise TypeError('File path must be a Path object.')
         if not file_path.exists():
             raise FileNotFoundError(f"File not found at '{file_path}'")
-        with open(file_path, 'r') as f:
+        with file_path.open('r') as f:
             data = json.load(f)
         return (data, None)
     except FileNotFoundError as e:
@@ -94,7 +94,7 @@ def save_json(file_path: Path, data):
     try:
         if not isinstance(file_path, Path):
             raise TypeError('File path must be a Path object.')
-        with open(file_path, 'w') as f:
+        with file_path.open('w') as f:
             json.dump(data, f, indent=4, default=convert_numpy)
         return (None, None)
     except TypeError as e:
@@ -966,7 +966,7 @@ def create_ROI_JSON(chip_type, grating_data, target_shape, rotation_angle, ROI_p
                     'size': [y_size, x_size // 2],
                 }
         ROIs['image_angle'] = rotation_angle
-        with open(ROI_path, 'w') as file:
+        with ROI_path.open('w') as file:
             json.dump(ROIs, file, indent=4)
         return (None, None)
     except IOError as e:

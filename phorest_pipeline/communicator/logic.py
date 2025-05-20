@@ -39,13 +39,13 @@ def communicate_results(processed_entries: list[int], results_data: list[dict]) 
     # If CSV does not exist create it and populate with headers
     csv_path = Path(RESULTS_DIR, CSV_FILENAME)
     if not csv_path.exists():
-        with open(csv_path, 'w') as f:
+        with csv_path.open('w') as f:
             f.write(
                 'image_timestamp,roi_label,mean_resonance_position,temperature_timestamp,temperature_1,temperature_2\n'
             )
 
     # Append processed data to the CSV file
-    with open(csv_path, 'a') as f:
+    with csv_path.open('a') as f:
         for idx in processed_entries:
             image_timestamp = results_data[idx].get('image_timestamp', idx)
             temperature_timestamp = results_data[idx].get('temperature_timestamp', idx)
@@ -65,7 +65,7 @@ def communicate_results(processed_entries: list[int], results_data: list[dict]) 
     roi_labels = []
     temp_1 = []
     temp_2 = []
-    with open(csv_path, 'r') as f:
+    with csv_path.open('r') as f:
         next(f)
         for line in f:
             if line.strip():

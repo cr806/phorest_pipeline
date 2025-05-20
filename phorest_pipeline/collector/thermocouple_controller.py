@@ -31,7 +31,7 @@ def check_device_connection(device_dict) -> bool:
 
 
 def read_sensor_ROM(device_id):
-    with open(Path(DEVICE_LOC, device_id, 'w1_slave'), 'r') as f:
+    with Path(DEVICE_LOC, device_id, 'w1_slave').open('r') as f:
         return f.readlines()
 
 

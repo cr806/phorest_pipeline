@@ -46,7 +46,7 @@ def process_image(image_meta: dict | None) -> tuple[list | None, str | None]:
     if not ROI_MANIFEST_PATH.exists():
         return None, f'ROI manifest file not found: {ROI_MANIFEST_PATH}'
 
-    with open(ROI_MANIFEST_PATH, 'r') as file:
+    with ROI_MANIFEST_PATH.open('r') as file:
         ROI_dictionary = json.load(file)
 
     image_filename = image_meta['filename']
