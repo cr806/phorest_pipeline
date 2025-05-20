@@ -6,7 +6,7 @@ from pathlib import Path
 from phorest_pipeline.shared.config import LOGS_DIR
 
 
-def configure_logger(name=None, level=logging.INFO, log_filename='app.log', rotate_daily=False):
+def configure_logger(name=None, level=logging.INFO, log_filename='app.log', rotate_daily=False, log_to_terminal=False):
     """Configures a logger with the specified settings.
 
     Args:
@@ -21,22 +21,29 @@ def configure_logger(name=None, level=logging.INFO, log_filename='app.log', rota
     logger = logging.getLogger(name)
     logger.setLevel(level)
 
+    if logger.handlers:
+        for handler in logger.handlers[:]: # Iterating of a slice allows in-place modification
+            logger.removeHandler(handler)
+
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(module)s - %(name)s - %(message)s',
                                   datefmt='%Y-%m-%d %H:%M:%S')
 
+    log_file_path = Path(LOGS_DIR, log_filename)
     if rotate_daily:
-        log_file_path = Path(LOGS_DIR, log_filename)
-        rotating_handler = logging.handlers.TimedRotatingFileHandler(
+        file_handler = logging.handlers.TimedRotatingFileHandler(
             log_file_path,
             when='midnight',
             interval=1,
             backupCount=0,
             encoding='utf-8'
         )
-        rotating_handler.setFormatter(formatter)
-        logger.addHandler(rotating_handler)
     else:
-        # If not rotating, log to console
+        file_handler = logging.FileHandler(log_file_path, encoding='utf-8')
+    
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+
+    if log_to_terminal:
         console_handler = logging.StreamHandler()
         console_handler.setFormatter(formatter)
         logger.addHandler(console_handler)
