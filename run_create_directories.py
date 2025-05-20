@@ -3,10 +3,11 @@ from pathlib import Path
 
 from phorest_pipeline.shared.logger_config import configure_logger
 
-logger = configure_logger(name=__name__, rotate_daily=False, log_filename='directory_setup.log', log_to_terminal=True)
-
 USB_MOUNT_POINT = Path('/', 'mnt', 'ARGUS_data')
 PROJECT_ROOT = Path(__file__).resolve().parent
+LOG_FILEPATH = Path(USB_MOUNT_POINT, 'logs', 'directory_setup.log')
+
+logger = configure_logger(name=__name__, rotate_daily=False, log_filename=LOG_FILEPATH, log_to_terminal=True)
 
 DIRECTORIES_TO_CREATE = [
     "continuous_capture",
