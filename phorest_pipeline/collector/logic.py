@@ -109,7 +109,7 @@ def perform_collection(
                 time.sleep(POLL_INTERVAL)
 
         case CollectorState.COLLECTING:
-            print(f'Collector ({datetime.datetime.now().isoformat()}): --- Running Collection ---')
+            logger.info(f'Collector ({datetime.datetime.now().isoformat()}): --- Running Collection ---')
             logger.info(f'Collection Attempt {updated_failure_count + 1}/{FAILURE_LIMIT}')
 
             collection_successful = True
@@ -120,7 +120,8 @@ def perform_collection(
                 cam_status, cam_msg, cam_metadata = camera_controller(DATA_DIR)
                 if cam_status != 0:
                     collection_successful = False
-                print(cam_msg)
+                    logger.error(cam_msg)
+                logger.info(cam_msg)
 
             tc_metadata = None
             if ENABLE_THERMOCOUPLE:
@@ -128,7 +129,8 @@ def perform_collection(
                 tc_status, tc_msg, tc_metadata = thermocouple_controller(DATA_DIR)
                 if tc_status != 0:
                     collection_successful = False
-                print(tc_msg)
+                    logger.error(tc_msg)
+                logger.info(tc_msg)
 
             if not ENABLE_CAMERA and not ENABLE_THERMOCOUPLE:
                 logger.info('No components enabled. Skipping flag creation and buffer.')
@@ -171,7 +173,7 @@ def perform_collection(
                     # Stay in COLLECTING state to retry immediately
                     logger.info(f'Retrying collection...')
                     next_state = CollectorState.COLLECTING
-                    logger.info('Waiting {RETRY_DELAY}s before retrying...')
+                    logger.info(f'Waiting {RETRY_DELAY}s before retrying...')
                     time.sleep(RETRY_DELAY)
 
         case CollectorState.FATAL_ERROR:
@@ -184,6 +186,7 @@ def perform_collection(
 
 def run_collector():
     """Main loop for the collector process."""
+    logger.info('--- Starting Collector ---')
     print('--- Starting Collector ---')
     current_state = CollectorState.IDLE
     global next_run_time  # Needs to be accessible across state calls
@@ -224,6 +227,7 @@ def run_collector():
                 logger.error(
                     f'Could not clean up flag {DATA_READY_FLAG} on exit: {e}'
                 )
+        logger.info('--- Collector Stopped ---')
         print('--- Collector Stopped ---')
         if current_state == CollectorState.FATAL_ERROR:
             sys.exit(1)

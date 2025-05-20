@@ -28,23 +28,26 @@ METADATA_FILENAME = Path('processing_manifest.json')
 POLL_INTERVAL = 2
 
 def compress_log_files():
+    logger.info('--- Compressing Log Files ---')
     output_dir = Path(LOGS_DIR, 'compressed')
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    log_files = Path(LOGS_DIR).glob('*.log')
+    log_files = list(Path(LOGS_DIR).glob('*.log'))
     if not log_files:
         logger.info('No log files to compress.')
         return
+    logger.info(f'Found {len(log_files)} log files to compress.')
 
     for log_file in log_files:
         try:
             # Create a temporary copy to avoid interrupting ongoing writes
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            temp_log_file = f'{log_file}.temp_{timestamp}'
+            timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+            temp_log_file = Path(f'{log_file}.temp_{timestamp}')
             shutil.copy2(log_file, temp_log_file)
 
             output_file = Path(output_dir, f'{log_file.name}.{timestamp}.gz')
-            with open(temp_log_file, 'rb') as f_in, gzip.open(output_file, 'wb') as f_out:
+            logger.info(f'Compressing {log_file} to {output_file}...')
+            with temp_log_file.open('rb') as f_in, gzip.open(output_file, 'wb') as f_out:
                 shutil.copyfileobj(f_in, f_out)
 
             temp_log_file.unlink(missing_ok=True)
@@ -209,6 +212,7 @@ def perform_compression_cycle(current_state: CompressorState) -> CompressorState
 def run_compressor():
     '''Main loop for the compressor process.'''
     logger.info('--- Starting Compressor ---')
+    print('--- Starting Compressor ---')
     if not ENABLE_COMPRESSOR:
         logger.info('Compressor is disabled in config. Exiting.')
         return
@@ -225,3 +229,4 @@ def run_compressor():
         logger.info('Shutdown requested.')
     finally:
         logger.info('--- Compressor Stopped ---')
+        print('--- Compressor Stopped ---')

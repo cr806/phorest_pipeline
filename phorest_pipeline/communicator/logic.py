@@ -156,6 +156,7 @@ def perform_communication(current_state: CommunicatorState) -> CommunicatorState
 def run_communicator():
     """Main loop for the communicator process."""
     logger.info('--- Starting Communicator ---')
+    print('--- Starting Communicator ---')
     current_state = CommunicatorState.COMMUNICATING
 
     # Initial cleanup: remove results flag if it exists on startup
@@ -181,3 +182,4 @@ def run_communicator():
         except OSError as e:
             logger.error(f'Could not clean up flag {RESULTS_READY_FLAG} on exit: {e}')
         logger.info('--- Communicator Stopped ---')
+        print('--- Communicator Stopped ---')

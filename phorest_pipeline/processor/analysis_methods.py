@@ -101,7 +101,7 @@ def gaussian(data: np.ndarray) -> Dict:
     try:
         popt, _ = curve_fit(gaussian_func, xdata, data, p0=p0)
     except (RuntimeError, ValueError) as e:
-        logger.error(f'[FUNCTION FITTING] Curve fitting failed {e}')
+        logger.warning(f'[FUNCTION FITTING] Curve fitting failed: {e}')
         return {}
 
     error = RMSE(data, gaussian_func(xdata, *popt))
@@ -150,7 +150,7 @@ def fano(data: np.ndarray) -> Dict:
     try:
         popt, _ = curve_fit(fano_func, xdata, data, p0=p0)
     except (RuntimeError, ValueError) as e:
-        logger.error(f'[FUNCTION FITTING] Curve fitting failed {e}')
+        logger.warning(f'[FUNCTION FITTING] Curve fitting failed: {e}')
         return {}
 
     error = RMSE(data, fano_func(xdata, *popt))

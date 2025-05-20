@@ -11,7 +11,7 @@ from phorest_pipeline.shared.logger_config import configure_logger
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename='camera.log')
 
 DUMMY_IMAGE_PATH = Path('phorest_pipeline/collector/dummy_image.tif')
-
+CAMERA_INDEX = 'DUMMY'
 
 def camera_controller(data_dir: Path, savename: Path = None) -> tuple[int, str, dict | None]:
     """
@@ -117,7 +117,7 @@ def camera_controller(data_dir: Path, savename: Path = None) -> tuple[int, str, 
                     'filename': filename,
                     'filepath': filepath.parent.resolve().as_posix(),
                     'timestamp_iso': capture_timestamp.isoformat(),
-                    'camera_index': 'DUMMY',
+                    'camera_index': CAMERA_INDEX,
                     'error_flag': False,
                     'error_message': None,
                 }

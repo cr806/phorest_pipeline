@@ -165,6 +165,7 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
 def run_processor():
     """Main loop for the processor process."""
     logger.info('--- Starting Processor ---')
+    print('--- Starting Processor ---')
     # Start in PROCESSING state to immediately clear any backlog
     current_state = ProcessorState.PROCESSING
 
@@ -205,6 +206,7 @@ def run_processor():
                     f'Could not clean up flag {DATA_READY_FLAG} on exit: {e}'
                 )
         logger.info('--- Processor Stopped ---')
+        print('--- Processor Stopped ---')
         if current_state == ProcessorState.FATAL_ERROR:
             sys.exit(1)
         else:

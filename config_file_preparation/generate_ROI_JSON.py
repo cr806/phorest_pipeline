@@ -22,7 +22,7 @@ def generate_ROI_JSON(path_to_image, output_ROI_filename):
     # 1. Script input file data
     feature_location_json = Path('Feature_locations.json')
     chip_location_json = Path('config_file_preparation', 'Label_templates', 'Chip_map.json')
-    generated_results_root = Path('Generated_files')
+    generated_results_root = Path('generated_files')
     calculated_image_feature_path = Path(generated_results_root, 'CalculatedImageFeatures.json')
     grating_locations_image_path = Path(generated_results_root, 'Grating_locations.png')
     label_locations_image_path = Path(generated_results_root, 'Label_locations.png')

@@ -283,7 +283,7 @@ def chip_rotation_angle(user_chip_mapping, key='user_location'):
     ]
 
     if len(locations) < 2 or len(chip_locations) < 2:
-        return (None, f'[ERROR] Insufficient valid locations or chip locations {message}.')
+        return (None, f'[ERROR] Insufficient valid locations or chip locations (key: {key}) {message}.')
 
     combination_idxs = list(itertools.combinations(range(len(locations)), 2))
 
@@ -726,7 +726,7 @@ def refine_feature_locations(image, user_chip_mapping, result_save_path):
             search_window, result, max_loc, max_val, mean_val, quality_metric, _result_save_path
         )
 
-        if quality_metric > 1.5 and max_val > 0.5:
+        if quality_metric > 1.5:
             refined_x = x_start + max_loc[0]
             refined_y = y_start + max_loc[1]
             user_chip_mapping['features'][idx]['refined_location'] = [refined_x, refined_y]

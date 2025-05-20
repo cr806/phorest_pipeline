@@ -5,7 +5,6 @@ from pathlib import Path
 from config_file_preparation.generate_ROI_JSON import generate_ROI_JSON
 
 
-ROOT_PATH =      '.'
 PATH_TO_IMAGES = './continuous_capture'
 IMAGE_TYPE =     'jpg'
 IMAGE_NAME_FOR_ROI_PLOTS = 'continuous_capture_frame'
@@ -51,54 +50,19 @@ def move_files(files_src_dest_name):
     print('\n'.join(message))
     return success
 
-print('##############################################')
-print('Have you updated the filepaths in this script?')
-print('##############################################')
-
 # 1. Confirm root, image, ROI, and server_root variables
 print('\nThese locations will be used:')
-print(f'\t{"Root folder:":<30} {ROOT_PATH}')
 print(f'\t{"Image folder:":<30} {PATH_TO_IMAGES}')
 print(f'\t{"Image type:":<30} {IMAGE_TYPE}')
 print(f'\t{"ROI metadata name:":<30} {ROI_METADATA_NAME}')
 input('Press Enter to continue...')
 
 # 2. Generate ROI metadata and save plots of ROI locations
-# Make sure directory exists for generated files
-Path('Generated_files').mkdir(parents=True, exist_ok=True)
-if Path('Generated_files', 'ImageFeatures.csv').exists():
-    Path('Generated_files', 'ImageFeatures.csv').unlink()
-print('\nStep 1: Generating ROI metadata...')
+print('\nGenerating ROI metadata (this may take a few seconds)...')
 generate_ROI_JSON(
     Path(PATH_TO_IMAGES, f'{IMAGE_NAME_FOR_ROI_PLOTS}.{IMAGE_TYPE}'),
-    Path(f'{ROI_METADATA_NAME}.json'),
+    Path(f'{ROI_METADATA_NAME}'),
 )
 
-# 3. Confirm ROI locations
-print('\nStep 2: Please check the saved ROI location plots.')
-roi_correct = input('\tAre the ROI locations correct? (y/n): ').lower()
-if roi_correct != 'y':
-    print('\nROI locations not confirmed. Please adjust and rerun. Exiting.')
-    sys.exit(1)
-
-
-# 4. Back-up generated files to location of experiment
-print('\nStep 3: Backing-up all generated files to experiment directory...')
-dest_path = Path(ROOT_PATH, 'Image_analysis_files_BACKUP')
-dest_path.mkdir(parents=True, exist_ok=True)
-files_src_dest_name = []
-src_path = Path('Generated_files')
-for entry in src_path.iterdir():
-    if not entry.is_file():
-        continue
-    files_src_dest_name.append((src_path, dest_path, entry.name))
-
-src_path = Path('config')
-for entry in src_path.iterdir():
-    if not entry.is_file():
-        continue
-    files_src_dest_name.append((src_path, dest_path, entry.name))
-
-if not move_files(files_src_dest_name):
-    print('\nFailed to move some/all metadata files. Exiting.')
-    sys.exit(1)
+# 3. Confirm generated files with user
+print('\nROI location file has been created, please check the saved ROI location plots before continuing.')
