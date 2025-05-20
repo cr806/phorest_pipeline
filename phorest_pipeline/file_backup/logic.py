@@ -99,7 +99,7 @@ def run_file_backup():
     logger.info('--- Starting File Renamer ---')
     print('--- Starting File Backup ---')
 
-    current_state = BackupState.BACKUP_FILES
+    current_state = BackupState.IDLE
     global next_run_time  # Needs to be accessible across state calls
     next_run_time = 0
     try:
