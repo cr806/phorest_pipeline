@@ -81,6 +81,7 @@ data/
 results/
 continuous_capture/
 logs/
+generated_files/
 *.log
 compression_test/
 *_camera_calibration/
