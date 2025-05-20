@@ -69,8 +69,9 @@ def generate_ROI_JSON(path_to_image, output_ROI_filename):
         exit(1)
 
     # 4. Refine feature locations using template matching
-    result, error = refine_feature_locations(rotated_image, user_chip_mapping,
-                                             template_matching_image_path)
+    result, error = refine_feature_locations(
+        rotated_image, user_chip_mapping, template_matching_image_path
+    )
     if error:
         print(error)
         exit(1)
@@ -97,8 +98,9 @@ def generate_ROI_JSON(path_to_image, output_ROI_filename):
         exit(1)
 
     # 6. Refine feature locations again with new rotation-angle / scale-factor using template matching
-    result, error = refine_feature_locations(rotated_image, user_chip_mapping,
-                                             template_matching_image_path)
+    result, error = refine_feature_locations(
+        rotated_image, user_chip_mapping, template_matching_image_path
+    )
     if error:
         print(error)
         exit(1)
@@ -118,13 +120,17 @@ def generate_ROI_JSON(path_to_image, output_ROI_filename):
 
     # 9.. Visualise feature location results
     visualize_features_with_matplotlib(
-        rotated_image, user_chip_mapping, template_shape,
-        label_locations_image_path, key='features'
+        rotated_image,
+        user_chip_mapping,
+        template_shape,
+        label_locations_image_path,
+        key='features',
     )
 
     # 10. Visualise grating location results
-    visualize_features_with_matplotlib(rotated_image, grating_data, None,
-                                       grating_locations_image_path, key='gratings')
+    visualize_features_with_matplotlib(
+        rotated_image, grating_data, None, grating_locations_image_path, key='gratings'
+    )
 
     # 11. Display results
     # pp = pprint.PrettyPrinter(indent=4)  # Create a PrettyPrinter object
@@ -158,4 +164,3 @@ if __name__ == '__main__':
     output_ROI_filename = Path('ROI_ChirpArray_TEST.json')
 
     generate_ROI_JSON(path_to_image, output_ROI_filename)
-

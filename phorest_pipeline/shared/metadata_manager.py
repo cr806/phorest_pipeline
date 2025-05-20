@@ -8,6 +8,7 @@ from phorest_pipeline.shared.logger_config import configure_logger
 
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename='shared.log')
 
+
 def load_metadata(data_dir: Path, metadata_filename: Path) -> list:
     metadata_path = Path(data_dir, metadata_filename)
     if metadata_path.exists():

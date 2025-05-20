@@ -3,7 +3,7 @@ import ast
 import configparser
 from pathlib import Path
 
-from phorest_pipeline.shared.cameras import CameraType, CameraTransform
+from phorest_pipeline.shared.cameras import CameraTransform, CameraType
 
 CONFIG_FILE = Path('config.ini')
 
@@ -49,7 +49,9 @@ try:
 
     # --- Paths ---
     DATA_DIR = Path(settings.get('Paths', 'data_dir', fallback='data'))
-    CONTINUOUS_DIR = Path(settings.get('Paths', 'continuous_capture_dir', fallback='continuous_capture'))
+    CONTINUOUS_DIR = Path(
+        settings.get('Paths', 'continuous_capture_dir', fallback='continuous_capture')
+    )
     RESULTS_DIR = Path(settings.get('Paths', 'results_dir', fallback='results'))
     LOGS_DIR = Path(settings.get('Paths', 'logs_dir', fallback='results'))
 
@@ -59,7 +61,9 @@ try:
     PROCESSOR_INTERVAL = settings.getint('Timing', 'processor_interval_seconds', fallback=2)
     ENABLE_COMPRESSOR = settings.getboolean('Timing', 'enable_image_compression', fallback=False)
     COMPRESSOR_INTERVAL = settings.getint('Timing', 'compress_interval_seconds', fallback=3600)
-    LOGS_COMPRESSOR_INTERVAL = settings.getint('Timing', 'log_file_interval_seconds', fallback=3600)
+    LOGS_COMPRESSOR_INTERVAL = settings.getint(
+        'Timing', 'log_file_interval_seconds', fallback=3600
+    )
 
     # --- Retries ---
     FAILURE_LIMIT = settings.getint('Retries', 'collector_failure_limit', fallback=5)
@@ -75,25 +79,25 @@ try:
 
     # --- Camera Settings ---
     camera_type_str = settings.get('Camera', 'camera_type', fallback='LOGITECH')
-    camera_type_str = camera_type_str.upper().strip().replace("'", "").replace('"', '')
+    camera_type_str = camera_type_str.upper().strip().replace("'", '').replace('"', '')
     try:
-        CAMERA_TYPE = CameraType[camera_type_str] #try to return the enum
+        CAMERA_TYPE = CameraType[camera_type_str]  # try to return the enum
     except KeyError:
-        print(f"[CONFIG] Invalid camera type: {camera_type_str}.")
-        print(f"Please use one of {', '.join(CameraType.__members__.keys())}")
+        print(f'[CONFIG] Invalid camera type: {camera_type_str}.')
+        print(f'Please use one of {", ".join(CameraType.__members__.keys())}')
         exit(1)
     CAMERA_INDEX = settings.getint('Camera', 'camera_id', fallback=1)
     CAMERA_EXPOSURE = settings.getint('Camera', 'camera_exposure', fallback=150)
     CAMERA_BRIGHTNESS = settings.getint('Camera', 'camera_brightness', fallback=128)
     CAMERA_CONTRAST = settings.getint('Camera', 'camera_contrast', fallback=32)
-    
+
     camera_transform_str = settings.get('Camera', 'camera_transform', fallback='NONE')
-    camera_transform_str = camera_transform_str.upper().strip().replace("'", "").replace('"', '')
+    camera_transform_str = camera_transform_str.upper().strip().replace("'", '').replace('"', '')
     try:
-        CAMERA_TRANFORM = CameraTransform[camera_transform_str] #try to return the enum
+        CAMERA_TRANFORM = CameraTransform[camera_transform_str]  # try to return the enum
     except KeyError:
-        print(f"[CONFIG] Invalid camera image transofrm: {camera_transform_str}.")
-        print(f"Please use one of {', '.join(CameraTransform.__members__.keys())}")
+        print(f'[CONFIG] Invalid camera image transofrm: {camera_transform_str}.')
+        print(f'Please use one of {", ".join(CameraTransform.__members__.keys())}')
         exit(1)
 
     # --- Temperature Settings ---

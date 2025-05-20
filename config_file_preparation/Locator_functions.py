@@ -283,7 +283,10 @@ def chip_rotation_angle(user_chip_mapping, key='user_location'):
     ]
 
     if len(locations) < 2 or len(chip_locations) < 2:
-        return (None, f'[ERROR] Insufficient valid locations or chip locations (key: {key}) {message}.')
+        return (
+            None,
+            f'[ERROR] Insufficient valid locations or chip locations (key: {key}) {message}.',
+        )
 
     combination_idxs = list(itertools.combinations(range(len(locations)), 2))
 

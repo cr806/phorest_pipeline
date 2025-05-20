@@ -241,5 +241,7 @@ def postprocess_roi_results(data: Dict) -> Dict:
         if data_range == 0:
             data[key]['Smoothness'] = 0.0
         else:
-            data[key]['Smoothness'] = np.round(np.std(np.diff(temp)) / data_range, decimals=dp)  # Smoothness i.e. Variation
+            data[key]['Smoothness'] = np.round(
+                np.std(np.diff(temp)) / data_range, decimals=dp
+            )  # Smoothness i.e. Variation
     return data

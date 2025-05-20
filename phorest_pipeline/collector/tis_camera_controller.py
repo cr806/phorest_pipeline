@@ -6,9 +6,9 @@ import cv2
 import numpy as np
 
 from phorest_pipeline.shared.config import (
-    CAMERA_TRANFORM,
     CAMERA_EXPOSURE,
     CAMERA_INDEX,
+    CAMERA_TRANFORM,
 )
 from phorest_pipeline.shared.logger_config import configure_logger
 
@@ -41,7 +41,7 @@ def camera_controller(data_dir: Path, savename: Path = None) -> tuple[int, str, 
     try:
         logger.info(f'Opening camera {CAMERA_INDEX}...')
         cap = cv2.VideoCapture(CAMERA_INDEX)
-        
+
         if not cap.isOpened():
             retry_count = 0
             while not cap.isOpened() and retry_count < 5:
@@ -52,7 +52,11 @@ def camera_controller(data_dir: Path, savename: Path = None) -> tuple[int, str, 
                     break
                 retry_count += 1
             if not cap.isOpened():
-                return (1, f'[CAMERA] [ERROR] Could not open camera at index {CAMERA_INDEX}.', None)
+                return (
+                    1,
+                    f'[CAMERA] [ERROR] Could not open camera at index {CAMERA_INDEX}.',
+                    None,
+                )
         logger.info(f'Camera {CAMERA_INDEX} opened.')
         time.sleep(0.1)
 
@@ -69,7 +73,7 @@ def camera_controller(data_dir: Path, savename: Path = None) -> tuple[int, str, 
             if width != RESOLTION[0] or height != RESOLTION[1]:
                 logger.error(f'Camera resolution not set correctly: {width}x{height}')
         logger.info('Camera resolution set')
-        
+
         logger.info('Attempting to set image format')
         fourcc = cv2.VideoWriter_fourcc(*IMAGE_FORMAT)
         success = cap.set(cv2.CAP_PROP_FOURCC, fourcc)
@@ -91,13 +95,13 @@ def camera_controller(data_dir: Path, savename: Path = None) -> tuple[int, str, 
         logger.info('Attempting to set camera auto exposure to manual')
         success = cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 1)
         if not success:
-            return (1, f'[CAMERA] [ERROR] Could not set CAP_PROP_AUTO_EXPOSURE to manual', None)
+            return (1, '[CAMERA] [ERROR] Could not set CAP_PROP_AUTO_EXPOSURE to manual', None)
         else:
             current = cap.get(cv2.CAP_PROP_AUTO_EXPOSURE)
             if current != 1:
-                return (1, f'[CAMERA] [ERROR] Could not set CAP_PROP_AUTO_EXPOSURE to manual', None)
+                return (1, '[CAMERA] [ERROR] Could not set CAP_PROP_AUTO_EXPOSURE to manual', None)
         logger.info('Camera auto exposure set to manual')
-        
+
         # 1. Set Brightness: brightness
         success = cap.set(cv2.CAP_PROP_BRIGHTNESS, CAMERA_BRIGHTNESS)
         if not success:
@@ -106,7 +110,7 @@ def camera_controller(data_dir: Path, savename: Path = None) -> tuple[int, str, 
             current = cap.get(cv2.CAP_PROP_BRIGHTNESS)
             if current != CAMERA_BRIGHTNESS:
                 logger.error('CAP_PROP_BRIGHTNESS not set')
-        
+
         # 2. Set fixed Gain: gain
         success = cap.set(cv2.CAP_PROP_GAIN, GAIN_VALUE)
         if not success:
@@ -148,9 +152,7 @@ def camera_controller(data_dir: Path, savename: Path = None) -> tuple[int, str, 
             return (1, '[CAMERA] [ERROR] Failed to capture frame.', None)
         else:
             original_dtype = str(frame_raw.dtype)
-            logger.info(
-                f'Raw frame captured. Shape: {frame_raw.shape}, dtype: {original_dtype}'
-            )
+            logger.info(f'Raw frame captured. Shape: {frame_raw.shape}, dtype: {original_dtype}')
 
             # --- Convert to Grayscale (if needed) ---
             if (
@@ -180,9 +182,7 @@ def camera_controller(data_dir: Path, savename: Path = None) -> tuple[int, str, 
                 frame_gray_8bit = frame_gray_intermediate
             else:
                 source_dtype = frame_gray_intermediate.dtype
-                logger.info(
-                    f'Frame is {source_dtype}, using cv2.normalize to scale to 8-bit...'
-                )
+                logger.info(f'Frame is {source_dtype}, using cv2.normalize to scale to 8-bit...')
                 try:
                     frame_gray_8bit = cv2.normalize(
                         frame_gray_intermediate,
@@ -216,7 +216,7 @@ def camera_controller(data_dir: Path, savename: Path = None) -> tuple[int, str, 
                 )
             else:
                 filename = savename
-            
+
             filepath = Path(data_dir, filename)
             filepath.parent.mkdir(parents=True, exist_ok=True)
             logger.info(f'Saving image to {filepath} ...')

@@ -12,8 +12,10 @@ logger = configure_logger(name=__name__, rotate_daily=True, log_filename='collec
 
 DEVICE_LOC = Path('/sys/bus/w1/devices/')
 
+
 def start_w1():
     import os
+
     os.system('modprobe w1-gpio')
     os.system('modprobe w1-therm')
 
@@ -44,7 +46,7 @@ def read_temp(device_id) -> tuple[int, str, float | None]:
         return None
     equals_pos = lines[1].find('t=')
     if equals_pos != -1:
-        temp_string = lines[1][equals_pos+2:]
+        temp_string = lines[1][equals_pos + 2 :]
         return float(temp_string) / 1000.0
     else:
         return None
@@ -57,7 +59,7 @@ def thermocouple_controller(data_dir: Path) -> tuple[int, str, dict | None]:
     Returns:
         tuple[int, str, dict | None]: (status_code, message, metadata_dict)
     """
-    logger.info(f' --- Starting Thermocouple Controller ---')
+    logger.info(' --- Starting Thermocouple Controller ---')
     metadata_dict = None
     temp_data = {}
 
@@ -65,7 +67,7 @@ def thermocouple_controller(data_dir: Path) -> tuple[int, str, dict | None]:
         logger.info(' Checking sensor connections ...')
         measurement_timestamp = datetime.datetime.now()
         if not check_device_connection(THERMOCOUPLE_IDS):
-            logger.info(f' Attempting to connect sensors manually.')
+            logger.info(' Attempting to connect sensors manually.')
             start_w1()
             time.sleep(0.5)
             if not check_device_connection(THERMOCOUPLE_IDS):
@@ -78,7 +80,7 @@ def thermocouple_controller(data_dir: Path) -> tuple[int, str, dict | None]:
                 }
                 return (1, '[THERMOCOUPLE] [ERROR] Sensor(s) not found.', None)
 
-        logger.info(f' Taking temperature measurements ...')
+        logger.info(' Taking temperature measurements ...')
 
         error = False
         error_message = 'Error reading temperature from:'
@@ -122,4 +124,4 @@ def thermocouple_controller(data_dir: Path) -> tuple[int, str, dict | None]:
         }
         return (1, f'[THERMOCOUPLE] [ERROR] Failed during operation: {e}', metadata)
     finally:
-        logger.info(f' --- Thermocouple Controller Done ---')
+        logger.info(' --- Thermocouple Controller Done ---')

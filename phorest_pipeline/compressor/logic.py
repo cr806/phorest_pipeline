@@ -1,31 +1,32 @@
 # phorest_pipeline/compressor/logic.py
 import datetime
-import time
-import shutil
-from pathlib import Path
 import gzip
+import shutil
+import time
+from pathlib import Path
 
 import cv2
 
 from phorest_pipeline.shared.config import (
     COMPRESSOR_INTERVAL,
-    LOGS_COMPRESSOR_INTERVAL,
     DATA_DIR,
-    LOGS_DIR,
     ENABLE_COMPRESSOR,
+    LOGS_COMPRESSOR_INTERVAL,
+    LOGS_DIR,
     settings,
 )
+from phorest_pipeline.shared.logger_config import configure_logger
 from phorest_pipeline.shared.metadata_manager import (
     load_metadata,
     save_metadata,
 )
 from phorest_pipeline.shared.states import CompressorState
-from phorest_pipeline.shared.logger_config import configure_logger
 
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename='compressor.log')
 
 METADATA_FILENAME = Path('processing_manifest.json')
 POLL_INTERVAL = 2
+
 
 def compress_log_files():
     logger.info('--- Compressing Log Files ---')
@@ -55,13 +56,14 @@ def compress_log_files():
         except Exception as e:
             logger.info(f'[ERROR] Error compressing {log_file}: {e}')
 
+
 def find_entry_to_compress(metadata_list: list) -> tuple[int, dict | None]:
-    '''
+    """
     Finds index/data of first entry that meets criteria:
     - processed is True
     - compression_attempted is False
     - has camera_data with a .png filename
-    '''
+    """
     for index, entry in enumerate(metadata_list):
         camera_data = entry.get('camera_data')
         # Check criteria: processed, has camera data, type is 'image', filename is PNG
@@ -78,7 +80,7 @@ def find_entry_to_compress(metadata_list: list) -> tuple[int, dict | None]:
 
 
 def perform_compression_cycle(current_state: CompressorState) -> CompressorState:
-    '''State machine logic for the compressor.'''
+    """State machine logic for the compressor."""
     next_state = current_state
 
     if settings is None:
@@ -210,7 +212,7 @@ def perform_compression_cycle(current_state: CompressorState) -> CompressorState
 
 
 def run_compressor():
-    '''Main loop for the compressor process.'''
+    """Main loop for the compressor process."""
     logger.info('--- Starting Compressor ---')
     print('--- Starting Compressor ---')
     if not ENABLE_COMPRESSOR:

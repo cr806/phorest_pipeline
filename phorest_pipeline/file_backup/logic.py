@@ -24,6 +24,7 @@ FILES_TO_PROCESS = [
     Path(RESULTS_DIR, 'processed_data_plot.png'),
 ]
 
+
 def backup_and_empty__original_file(files_to_process: list[Path]):
     logger.info('--- Backing up and Emptying Files ---')
     for original_file_path in files_to_process:
@@ -39,7 +40,7 @@ def backup_and_empty__original_file(files_to_process: list[Path]):
             # 1. Generate the backup file name with datetime suffix
             timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
             backup_file_path = original_file_path.with_name(
-                f"{original_file_path.stem}_{timestamp}{original_file_path.suffix}"
+                f'{original_file_path.stem}_{timestamp}{original_file_path.suffix}'
             )
 
             # 2. Copy the original file to the backup location
@@ -48,19 +49,22 @@ def backup_and_empty__original_file(files_to_process: list[Path]):
 
             # 3. Replace the original file with an empty file
             with open(original_file_path, 'w') as f:
-                f.write('') # Write an empty string to ensure it's empty
+                f.write('')  # Write an empty string to ensure it's empty
             logger.info(f'Emptied original file: {original_file_path}')
         except PermissionError:
-            logger.error(f'Permission denied: Cannot process file {original_file_path}. Check file permissions.')
+            logger.error(
+                f'Permission denied: Cannot process file {original_file_path}. Check file permissions.'
+            )
         except OSError as e:
             logger.error(f'OS error processing file {original_file_path}: {e}')
         except Exception as e:
-            logger.error(f'An unexpected error occurred while processing {original_file_path}: {e}')
+            logger.error(
+                f'An unexpected error occurred while processing {original_file_path}: {e}'
+            )
 
-    
 
 def perform_file_backup_cycle(current_state: BackupState) -> BackupState:
-    '''State machine logic for the file renamer.'''
+    """State machine logic for the file renamer."""
     next_state = current_state
 
     if settings is None:
@@ -95,7 +99,7 @@ def perform_file_backup_cycle(current_state: BackupState) -> BackupState:
 
 
 def run_file_backup():
-    '''Main loop for the file backup process.'''
+    """Main loop for the file backup process."""
     logger.info('--- Starting File Renamer ---')
     print('--- Starting File Backup ---')
 

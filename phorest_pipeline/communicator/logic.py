@@ -3,17 +3,17 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import matplotlib.pyplot as plt
 
 from phorest_pipeline.shared.config import (
     RESULTS_DIR,
     RESULTS_READY_FLAG,
     settings,
 )
+from phorest_pipeline.shared.logger_config import configure_logger
 from phorest_pipeline.shared.metadata_manager import load_metadata, save_metadata
 from phorest_pipeline.shared.states import CommunicatorState
-from phorest_pipeline.shared.logger_config import configure_logger
 
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename='comms.log')
 
@@ -21,6 +21,7 @@ RESULTS_FILENAME = Path('processing_results.json')
 CSV_FILENAME = Path('communicating_results.csv')
 RESULTS_IMAGE = Path('processed_data_plot.png')
 POLL_INTERVAL = 2
+
 
 # Helper Function: Find all processed entries
 def find_processed_entries(metadata_list: list) -> list[int]:
@@ -39,7 +40,9 @@ def communicate_results(processed_entries: list[int], results_data: list[dict]) 
     csv_path = Path(RESULTS_DIR, CSV_FILENAME)
     if not csv_path.exists():
         with open(csv_path, 'w') as f:
-            f.write('image_timestamp,roi_label,mean_resonance_position,temperature_timestamp,temperature_1,temperature_2\n')
+            f.write(
+                'image_timestamp,roi_label,mean_resonance_position,temperature_timestamp,temperature_1,temperature_2\n'
+            )
 
     # Append processed data to the CSV file
     with open(csv_path, 'a') as f:
@@ -47,13 +50,13 @@ def communicate_results(processed_entries: list[int], results_data: list[dict]) 
             image_timestamp = results_data[idx].get('image_timestamp', idx)
             temperature_timestamp = results_data[idx].get('temperature_timestamp', idx)
             image_analysis_list = results_data[idx].get('image_analysis', [])
-            mean_pixel_value = (
-                image_analysis_list[1].get('mu', None).get('Mean', None)
-            )
+            mean_pixel_value = image_analysis_list[1].get('mu', None).get('Mean', None)
             roi_label = image_analysis_list[1].get('ROI-label', None)
             temperature_1 = results_data[idx].get('temperature_readings', {}).get('Sensor 1', None)
             temperature_2 = results_data[idx].get('temperature_readings', {}).get('Sensor 2', None)
-            f.write(f'{image_timestamp},{roi_label},{mean_pixel_value},{temperature_timestamp},{temperature_1},{temperature_2}\n')
+            f.write(
+                f'{image_timestamp},{roi_label},{mean_pixel_value},{temperature_timestamp},{temperature_1},{temperature_2}\n'
+            )
 
     # Load the CSV data for plotting
     img_timestamps = []

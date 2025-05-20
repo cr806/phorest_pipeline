@@ -13,11 +13,11 @@ from phorest_pipeline.shared.config import (
     RESULTS_READY_FLAG,
     settings,  # Check if config loaded
 )
+from phorest_pipeline.shared.logger_config import configure_logger
 
 # Assuming metadata_manager handles loading/saving the manifest
 from phorest_pipeline.shared.metadata_manager import append_metadata, load_metadata, save_metadata
 from phorest_pipeline.shared.states import ProcessorState
-from phorest_pipeline.shared.logger_config import configure_logger
 
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename='processor.log')
 
@@ -39,9 +39,7 @@ def find_unprocessed_entry(metadata_list: list) -> tuple[int, dict | None]:
                     f'Entry {index} found unprocessed but missing camera data filename. Skipping.'
                 )
             else:
-                logger.warning(
-                    f'Entry {index} found unprocessed but missing key data. Skipping.'
-                )
+                logger.warning(f'Entry {index} found unprocessed but missing key data. Skipping.')
     return -1, None
 
 
@@ -202,9 +200,7 @@ def run_processor():
             try:
                 DATA_READY_FLAG.unlink(missing_ok=True)
             except OSError as e:
-                logger.error(
-                    f'Could not clean up flag {DATA_READY_FLAG} on exit: {e}'
-                )
+                logger.error(f'Could not clean up flag {DATA_READY_FLAG} on exit: {e}')
         logger.info('--- Processor Stopped ---')
         print('--- Processor Stopped ---')
         if current_state == ProcessorState.FATAL_ERROR:

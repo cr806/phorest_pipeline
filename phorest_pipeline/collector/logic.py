@@ -16,15 +16,16 @@ from phorest_pipeline.shared.config import (
     RETRY_DELAY,
     settings,  # Import settings to check if config loaded ok
 )
+from phorest_pipeline.shared.logger_config import configure_logger
 from phorest_pipeline.shared.metadata_manager import add_entry
 from phorest_pipeline.shared.states import CollectorState
-from phorest_pipeline.shared.logger_config import configure_logger
 
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename='collector.log')
 
 if ENABLE_CAMERA:
     from phorest_pipeline.shared.cameras import CameraType
     from phorest_pipeline.shared.config import CAMERA_TYPE
+
     if CAMERA_TYPE == CameraType.LOGITECH:
         from phorest_pipeline.collector.logi_camera_controller import camera_controller
     elif CAMERA_TYPE == CameraType.ARGUS:
@@ -64,9 +65,7 @@ def ring_buffer_cleanup():
                     logger.info(f'Deleting: {file_to_delete.name}')
                     file_to_delete.unlink()
                 except OSError as delete_err:
-                    logger.error(
-                        f'Failed to delete image {file_to_delete.name}: {delete_err}'
-                    )
+                    logger.error(f'Failed to delete image {file_to_delete.name}: {delete_err}')
         else:
             logger.info('Image count within buffer limit.')
 
@@ -109,7 +108,9 @@ def perform_collection(
                 time.sleep(POLL_INTERVAL)
 
         case CollectorState.COLLECTING:
-            logger.info(f'Collector ({datetime.datetime.now().isoformat()}): --- Running Collection ---')
+            logger.info(
+                f'Collector ({datetime.datetime.now().isoformat()}): --- Running Collection ---'
+            )
             logger.info(f'Collection Attempt {updated_failure_count + 1}/{FAILURE_LIMIT}')
 
             collection_successful = True
@@ -171,7 +172,7 @@ def perform_collection(
                     next_state = CollectorState.FATAL_ERROR
                 else:
                     # Stay in COLLECTING state to retry immediately
-                    logger.info(f'Retrying collection...')
+                    logger.info('Retrying collection...')
                     next_state = CollectorState.COLLECTING
                     logger.info(f'Waiting {RETRY_DELAY}s before retrying...')
                     time.sleep(RETRY_DELAY)
@@ -220,13 +221,11 @@ def run_collector():
     finally:
         # Cleanup on exit
         if settings:
-            logger.info(f'Cleaning up flags...')
+            logger.info('Cleaning up flags...')
             try:
                 DATA_READY_FLAG.unlink(missing_ok=True)
             except OSError as e:
-                logger.error(
-                    f'Could not clean up flag {DATA_READY_FLAG} on exit: {e}'
-                )
+                logger.error(f'Could not clean up flag {DATA_READY_FLAG} on exit: {e}')
         logger.info('--- Collector Stopped ---')
         print('--- Collector Stopped ---')
         if current_state == CollectorState.FATAL_ERROR:

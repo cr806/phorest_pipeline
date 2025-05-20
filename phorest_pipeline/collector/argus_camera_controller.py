@@ -5,18 +5,17 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from phorest_pipeline.shared.cameras import CameraTransform
 from phorest_pipeline.shared.config import (
-    CAMERA_TRANFORM,
     CAMERA_BRIGHTNESS,
     CAMERA_INDEX,
+    CAMERA_TRANFORM,
 )
-
 from phorest_pipeline.shared.logger_config import configure_logger
 
 BUFFER_CLEAR_UP_FRAMES = 5
 
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename='camera.log')
+
 
 def camera_controller(data_dir: Path, savename: Path = None) -> tuple[int, str, dict | None]:
     """
@@ -78,9 +77,7 @@ def camera_controller(data_dir: Path, savename: Path = None) -> tuple[int, str, 
             return (1, '[CAMERA] [ERROR] Failed to capture frame.', None)
         else:
             original_dtype = str(frame_raw.dtype)
-            logger.info(
-                f'Raw frame captured. Shape: {frame_raw.shape}, dtype: {original_dtype}'
-            )
+            logger.info(f'Raw frame captured. Shape: {frame_raw.shape}, dtype: {original_dtype}')
 
             # --- Convert to Grayscale (if needed) ---
             if (
@@ -110,9 +107,7 @@ def camera_controller(data_dir: Path, savename: Path = None) -> tuple[int, str, 
                 frame_gray_8bit = frame_gray_intermediate
             else:
                 source_dtype = frame_gray_intermediate.dtype
-                logger.info(
-                    f'Frame is {source_dtype}, using cv2.normalize to scale to 8-bit...'
-                )
+                logger.info(f'Frame is {source_dtype}, using cv2.normalize to scale to 8-bit...')
                 try:
                     frame_gray_8bit = cv2.normalize(
                         frame_gray_intermediate,

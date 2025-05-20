@@ -6,13 +6,12 @@ import cv2
 import numpy as np
 
 from phorest_pipeline.shared.config import (
-    CAMERA_TRANFORM,
     CAMERA_BRIGHTNESS,
     CAMERA_CONTRAST,
     CAMERA_EXPOSURE,
     CAMERA_INDEX,
+    CAMERA_TRANFORM,
 )
-
 from phorest_pipeline.shared.logger_config import configure_logger
 
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename='camera.log')
@@ -20,6 +19,7 @@ logger = configure_logger(name=__name__, rotate_daily=True, log_filename='camera
 BUFFER_CLEAR_UP_FRAMES = 5
 
 GAIN_VALUE = 32  # Low value to reduce noise
+
 
 def camera_controller(data_dir: Path, savename: Path = None) -> tuple[int, str, dict | None]:
     """
@@ -31,7 +31,7 @@ def camera_controller(data_dir: Path, savename: Path = None) -> tuple[int, str, 
         message: Status message string.
         metadata_dict: Dictionary with capture details on success, None on failure.
     """
-    logger.info(f'--- Starting Logitech Camera Controller ---')
+    logger.info('--- Starting Logitech Camera Controller ---')
     cap = None
     filepath = None
     metadata_dict = None
@@ -46,7 +46,7 @@ def camera_controller(data_dir: Path, savename: Path = None) -> tuple[int, str, 
         time.sleep(0.1)
 
         # --- Camera Settings ---
-        logger.info(f'Configuring camera settings...')
+        logger.info('Configuring camera settings...')
         # 1. Disable Auto Exposure
         success = cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 1)
         if not success:
@@ -64,9 +64,7 @@ def camera_controller(data_dir: Path, savename: Path = None) -> tuple[int, str, 
             wb_temp_default = 4000
             success = cap.set(cv2.CAP_PROP_WB_TEMPERATURE, wb_temp_default)
             if not success:
-                logger.error(
-                    f'Could not set CAP_PROP_WB_TEMPERATURE to {wb_temp_default}.'
-                )
+                logger.error(f'Could not set CAP_PROP_WB_TEMPERATURE to {wb_temp_default}.')
             else:
                 current = cap.get(cv2.CAP_PROP_WB_TEMPERATURE)
                 if current != wb_temp_default:
@@ -110,7 +108,7 @@ def camera_controller(data_dir: Path, savename: Path = None) -> tuple[int, str, 
         # cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
         # cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
         # time.sleep(0.2) # Allow time for settings to apply
-        logger.info(f'Camera configuration complete.')
+        logger.info('Camera configuration complete.')
 
         # --- Clear camera buffer ---
         logger.info(f'Clearing camera buffer with {BUFFER_CLEAR_UP_FRAMES} captures...')
@@ -121,9 +119,9 @@ def camera_controller(data_dir: Path, savename: Path = None) -> tuple[int, str, 
                 time.sleep(0.5)
             else:
                 time.sleep(0.1)
-        logger.info(f'Warm-up complete.')
+        logger.info('Warm-up complete.')
 
-        logger.info(f'Taking image ...')
+        logger.info('Taking image ...')
         ret, frame_raw = cap.read()  # Read the frame (BGR format)
         capture_timestamp = datetime.datetime.now()
 
@@ -131,18 +129,16 @@ def camera_controller(data_dir: Path, savename: Path = None) -> tuple[int, str, 
             return (1, '[CAMERA] [ERROR] Failed to capture frame.', None)
         else:
             original_dtype = str(frame_raw.dtype)
-            logger.info(
-                f'Raw frame captured. Shape: {frame_raw.shape}, dtype: {original_dtype}'
-            )
+            logger.info(f'Raw frame captured. Shape: {frame_raw.shape}, dtype: {original_dtype}')
 
             # --- Convert to Grayscale (if needed) ---
             if (
                 len(frame_raw.shape) == 3 and frame_raw.shape[2] == 3
             ):  # Check if it's a 3-channel image (like BGR)
-                logger.info(f'Converting color frame to grayscale...')
+                logger.info('Converting color frame to grayscale...')
                 frame_gray_intermediate = cv2.cvtColor(frame_raw, cv2.COLOR_BGR2GRAY)
             elif len(frame_raw.shape) == 2:  # Already grayscale (or single channel)
-                logger.info(f'Frame is already single channel (assuming grayscale).')
+                logger.info('Frame is already single channel (assuming grayscale).')
                 frame_gray_intermediate = frame_raw
             else:
                 # Handle other unexpected formats (e.g., 4 channels, YUV) - basic approach:
@@ -157,15 +153,13 @@ def camera_controller(data_dir: Path, savename: Path = None) -> tuple[int, str, 
 
             # --- Convert to 8-bit ---
             frame_gray_8bit = None
-            logger.info(f'Converting to 8-bit grayscale (target dtype: uint8)...')
+            logger.info('Converting to 8-bit grayscale (target dtype: uint8)...')
             if frame_gray_intermediate.dtype == np.uint8:
-                logger.info(f'Frame is already 8-bit.')
+                logger.info('Frame is already 8-bit.')
                 frame_gray_8bit = frame_gray_intermediate
             else:
                 source_dtype = frame_gray_intermediate.dtype
-                logger.info(
-                    f'Frame is {source_dtype}, using cv2.normalize to scale to 8-bit...'
-                )
+                logger.info(f'Frame is {source_dtype}, using cv2.normalize to scale to 8-bit...')
                 try:
                     frame_gray_8bit = cv2.normalize(
                         frame_gray_intermediate,
@@ -175,18 +169,18 @@ def camera_controller(data_dir: Path, savename: Path = None) -> tuple[int, str, 
                         cv2.NORM_MINMAX,
                         dtype=cv2.CV_8U,
                     )
-                    logger.info(f'Normalization successful.')
+                    logger.info('Normalization successful.')
                 except cv2.error as norm_err:
                     error_msg = f'[CAMERA] [ERROR] Failed to normalize frame with dtype {source_dtype}: {norm_err}'
                     return (1, error_msg, None)
             # --- End normalization ---
 
-            logger.info(f'Frame captured.')
+            logger.info('Frame captured.')
             logger.info(f'      Shape: {frame_gray_8bit.shape}')
             logger.info(f'      dtype: {frame_gray_8bit.dtype}')
             logger.info(f'      Min/Max value: {frame_gray_8bit.min()}/{frame_gray_8bit.max()}')
             if frame_gray_8bit.max() == 0:
-                logger.info(f'[WARN] Captured frame all black (max pixel value is 0)!')
+                logger.info('[WARN] Captured frame all black (max pixel value is 0)!')
 
             # --- Apply Image Transform ---
             logger.info(f'Applying image transform: {CAMERA_TRANFORM}...')
@@ -206,7 +200,7 @@ def camera_controller(data_dir: Path, savename: Path = None) -> tuple[int, str, 
             saved = cv2.imwrite(str(filepath), frame_gray_8bit)  # Use original BGR frame
 
             if saved:
-                logger.info(f'Image saved.')
+                logger.info('Image saved.')
                 metadata_dict = {
                     'type': 'image',
                     'filename': filename,
@@ -230,4 +224,4 @@ def camera_controller(data_dir: Path, savename: Path = None) -> tuple[int, str, 
         if cap is not None and cap.isOpened():
             cap.release()
             logger.info(f'Camera {CAMERA_INDEX} released.')
-        logger.info(f'--- Camera Controller Done ---')
+        logger.info('--- Camera Controller Done ---')

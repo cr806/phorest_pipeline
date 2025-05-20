@@ -2,7 +2,6 @@
 import datetime
 import sys
 import time
-
 from pathlib import Path
 
 from phorest_pipeline.shared.config import (
@@ -12,14 +11,15 @@ from phorest_pipeline.shared.config import (
     RETRY_DELAY,
     settings,  # Import settings to check if config loaded ok
 )
-from phorest_pipeline.shared.states import CollectorState
 from phorest_pipeline.shared.logger_config import configure_logger
+from phorest_pipeline.shared.states import CollectorState
 
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename='continuous_capture.log')
 
 if ENABLE_CAMERA:
     from phorest_pipeline.shared.cameras import CameraType
     from phorest_pipeline.shared.config import CAMERA_TYPE
+
     if CAMERA_TYPE == CameraType.LOGITECH:
         from phorest_pipeline.collector.logi_camera_controller import camera_controller
     elif CAMERA_TYPE == CameraType.ARGUS:
@@ -31,6 +31,7 @@ if ENABLE_CAMERA:
     logger.info(f'Camera type: {CAMERA_TYPE}')
 
 SAVENAME = 'continuous_capture_frame.jpg'
+
 
 def perform_continuous_capture(
     current_state: CollectorState, failure_count: int, filename: Path = None
@@ -55,7 +56,9 @@ def perform_continuous_capture(
             updated_failure_count = 0  # Reset failure count when *entering* COLLECTING state
 
         case CollectorState.COLLECTING:
-            logger.info(f'Capture ({datetime.datetime.now().isoformat()}): --- Running Continuous Capture ---')
+            logger.info(
+                f'Capture ({datetime.datetime.now().isoformat()}): --- Running Continuous Capture ---'
+            )
             logger.info(f'Collection Attempt {updated_failure_count + 1}/{FAILURE_LIMIT}')
 
             collection_successful = True
@@ -108,7 +111,9 @@ def run_continuous_capture():
 
     try:
         while True:
-            current_state, failure_count = perform_continuous_capture(current_state, failure_count, filename=SAVENAME)
+            current_state, failure_count = perform_continuous_capture(
+                current_state, failure_count, filename=SAVENAME
+            )
 
             # --- Check for FATAL_ERROR state to exit ---
             if current_state == CollectorState.FATAL_ERROR:

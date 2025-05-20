@@ -1,12 +1,10 @@
 import shutil
-import sys
 from pathlib import Path
 
 from config_file_preparation.generate_ROI_JSON import generate_ROI_JSON
 
-
 PATH_TO_IMAGES = './continuous_capture'
-IMAGE_TYPE =     'jpg'
+IMAGE_TYPE = 'jpg'
 IMAGE_NAME_FOR_ROI_PLOTS = 'continuous_capture_frame'
 ROI_METADATA_NAME = 'ROI_manifest.json'
 
@@ -50,6 +48,7 @@ def move_files(files_src_dest_name):
     print('\n'.join(message))
     return success
 
+
 # 1. Confirm root, image, ROI, and server_root variables
 print('\nThese locations will be used:')
 print(f'\t{"Image folder:":<30} {PATH_TO_IMAGES}')
@@ -65,4 +64,6 @@ generate_ROI_JSON(
 )
 
 # 3. Confirm generated files with user
-print('\nROI location file has been created, please check the saved ROI location plots before continuing.')
+print(
+    '\nROI location file has been created, please check the saved ROI location plots before continuing.'
+)
