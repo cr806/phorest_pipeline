@@ -19,6 +19,7 @@ logger = configure_logger(name=__name__, rotate_daily=True, log_filename='comms.
 
 RESULTS_FILENAME = Path('processing_results.json')
 CSV_FILENAME = Path('communicating_results.csv')
+RESULTS_IMAGE = Path('processed_data_plot.png')
 POLL_INTERVAL = 2
 
 # Helper Function: Find all processed entries
@@ -91,7 +92,7 @@ def communicate_results(processed_entries: list[int], results_data: list[dict]) 
     plt.gca().xaxis.set_major_locator(mdates.MinuteLocator(interval=30))
     plt.xticks(rotation=45, ha='right')
     plt.tight_layout()
-    plt.savefig(Path(RESULTS_DIR, 'processed_data_plot.png'))
+    plt.savefig(Path(RESULTS_DIR, RESULTS_IMAGE))
 
     # Update the metadata to mark entries as transmitted
     for idx in processed_entries:

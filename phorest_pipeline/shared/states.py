@@ -28,3 +28,9 @@ class CompressorState(Enum):
     COMPRESSING_IMAGES = auto()
     COMPRESSING_LOGS = auto()
     WAITING_TO_RUN = auto()
+
+
+class BackupState(Enum):
+    IDLE = auto()
+    BACKUP_FILES = auto()
+    WAITING_TO_RUN = auto()
