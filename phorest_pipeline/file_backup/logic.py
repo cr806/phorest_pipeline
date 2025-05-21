@@ -108,31 +108,25 @@ def perform_file_backup_cycle(current_state: BackupState) -> BackupState:
     match current_state:
         case BackupState.IDLE:
             logger.info("IDLE -> WAITING_TO_RUN")
-            next_state = BackupState.CHECKING
+            next_state = BackupState.WAITING_TO_RUN
             global next_run_time
             next_run_time = time.monotonic() + RENAME_INTERVAL
 
-        case BackupState.CHECKING:
+        case BackupState.WAITING_TO_RUN:
+            logger.info(f"Waiting for {RENAME_INTERVAL} seconds until next cycle...")
             now = time.monotonic()
             if now >= next_run_time:
+                logger.info("WAITING_TO_RUN -> BACKUP_FILES")
                 next_state = BackupState.BACKUP_FILES
-                logger.info("CHECKING -> BACKUP_FILES")
             else:
-                next_state = BackupState.WAITING_TO_RUN
-                logger.info("CHECKING -> WAITING_TO_RUN")
-
+                time.sleep(POLL_INTERVAL)
+        
         case BackupState.BACKUP_FILES:
             logger.info("--- Backing up files ---")
             files_to_compress = backup_and_empty_original_file(FILES_TO_PROCESS)
             compress_files(files_to_compress)
             logger.info("BACKUP_FILES -> IDLE")
             next_state = BackupState.IDLE
-
-        case BackupState.WAITING_TO_RUN:
-            logger.info(f"Waiting for {RENAME_INTERVAL} seconds until next cycle...")
-            time.sleep(POLL_INTERVAL)
-            logger.info("WAITING_TO_RUN -> CHECKING")
-            next_state = BackupState.CHECKING
 
     return next_state
 

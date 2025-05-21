@@ -8,6 +8,7 @@ from phorest_pipeline.processor.process_image import process_image
 from phorest_pipeline.shared.config import (
     DATA_DIR,
     DATA_READY_FLAG,
+    POLL_INTERVAL,
     PROCESSOR_INTERVAL,
     RESULTS_DIR,
     RESULTS_READY_FLAG,
@@ -58,28 +59,29 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
         case ProcessorState.IDLE:
             logger.info('IDLE -> WAITING_FOR_DATA')
             next_state = ProcessorState.WAITING_FOR_DATA
+            global next_run_time
+            next_run_time = time.monotonic() + PROCESSOR_INTERVAL
 
         case ProcessorState.WAITING_FOR_DATA:
-            if DATA_READY_FLAG.exists():
-                logger.info(f'Found flag {DATA_READY_FLAG}. Consuming.')
-                try:
-                    DATA_READY_FLAG.unlink()
-                    logger.info(f'Deleted flag {DATA_READY_FLAG}.')
-                    logger.info('WAITING_FOR_DATA -> PROCESSING')
-                    next_state = ProcessorState.PROCESSING
-                except (FileNotFoundError, OSError) as e:
-                    logger.error(f'Could not delete flag {DATA_READY_FLAG}: {e}')
-                    # Stay waiting, maybe the flag is gone or perms issue
-                    time.sleep(5)
-                    next_state = ProcessorState.WAITING_FOR_DATA
+            logger.info(f"Waiting for {PROCESSOR_INTERVAL} seconds until next cycle...")
+            now = time.monotonic()
+            if now >= next_run_time:
+                if DATA_READY_FLAG.exists():
+                    logger.info(f'Found flag {DATA_READY_FLAG}. Consuming.')
+                    try:
+                        DATA_READY_FLAG.unlink()
+                        logger.info(f'Deleted flag {DATA_READY_FLAG}.')
+                        logger.info('WAITING_FOR_DATA -> PROCESSING')
+                        next_state = ProcessorState.PROCESSING
+                    except (FileNotFoundError, OSError) as e:
+                        logger.error(f'Could not delete flag {DATA_READY_FLAG}: {e}')
+                        # Stay waiting, maybe the flag is gone or perms issue
+                        time.sleep(5)
             else:
-                time.sleep(PROCESSOR_INTERVAL)
-                next_state = ProcessorState.WAITING_FOR_DATA
+                time.sleep(POLL_INTERVAL)
 
         case ProcessorState.PROCESSING:
-            logger.info(
-                f'({datetime.datetime.now().isoformat()}) --- Checking for Unprocessed Data ---'
-            )
+            logger.info('--- Checking for Unprocessed Data ---')
             manifest_data = load_metadata(DATA_DIR, METADATA_FILENAME)
             entry_index, entry_to_process = find_unprocessed_entry(manifest_data)
 
@@ -124,14 +126,17 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
                 entry_to_process['processing_timestamp_iso'] = processing_timestamp
                 entry_to_process['processing_error'] = not processing_successful
                 entry_to_process['processing_error_msg'] = img_proc_error_msg
+                
                 # Replace the old entry with the updated one in the list
                 manifest_data[entry_index] = entry_to_process
+                
                 # Save the entire updated manifest
                 save_metadata(DATA_DIR, METADATA_FILENAME, manifest_data)
 
                 logger.info(
                     f'Processed entry index {entry_index}. Success: {processing_successful}\n\n'
                 )
+
                 # --- Stay in PROCESSING state ---
                 # Immediately check for the next unprocessed entry without waiting for the flag
                 next_state = ProcessorState.PROCESSING
