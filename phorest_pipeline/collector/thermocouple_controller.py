@@ -52,7 +52,7 @@ def read_temp(device_id) -> tuple[int, str, float | None]:
         return None
 
 
-def thermocouple_controller(data_dir: Path) -> tuple[int, str, dict | None]:
+def thermocouple_controller() -> tuple[int, str, dict | None]:
     """
     Reads thermocouples, saves data, returns status and metadata dict.
 

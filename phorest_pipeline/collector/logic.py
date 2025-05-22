@@ -119,7 +119,7 @@ def perform_collection(
             tc_metadata = None
             if ENABLE_THERMOCOUPLE:
                 logger.info("Thermocouple is enabled.")
-                tc_status, tc_msg, tc_metadata = thermocouple_controller(DATA_DIR)
+                tc_status, tc_msg, tc_metadata = thermocouple_controller()
                 if tc_status != 0:
                     collection_successful = False
                     logger.error(tc_msg)
