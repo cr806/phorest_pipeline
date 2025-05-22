@@ -143,7 +143,8 @@ def perform_collection(
                 logger.info("Data collection successful.")
                 updated_failure_count = 0  # Reset failure count on success
 
-                ring_buffer_cleanup()
+                if IMAGE_BUFFER_SIZE > 0:
+                    ring_buffer_cleanup()
 
                 logger.info(f"Creating flag: {DATA_READY_FLAG}")
                 try:
