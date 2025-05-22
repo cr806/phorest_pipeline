@@ -5,6 +5,7 @@ from pathlib import Path
 
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
+import pandas as pd
 
 from phorest_pipeline.shared.config import (
     POLL_INTERVAL,
@@ -24,8 +25,19 @@ RESULTS_IMAGE = Path("processed_data_plot.png")
 
 COMMUNICATOR_INTERVAL = 60
 
+
 # Helper Function: Find all processed entries
-def find_processed_entries(metadata_list: list) -> list[int]:
+def find_processed_entries(metadata_list: list) -> list[dict]:
+    """Finds all entry indexes with 'processed': True."""
+    processed_entries = []
+    for entry in metadata_list:
+        # Find entry marked as processed
+        if entry.get("processing_successful", False):
+            processed_entries.append(entry)
+    return processed_entries
+
+
+def find_not_transmitted_entries(metadata_list: list) -> list[int]:
     """Finds all entry indexes with 'processed': True."""
     processed_entries = []
     for index, entry in enumerate(metadata_list):
@@ -35,71 +47,103 @@ def find_processed_entries(metadata_list: list) -> list[int]:
     return processed_entries
 
 
-def communicate_results(processed_entries: list[int], results_data: list[dict]) -> None:
-    """Simulate communication of results to a CSV file."""
-    # If CSV does not exist create it and populate with headers
-    csv_path = Path(RESULTS_DIR, CSV_FILENAME)
-    if not csv_path.exists():
-        with csv_path.open("w") as f:
-            f.write(
-                "image_timestamp,roi_label,mean_resonance_position,temperature_timestamp,temperature_1,temperature_2\n"
-            )
+def save_results_json_as_csv(processed_entries: list[dict], csv_path: Path) -> None:
+    try:
+        target_dictionary = processed_entries[0]["image_analysis"][1]
+        headers = list(target_dictionary.keys())
+    except (IndexError, KeyError) as e:
+        print(f"Error accessing data: {e}")
+        print(
+            "Please ensure the JSON structure matches the expected path (data[0]['image_analysis'][1])."
+        )
 
-    # Append processed data to the CSV file
-    with csv_path.open("a") as f:
-        for idx in processed_entries:
-            image_timestamp = results_data[idx].get("image_timestamp", idx)
-            temperature_timestamp = results_data[idx].get("temperature_timestamp", idx)
-            image_analysis_list = results_data[idx].get("image_analysis", [])
-            mean_pixel_value = image_analysis_list[1].get("mu", None).get("Mean", None)
-            roi_label = image_analysis_list[1].get("ROI-label", None)
-            temperature_1 = results_data[idx].get("temperature_readings", {}).get("Sensor 1", None)
-            temperature_2 = results_data[idx].get("temperature_readings", {}).get("Sensor 2", None)
-            f.write(
-                f"{image_timestamp},{roi_label},{mean_pixel_value},{temperature_timestamp},{temperature_1},{temperature_2}\n"
-            )
+    records = []
+    for entry in processed_entries:
+        # Extract the image_timestamp once per entry
+        timestamp = entry.get("image_timestamp")
 
+        # Extract the temperature sensor data once per entry
+        temp_sensors = entry.get("temperature_readings", {}).keys()
+        temp_dict = {}
+        for sensor in temp_sensors:
+            temp_dict[f"temperature_{sensor.lower().replace(' ', '_')}"] = entry.get(
+                "temperature_readings", {}
+            ).get(sensor, None)
+
+        # Iterate through each item in the "image_analysis" list
+        for analysis_item in entry.get("image_analysis", []):
+            # We are interested in elements that have "ROI-label" as a key
+            if "ROI-label" in analysis_item:
+                row_data = {}
+
+                row_data["timestamp"] = timestamp
+
+                for field in headers:
+                    value = analysis_item.get(field)
+                    if isinstance(value, dict):
+                        # It's a dictionary so pull out "Mean"
+                        value = value.get("Mean")
+                    row_data[field] = value
+
+                row_data.update(temp_dict)
+
+                records.append(row_data)
+
+    # Create the DataFrame
+    df = pd.DataFrame(records)
+    df.to_csv(csv_path, index=False)
+
+
+def save_plot_of_results(csv_path: Path, image_path: Path) -> None:
     # Load the CSV data for plotting
-    img_timestamps = []
-    temp_timestamps = []
-    pixel_values = []
-    roi_labels = []
-    temp_1 = []
-    temp_2 = []
-    with csv_path.open("r") as f:
-        next(f)
-        for line in f:
-            if line.strip():
-                i_ts, rl, pv, t_ts, t1, t2 = line.strip().split(",")
-                img_timestamps.append(datetime.fromisoformat(i_ts))
-                temp_timestamps.append(datetime.fromisoformat(t_ts))
-                pixel_values.append(float(pv))
-                roi_labels.append(rl)
-                temp_1.append(float(t1))
-                temp_2.append(float(t2))
+    data = pd.read_csv(csv_path)
 
-    # for idx, _ in enumerate(timestamps[1:]):
-    #     timestamps[idx] = (timestamps[idx] - timestamps[0]).total_seconds()
-    # timestamps[0] = 0
+    analysis_method = data["Analysis-method"].unique()[0]
+    value_to_plot = {
+        'max_intensity': 'max_intensity',
+        'centre': 'centre',
+        'gaussian': 'mu',
+        'fano': 'resonance',
+    }
 
-    _, ax = plt.subplots()
-    ax.plot(img_timestamps, pixel_values, color="blue", label=f"{roi_labels[0]}")
-    ax.set_xlabel("Timestamp")
-    ax.set_ylabel("Mean pixel value")
-    ax2 = ax.twinx()
-    ax2.plot(temp_timestamps, temp_1, color="red", label="Temperature 1")
-    ax2.plot(temp_timestamps, temp_2, color="green", label="Temperature 2")
-    ax2.set_ylabel("Temperature (°C)")
-    ax2.set_ylim(0, 100)
-    ax.legend(loc="upper left")
-    ax2.legend(loc="upper right")
-    plt.gca().xaxis.set_major_locator(mdates.MinuteLocator(interval=30))
+    ROIs_to_plot = data["ROI-label"].unique()
+    temp_sensors_to_plot = [t for t in data.columns if "temperature" in t]
+    if len(ROIs_to_plot) == 0:
+        logger.warning("No ROI-labels found in the data.")
+        return
+    _, ax = plt.subplots(2, 1, figsize=(12, 6))
+    for idx, ROI in enumerate(ROIs_to_plot):
+        temp_df = data[data["ROI-label"] == ROI]
+        if temp_df.empty:
+            logger.warning(f"No data found for ROI-label: {ROI}")
+            continue
+        ax[0].plot(temp_df['timestamp'], temp_df[value_to_plot[analysis_method]], label=ROI)
+        for temp_sensor in temp_sensors_to_plot:
+            if idx == 0:
+                ax[1].plot(temp_df['timestamp'], temp_df[temp_sensor], label=temp_sensor)
+
+    ax[0].set_xlabel("Timestamp")
+    ax[0].set_ylabel("Mean pixel value")
+    ax[1].set_ylabel("Temperature (°C)")
+    ax[1].set_ylim(0, 150)
+    ax[0].legend(loc="upper left")
+    plt.gca().xaxis.set_major_locator(mdates.MinuteLocator(interval=60))
     plt.xticks(rotation=45, ha="right")
-    plt.tight_layout()
-    plt.savefig(Path(RESULTS_DIR, RESULTS_IMAGE))
+    # plt.tight_layout()
+    plt.savefig(image_path)
+
+
+def communicate_results(processed_entries: list[dict], results_data: list[dict]) -> None:
+    """Simulate communication of results to a CSV file."""
+
+    csv_path = Path(RESULTS_DIR, CSV_FILENAME)
+    save_results_json_as_csv(processed_entries, csv_path)
+
+    image_path =Path(RESULTS_DIR, RESULTS_IMAGE)
+    save_plot_of_results(csv_path, image_path)
 
     # Update the metadata to mark entries as transmitted
-    for idx in processed_entries:
+    for idx in find_not_transmitted_entries(processed_entries):
         results_data[idx]["data_transmitted"] = True
     # Save the entire updated manifest
     save_metadata(RESULTS_DIR, RESULTS_FILENAME, results_data)

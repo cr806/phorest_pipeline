@@ -57,10 +57,11 @@ try:
 
     # --- Timing ---
     COLLECTOR_INTERVAL = settings.getint('Timing', 'collector_interval_seconds', fallback=300)
-    RETRY_DELAY = settings.getint('Timing', 'collector_retry_delay_seconds', fallback=2)
     PROCESSOR_INTERVAL = settings.getint('Timing', 'processor_interval_seconds', fallback=2)
-    ENABLE_COMPRESSOR = settings.getboolean('Timing', 'enable_image_compression', fallback=False)
     COMPRESSOR_INTERVAL = settings.getint('Timing', 'compress_interval_seconds', fallback=3600)
+    POLL_INTERVAL = settings.getint('Timing', 'poll_interval_seconds', fallback=2)
+    RETRY_DELAY = settings.getint('Timing', 'collector_retry_delay_seconds', fallback=2)
+    ENABLE_COMPRESSOR = settings.getboolean('Timing', 'enable_image_compression', fallback=False)
     LOGS_COMPRESSOR_INTERVAL = settings.getint(
         'Timing', 'log_file_interval_seconds', fallback=3600
     )
