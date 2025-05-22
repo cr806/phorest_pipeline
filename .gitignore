@@ -91,6 +91,7 @@ flags/
 generated_files/
 logs/
 results/
+backup/
 
 # Ignore symlinks of data direcories too
 continuous_capture
@@ -99,3 +100,4 @@ flags
 generated_files
 logs
 results
+backup

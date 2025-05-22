@@ -40,6 +40,9 @@ def compress_files(files_to_process: list[Path]):
 
             with file_path.open("rb") as f_in, gzip.open(output_file_path, "wb") as f_out:
                 shutil.copyfileobj(f_in, f_out)
+            
+            # Remove the original file after compression
+            file_path.unlink()
 
             logger.info(f"Successfully compressed: '{file_path}' to '{output_file_path}'")
 
@@ -67,9 +70,9 @@ def backup_and_empty_original_file(files_to_process: list[Path]) -> list[Path]:
         try:
             # 1. Generate the backup file name with datetime suffix
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            backup_file_path = original_file_path.with_name(
+            backup_file_path = Path('backup', original_file_path.with_name(
                 f"{original_file_path.stem}_{timestamp}{original_file_path.suffix}"
-            )
+            ))
 
             # 2. Copy the original file to the backup location
             shutil.copy2(str(original_file_path), str(backup_file_path))
