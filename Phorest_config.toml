@@ -1,0 +1,66 @@
+# Main configuration file for the process pipeline
+
+# --- Data Analysis Settings ---
+[Data_Analysis]
+roi_manifest_path = "generated_files/ROI_manifest.json"   # Path to the ROI manifest file
+method = "gaussian"                                       # Analysis method: "max_intensity", "centre", "gaussian", or "fano"
+number_of_subROIs = 0                                     # Use 0 to indicate the use of all rows for subROIs
+
+# --- File Paths ---
+[Paths]
+flag_dir = "flags"                               # Directory for flag files
+data_dir = "data"                                # Directory for raw data
+results_dir = "results"                          # Directory for processed results
+continuous_capture_dir = "continuous_capture"    # Directory for continuous capture data
+logs_dir = "logs"                                # Directory for log files
+# brightfield_dir = "bright"                     # Example of a commented-out path
+
+# --- Flag File Names ---
+[Flags]
+data_ready = "data_ready.flag"        # Flag file indicating data is ready
+results_ready = "results_ready.flag"  # Flag file indicating results are ready
+
+# --- Timing Intervals (in seconds) ---
+[Timing]
+collector_interval_seconds = 10     # Interval for data collection
+processor_interval_seconds = 60     # Interval for data processing
+communicator_interval_seconds = 60  # Interval for communication tasks
+poll_interval_seconds = 2           # How often processes check for flags when waiting
+enable_image_compression = true     # Enable or disable image compression
+compress_interval_seconds = 600     # How often to compress images
+log_file_interval_seconds = 3600    # How often to manage log files
+
+# --- Retry Mechanism Settings ---
+[Retries]
+collector_failure_limit = 5         # Maximum number of collector failures before stopping
+collector_retry_delay_seconds = 3   # Delay before retrying collector operations
+
+# --- Data Buffer Settings ---
+[Buffer]
+image_buffer_size = 10              # Maximum number of images to keep in the data directory
+
+# --- Camera Settings ---
+[Camera]
+camera = true                       # Enable or disable camera usage
+camera_type = "dummy"               # Type of camera: "dummy", "argus", "tis", "logitech"
+camera_id = 0                       # Camera device ID
+camera_exposure = 30                # Camera exposure setting
+# camera_brightness = 170           # Example: alternate brightness setting
+# camera_contrast = 40              # Example: alternate contrast setting
+camera_transform = "ROTATE_180"     # Image transformation: "NONE", "ROTATE_90", "ROTATE_180", "ROTATE_270", "FLIP_HORIZONTAL", "FLIP_VERTICAL"
+
+# --- Temperature Sensor Settings ---
+[Temperature]
+thermocouple = true                 # Enable or disable thermocouple usage
+
+[Temperature.thermocouple_sensors]
+"28-00000ff8fa16" = "Sensor 1"
+"28-00000ff86450" = "Sensor 2"
+
+# --- Brightfield Settings ---
+[Brightfield]
+brightfield = false                 # Enable or disable brightfield mode
+# camera_exposure = 0.01            # Example: brightfield specific exposure
+# camera_gain = 1.0                 # Example: brightfield specific gain
+# camera_brightness = 0.5
+# camera_contrast = 0.5

@@ -1,32 +1,43 @@
 # src/process_pipeline/shared/config.py
-import ast
-import configparser
+import sys
+import tomllib
 from pathlib import Path
 
-from phorest_pipeline.shared.cameras import CameraTransform, CameraType
+from phorest_pipeline.shared.cameras import (
+    CameraTransform,
+    CameraType,
+)
 
-CONFIG_FILE = Path('config.ini')
+CONFIG_FILE = Path("Phorest_config.toml")
 
 
 def load_config():
-    """Loads configuration file."""
     if not CONFIG_FILE.is_file():
-        raise FileNotFoundError(f'Configuration file not found: {CONFIG_FILE}')
-    parser = configparser.ConfigParser()
-    parser.read(CONFIG_FILE)
-    return parser
+        raise FileNotFoundError(f"Configuration file not found: {CONFIG_FILE}")
+
+    try:
+        with CONFIG_FILE.open("rb") as f:
+            config = tomllib.load(f)
+        return config
+    except tomllib.TomlDecodeError as e:
+        raise ValueError(f"Error decoding TOML config file '{CONFIG_FILE}': {e}") from e
+    except Exception as e:
+        raise IOError(
+            f"An unexpected error occurred reading config file '{CONFIG_FILE}': {e}"
+        ) from e
 
 
-def get_path(config, dir_name_key: str, fallback: str) -> Path:
-    """Gets the full path from a key in config."""
-    new_dir = Path(config.get('Paths', dir_name_key, fallback=fallback))
-    return new_dir
+def get_path(config: dict, section_name: str, key: str, fallback: str) -> Path:
+    """Gets the full path from a key in config, within a specified section."""
+    # .get() on a dict handles missing sections/keys gracefully
+    value = config.get(section_name, {}).get(key, fallback)
+    return Path(value)
 
 
-def get_flag_path(config, flag_name_key: str) -> Path:
+def get_flag_path(config: dict, flag_name_key: str) -> Path:
     """Gets the full path for a flag file."""
-    flag_dir = get_path(config, 'flag_dir', 'flags')
-    flag_filename = config.get('Flags', flag_name_key)
+    flag_dir = get_path(config, "Paths", "flag_dir", "flags")  # Now specify section for get_path
+    flag_filename = config.get("Flags", {}).get(flag_name_key)  # Access directly from dict
     if not flag_filename:
         raise ValueError(f"Flag key '{flag_name_key}' not found in config [Flags]")
     return Path(flag_dir, flag_filename)
@@ -34,121 +45,74 @@ def get_flag_path(config, flag_name_key: str) -> Path:
 
 # Load config once on import
 try:
-    settings = load_config()  # Make sure load_config loads 'config.ini'
+    settings = load_config()  # settings is now a dictionary
 
     # --- Data analysis ---
-    ROI_MANIFEST_PATH = Path(
-        settings.get('Data_Analysis', 'roi_manifest_path', fallback='roi_manifest.json')
-    )
-    METHOD = settings.get('Data_Analysis', 'method', fallback='gaussian')
-    NUMBER_SUB_ROIS = settings.getint('Data_Analysis', 'number_of_subROIs', fallback=1)
+    # Accessing values directly from the dictionary. TOML parsing handles types.
+    ROI_MANIFEST_PATH = Path(settings.get("Data_Analysis", {}).get("roi_manifest_path", None))
+    METHOD = settings.get("Data_Analysis", {}).get("method", "gaussian")
+    NUMBER_SUB_ROIS = int(settings.get("Data_Analysis", {}).get("number_of_subROIs", 1))
 
     # --- Flags ---
-    DATA_READY_FLAG = get_flag_path(settings, 'data_ready')
-    RESULTS_READY_FLAG = get_flag_path(settings, 'results_ready')
+    DATA_READY_FLAG = get_flag_path(settings, "data_ready")
+    RESULTS_READY_FLAG = get_flag_path(settings, "results_ready")
 
     # --- Paths ---
-    DATA_DIR = Path(settings.get('Paths', 'data_dir', fallback='data'))
-    CONTINUOUS_DIR = Path(
-        settings.get('Paths', 'continuous_capture_dir', fallback='continuous_capture')
-    )
-    RESULTS_DIR = Path(settings.get('Paths', 'results_dir', fallback='results'))
-    LOGS_DIR = Path(settings.get('Paths', 'logs_dir', fallback='results'))
+    DATA_DIR = get_path(settings, "Paths", "data_dir", "data")
+    CONTINUOUS_DIR = get_path(settings, "Paths", "continuous_capture_dir", "continuous_capture")
+    RESULTS_DIR = get_path(settings, "Paths", "results_dir", "results")
+    LOGS_DIR = get_path(settings, "Paths", "logs_dir", "logs")
 
     # --- Timing ---
-    COLLECTOR_INTERVAL = settings.getint('Timing', 'collector_interval_seconds', fallback=300)
-    PROCESSOR_INTERVAL = settings.getint('Timing', 'processor_interval_seconds', fallback=2)
-    COMPRESSOR_INTERVAL = settings.getint('Timing', 'compress_interval_seconds', fallback=3600)
-    POLL_INTERVAL = settings.getint('Timing', 'poll_interval_seconds', fallback=2)
-    RETRY_DELAY = settings.getint('Timing', 'collector_retry_delay_seconds', fallback=2)
-    ENABLE_COMPRESSOR = settings.getboolean('Timing', 'enable_image_compression', fallback=False)
-    LOGS_COMPRESSOR_INTERVAL = settings.getint(
-        'Timing', 'log_file_interval_seconds', fallback=3600
-    )
+    # No need for getint/getboolean, TOML parses types directly
+    COLLECTOR_INTERVAL = settings.get("Timing", {}).get("collector_interval_seconds", 300)
+    PROCESSOR_INTERVAL = settings.get("Timing", {}).get("processor_interval_seconds", 2)
+    COMPRESSOR_INTERVAL = settings.get("Timing", {}).get("compress_interval_seconds", 3600)
+    POLL_INTERVAL = settings.get("Timing", {}).get("poll_interval_seconds", 2)
+    RETRY_DELAY = settings.get("Timing", {}).get("collector_retry_delay_seconds", 2)
+    ENABLE_COMPRESSOR = settings.get("Timing", {}).get("enable_image_compression", False)
+    LOGS_COMPRESSOR_INTERVAL = settings.get("Timing", {}).get("log_file_interval_seconds", 3600)
 
     # --- Retries ---
-    FAILURE_LIMIT = settings.getint('Retries', 'collector_failure_limit', fallback=5)
+    FAILURE_LIMIT = settings.get("Retries", {}).get("collector_failure_limit", 5)
 
     # --- Buffer ---
-    IMAGE_BUFFER_SIZE = settings.getint('Buffer', 'image_buffer_size', fallback=10)
+    IMAGE_BUFFER_SIZE = settings.get("Buffer", {}).get("image_buffer_size", 300)
 
     # --- Component Availability ---
-    # Use getboolean for true/false values
-    ENABLE_CAMERA = settings.getboolean('Camera', 'camera', fallback=True)
-    ENABLE_THERMOCOUPLE = settings.getboolean('Temperature', 'thermocouple', fallback=True)
-    ENABLE_BRIGHTFIELD = settings.getboolean('Brightfield', 'brightfield', fallback=False)
+    ENABLE_CAMERA = settings.get("Camera", {}).get("camera", False)
+    ENABLE_THERMOCOUPLE = settings.get("Temperature", {}).get("thermocouple", False)
+    ENABLE_BRIGHTFIELD = settings.get("Brightfield", {}).get("brightfield", False)
 
     # --- Camera Settings ---
-    camera_type_str = settings.get('Camera', 'camera_type', fallback='LOGITECH')
-    camera_type_str = camera_type_str.upper().strip().replace("'", '').replace('"', '')
+    camera_type_str = settings.get("Camera", {}).get("camera_type", "DUMMY")
+    camera_type_str = camera_type_str.upper()
     try:
-        CAMERA_TYPE = CameraType[camera_type_str]  # try to return the enum
+        CAMERA_TYPE = CameraType[camera_type_str]
     except KeyError:
-        print(f'[CONFIG] Invalid camera type: {camera_type_str}.')
-        print(f'Please use one of {", ".join(CameraType.__members__.keys())}')
+        print(f"[CONFIG] Invalid camera type: {camera_type_str}.")
+        print(f"Please use one of {', '.join(CameraType.__members__.keys())}")
         exit(1)
-    CAMERA_INDEX = settings.getint('Camera', 'camera_id', fallback=1)
-    CAMERA_EXPOSURE = settings.getint('Camera', 'camera_exposure', fallback=150)
-    CAMERA_BRIGHTNESS = settings.getint('Camera', 'camera_brightness', fallback=128)
-    CAMERA_CONTRAST = settings.getint('Camera', 'camera_contrast', fallback=32)
+    CAMERA_INDEX = int(settings.get("Camera", {}).get("camera_id", 0))
+    CAMERA_EXPOSURE = int(settings.get("Camera", {}).get("camera_exposure", 150))
+    CAMERA_BRIGHTNESS = int(settings.get("Camera", {}).get("camera_brightness", 128))
+    CAMERA_CONTRAST = int(settings.get("Camera", {}).get("camera_contrast", 32))
 
-    camera_transform_str = settings.get('Camera', 'camera_transform', fallback='NONE')
-    camera_transform_str = camera_transform_str.upper().strip().replace("'", '').replace('"', '')
+    camera_transform_str = settings.get("Camera", {}).get("camera_transform", "NONE")
+    camera_transform_str = camera_transform_str.upper()
     try:
-        CAMERA_TRANFORM = CameraTransform[camera_transform_str]  # try to return the enum
+        CAMERA_TRANFORM = CameraTransform[camera_transform_str]
     except KeyError:
-        print(f'[CONFIG] Invalid camera image transofrm: {camera_transform_str}.')
-        print(f'Please use one of {", ".join(CameraTransform.__members__.keys())}')
+        print(f"[CONFIG] Invalid camera image transform: {camera_transform_str}.")
+        print(f"Please use one of {', '.join(CameraTransform.__members__.keys())}")
         exit(1)
 
     # --- Temperature Settings ---
-    # Parse the dictionary string using ast.literal_eval
-    THERMOCOUPLE_IDS = {}
-    tc_id_str = settings.get('Temperature', 'thermocouple_sensors', fallback='{}')
-    try:
-        parsed_data = ast.literal_eval(tc_id_str)
-        if isinstance(parsed_data, dict):
-            THERMOCOUPLE_IDS = parsed_data
-        else:
-            print(
-                f"[CONFIG] [WARN] 'thermocouple_sensors' in config is not a dictionary: {tc_id_str}. Using default {{}}."
-            )
-    except (ValueError, SyntaxError) as e:
-        print(
-            f"[CONFIG] [WARN] Could not parse 'thermocouple_id': {tc_id_str}. Error: {e}. Using default {{}}."
-        )
+    THERMOCOUPLE_IDS = settings.get("Temperature", {}).get("thermocouple_sensors", {})
 
     # --- Brightfield Settings ---
-    # Example reading brightfield specific camera ID
-    BRIGHTFIELD_CAMERA_INDEX = settings.getint(
-        'Brightfield', 'camera_id', fallback=1
-    )  # Read specific ID if needed
+    BRIGHTFIELD_CAMERA_INDEX = int(settings.get("Brightfield", {}).get("camera_id", 1))
 
-except (FileNotFoundError, ValueError, configparser.Error) as e:
-    print(f'FATAL ERROR loading/parsing configuration: {e}')
-    # Set default fallbacks for critical components
-    settings = None
-
-    DATA_READY_FLAG = Path('ERROR_data_ready.flag')
-    RESULTS_READY_FLAG = Path('ERROR_results_ready.flag')
-
-    DATA_DIR = Path('ERROR_data')
-    RESULTS_DIR = Path('ERROR_results')
-
-    COLLECTOR_INTERVAL = 300
-    POLL_INTERVAL = 2
-    RETRY_DELAY = 2
-
-    FAILURE_LIMIT = 5
-    IMAGE_BUFFER_SIZE = 10
-
-    # Default availability flags on error
-    ENABLE_CAMERA = False
-    ENABLE_THERMOCOUPLE = False
-    ENABLE_BRIGHTFIELD = False
-
-    # Default settings on error
-    CAMERA_INDEX = 0
-    THERMOCOUPLE_IDS = []
-    BRIGHTFIELD_CAMERA_INDEX = 0
-    # sys.exit(f"Configuration error: {e}") # Consider making errors fatal
+except (FileNotFoundError, ValueError, IOError) as e:
+    print(f"FATAL ERROR loading/parsing configuration: {e}")
+    sys.exit(1)
