@@ -39,7 +39,11 @@ def configure_logger(
     log_file_path = Path(LOGS_DIR, log_filename)
     if rotate_daily:
         file_handler = logging.handlers.TimedRotatingFileHandler(
-            log_file_path, when='midnight', interval=1, backupCount=0, encoding='utf-8'
+            log_file_path,
+            when='midnight',
+            interval=1,
+            backupCount=1,
+            encoding='utf-8'
         )
     else:
         file_handler = logging.FileHandler(log_file_path, encoding='utf-8')
