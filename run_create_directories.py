@@ -18,6 +18,19 @@ DIRECTORIES_TO_CREATE = [
     'generated_files',
     'logs',
     'results',
+    'backup/data',
+    'backup/logs',
+    'backup/results',
+]
+
+SYMLINKS_TO_CREATE = [
+    'continuous_capture',
+    'data',
+    'flags',
+    'generated_files',
+    'logs',
+    'results',
+    'backup',
 ]
 
 
@@ -132,7 +145,7 @@ if __name__ == '__main__':
     usb_dir_success = create_directories(USB_MOUNT_POINT, DIRECTORIES_TO_CREATE)
 
     # 2. Create symlinks in the project directory
-    symlink_success = create_symlinks_to_usb(USB_MOUNT_POINT, PROJECT_ROOT, DIRECTORIES_TO_CREATE)
+    symlink_success = create_symlinks_to_usb(USB_MOUNT_POINT, PROJECT_ROOT, SYMLINKS_TO_CREATE)
 
     if usb_dir_success and symlink_success:
         logger.info('Directory and symlink setup completed successfully!')
