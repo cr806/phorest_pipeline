@@ -67,11 +67,12 @@ try:
     # No need for getint/getboolean, TOML parses types directly
     COLLECTOR_INTERVAL = settings.get("Timing", {}).get("collector_interval_seconds", 300)
     PROCESSOR_INTERVAL = settings.get("Timing", {}).get("processor_interval_seconds", 2)
+    COMMUNICATOR_INTERVAL = settings.get("Timing", {}).get("communicator_interval_seconds", 60)
     COMPRESSOR_INTERVAL = settings.get("Timing", {}).get("compress_interval_seconds", 3600)
     POLL_INTERVAL = settings.get("Timing", {}).get("poll_interval_seconds", 2)
     RETRY_DELAY = settings.get("Timing", {}).get("collector_retry_delay_seconds", 2)
     ENABLE_COMPRESSOR = settings.get("Timing", {}).get("enable_image_compression", False)
-    LOGS_COMPRESSOR_INTERVAL = settings.get("Timing", {}).get("log_file_interval_seconds", 3600)
+    FILE_BACKUP_INTERVAL = settings.get("Timing", {}).get("file_backup_interval_seconds", 3600)
 
     # --- Retries ---
     FAILURE_LIMIT = settings.get("Retries", {}).get("collector_failure_limit", 5)

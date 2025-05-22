@@ -36,8 +36,7 @@ if ENABLE_CAMERA:
     logger.info(f"Camera type: {CAMERA_TYPE}")
 
 METADATA_FILENAME = Path("processing_manifest.json")
-POLL_INTERVAL = 2
-
+POLL_INTERVAL = COLLECTOR_INTERVAL / 5
 
 def ring_buffer_cleanup():
     logger.info("Performing ring buffer cleanup...")

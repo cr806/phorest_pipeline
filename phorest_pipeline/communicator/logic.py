@@ -1,6 +1,5 @@
 # src/process_pipeline/communicator/logic.py
 import time
-from datetime import datetime
 from pathlib import Path
 
 import matplotlib.dates as mdates
@@ -8,7 +7,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from phorest_pipeline.shared.config import (
-    POLL_INTERVAL,
+    COMMUNICATOR_INTERVAL,
     RESULTS_DIR,
     RESULTS_READY_FLAG,
     settings,
@@ -23,7 +22,7 @@ RESULTS_FILENAME = Path("processing_results.json")
 CSV_FILENAME = Path("communicating_results.csv")
 RESULTS_IMAGE = Path("processed_data_plot.png")
 
-COMMUNICATOR_INTERVAL = 60
+POLL_INTERVAL = COMMUNICATOR_INTERVAL / 20 if COMMUNICATOR_INTERVAL > (5 * 20) else 5
 
 
 # Helper Function: Find all processed entries
@@ -48,14 +47,12 @@ def find_not_transmitted_entries(metadata_list: list) -> list[int]:
 
 
 def save_results_json_as_csv(processed_entries: list[dict], csv_path: Path) -> None:
+    logger.info(f"Parsing results JSON to CSV and saving to {csv_path}")
     try:
         target_dictionary = processed_entries[0]["image_analysis"][1]
         headers = list(target_dictionary.keys())
     except (IndexError, KeyError) as e:
-        print(f"Error accessing data: {e}")
-        print(
-            "Please ensure the JSON structure matches the expected path (data[0]['image_analysis'][1])."
-        )
+        logger.error(f"Error accessing data: {e}")
 
     records = []
     for entry in processed_entries:
@@ -95,15 +92,17 @@ def save_results_json_as_csv(processed_entries: list[dict], csv_path: Path) -> N
 
 
 def save_plot_of_results(csv_path: Path, image_path: Path) -> None:
+    logger.info(f"Generating chart of results and saving to {image_path}")
+
     # Load the CSV data for plotting
     data = pd.read_csv(csv_path)
 
     analysis_method = data["Analysis-method"].unique()[0]
     value_to_plot = {
-        'max_intensity': 'max_intensity',
-        'centre': 'centre',
-        'gaussian': 'mu',
-        'fano': 'resonance',
+        "max_intensity": "max_intensity",
+        "centre": "centre",
+        "gaussian": "mu",
+        "fano": "resonance",
     }
 
     ROIs_to_plot = data["ROI-label"].unique()
@@ -117,10 +116,10 @@ def save_plot_of_results(csv_path: Path, image_path: Path) -> None:
         if temp_df.empty:
             logger.warning(f"No data found for ROI-label: {ROI}")
             continue
-        ax[0].plot(temp_df['timestamp'], temp_df[value_to_plot[analysis_method]], label=ROI)
+        ax[0].plot(temp_df["timestamp"], temp_df[value_to_plot[analysis_method]], label=ROI)
         for temp_sensor in temp_sensors_to_plot:
             if idx == 0:
-                ax[1].plot(temp_df['timestamp'], temp_df[temp_sensor], label=temp_sensor)
+                ax[1].plot(temp_df["timestamp"], temp_df[temp_sensor], label=temp_sensor)
 
     ax[0].set_xlabel("Timestamp")
     ax[0].set_ylabel("Mean pixel value")
@@ -139,7 +138,7 @@ def communicate_results(processed_entries: list[dict], results_data: list[dict])
     csv_path = Path(RESULTS_DIR, CSV_FILENAME)
     save_results_json_as_csv(processed_entries, csv_path)
 
-    image_path =Path(RESULTS_DIR, RESULTS_IMAGE)
+    image_path = Path(RESULTS_DIR, RESULTS_IMAGE)
     save_plot_of_results(csv_path, image_path)
 
     # Update the metadata to mark entries as transmitted
@@ -164,9 +163,9 @@ def perform_communication(current_state: CommunicatorState) -> CommunicatorState
             next_state = CommunicatorState.WAITING_FOR_RESULTS
             global next_run_time
             next_run_time = time.monotonic() + COMMUNICATOR_INTERVAL
+            logger.info(f"Will now wait for {COMMUNICATOR_INTERVAL} seconds until next cycle...")
 
         case CommunicatorState.WAITING_FOR_RESULTS:
-            logger.info(f"Waiting for {COMMUNICATOR_INTERVAL} seconds until next cycle...")
             now = time.monotonic()
             if now >= next_run_time:
                 if RESULTS_READY_FLAG.exists():
@@ -182,6 +181,9 @@ def perform_communication(current_state: CommunicatorState) -> CommunicatorState
                     except OSError as e:
                         logger.error(f"Could not delete flag {RESULTS_READY_FLAG}: {e}")
                         time.sleep(POLL_INTERVAL)
+                else:
+                    next_state = CommunicatorState.IDLE
+                    logger.info("WAITING_FOR_RESULTS -> IDLE")
             else:
                 time.sleep(POLL_INTERVAL)
 
@@ -203,6 +205,8 @@ def run_communicator():
     logger.info("--- Starting Communicator ---")
     print("--- Starting Communicator ---")
     current_state = CommunicatorState.COMMUNICATING
+    global next_run_time
+    next_run_time = 0
 
     # Initial cleanup: remove results flag if it exists on startup
     if settings:

@@ -7,6 +7,7 @@ from pathlib import Path
 
 from phorest_pipeline.shared.config import (
     DATA_DIR,
+    FILE_BACKUP_INTERVAL,
     RESULTS_DIR,
     settings,
 )
@@ -15,8 +16,7 @@ from phorest_pipeline.shared.states import BackupState
 
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename="file_backup.log")
 
-RENAME_INTERVAL = 3600
-POLL_INTERVAL = RENAME_INTERVAL / 20
+POLL_INTERVAL = FILE_BACKUP_INTERVAL / 20 if FILE_BACKUP_INTERVAL > (5 * 20) else 5
 
 FILES_TO_PROCESS = [
     Path(DATA_DIR, "processing_manifest.json"),
@@ -27,20 +27,20 @@ FILES_TO_PROCESS = [
 
 
 def compress_files(files_to_process: list[Path]):
-    logger.info('--- Compressing Files ---')
+    logger.info("--- Compressing Files ---")
     for file_path in files_to_process:
         if not file_path.is_file():
             logger.warning(f"Skipping compression: '{file_path}' is not a file or does not exist.")
             continue
 
         try:
-            output_file_path = file_path.with_suffix(file_path.suffix + '.gz')
+            output_file_path = file_path.with_suffix(file_path.suffix + ".gz")
 
             logger.info(f"Compressing '{file_path}' to '{output_file_path}'...")
 
             with file_path.open("rb") as f_in, gzip.open(output_file_path, "wb") as f_out:
                 shutil.copyfileobj(f_in, f_out)
-            
+
             # Remove the original file after compression
             file_path.unlink()
 
@@ -52,7 +52,6 @@ def compress_files(files_to_process: list[Path]):
             logger.error(f"Error compressing '{file_path}': Permission denied to read or write.")
         except Exception as e:
             logger.error(f"An unexpected error occurred compressing '{file_path}': {e}")
-
 
 
 def backup_and_empty_original_file(files_to_process: list[Path]) -> list[Path]:
@@ -70,9 +69,12 @@ def backup_and_empty_original_file(files_to_process: list[Path]) -> list[Path]:
         try:
             # 1. Generate the backup file name with datetime suffix
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            backup_file_path = Path('backup', original_file_path.with_name(
-                f"{original_file_path.stem}_{timestamp}{original_file_path.suffix}"
-            ))
+            backup_file_path = Path(
+                "backup",
+                original_file_path.with_name(
+                    f"{original_file_path.stem}_{timestamp}{original_file_path.suffix}"
+                ),
+            )
 
             # 2. Copy the original file to the backup location
             shutil.copy2(str(original_file_path), str(backup_file_path))
@@ -93,7 +95,7 @@ def backup_and_empty_original_file(files_to_process: list[Path]) -> list[Path]:
         except Exception as e:
             logger.error(
                 f"An unexpected error occurred while processing {original_file_path}: {e}"
-            )    
+            )
             continue
         files_to_compress.append(backup_file_path)
     return files_to_compress
@@ -113,17 +115,17 @@ def perform_file_backup_cycle(current_state: BackupState) -> BackupState:
             logger.info("IDLE -> WAITING_TO_RUN")
             next_state = BackupState.WAITING_TO_RUN
             global next_run_time
-            next_run_time = time.monotonic() + RENAME_INTERVAL
+            next_run_time = time.monotonic() + FILE_BACKUP_INTERVAL
+            logger.info(f"Will wait for {FILE_BACKUP_INTERVAL} seconds until next cycle...")
 
         case BackupState.WAITING_TO_RUN:
-            logger.info(f"Waiting for {RENAME_INTERVAL} seconds until next cycle...")
             now = time.monotonic()
             if now >= next_run_time:
                 logger.info("WAITING_TO_RUN -> BACKUP_FILES")
                 next_state = BackupState.BACKUP_FILES
             else:
                 time.sleep(POLL_INTERVAL)
-        
+
         case BackupState.BACKUP_FILES:
             logger.info("--- Backing up files ---")
             files_to_compress = backup_and_empty_original_file(FILES_TO_PROCESS)

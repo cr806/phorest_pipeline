@@ -8,7 +8,6 @@ from phorest_pipeline.processor.process_image import process_image
 from phorest_pipeline.shared.config import (
     DATA_DIR,
     DATA_READY_FLAG,
-    POLL_INTERVAL,
     PROCESSOR_INTERVAL,
     RESULTS_DIR,
     RESULTS_READY_FLAG,
@@ -24,6 +23,8 @@ logger = configure_logger(name=__name__, rotate_daily=True, log_filename='proces
 
 METADATA_FILENAME = Path('processing_manifest.json')
 RESULTS_FILENAME = Path('processing_results.json')
+
+POLL_INTERVAL = PROCESSOR_INTERVAL / 20 if PROCESSOR_INTERVAL > (5 * 20) else 5
 
 
 # Helper Function: Find next unprocessed entry
@@ -77,6 +78,9 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
                         logger.error(f'Could not delete flag {DATA_READY_FLAG}: {e}')
                         # Stay waiting, maybe the flag is gone or perms issue
                         time.sleep(5)
+                else:
+                    next_state = ProcessorState.IDLE
+                    logger.info('WAITING_FOR_DATA -> IDLE')
             else:
                 time.sleep(POLL_INTERVAL)
 
@@ -171,6 +175,8 @@ def run_processor():
     print('--- Starting Processor ---')
     # Start in PROCESSING state to immediately clear any backlog
     current_state = ProcessorState.PROCESSING
+    global next_run_time
+    next_run_time = 0
 
     # Initial cleanup: remove data flag if it exists on startup
     if settings:

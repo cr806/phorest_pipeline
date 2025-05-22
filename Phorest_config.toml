@@ -22,13 +22,13 @@ results_ready = "results_ready.flag"  # Flag file indicating results are ready
 
 # --- Timing Intervals (in seconds) ---
 [Timing]
-collector_interval_seconds = 10     # Interval for data collection
-processor_interval_seconds = 60     # Interval for data processing
-communicator_interval_seconds = 60  # Interval for communication tasks
-poll_interval_seconds = 2           # How often processes check for flags when waiting
-enable_image_compression = true     # Enable or disable image compression
-compress_interval_seconds = 600     # How often to compress images
-log_file_interval_seconds = 3600    # How often to manage log files
+collector_interval_seconds = 5        # Interval for data collection
+processor_interval_seconds = 60       # Interval for data processing
+communicator_interval_seconds = 20    # Interval for communication task
+enable_image_compression = true       # Enable or disable image compression
+compress_interval_seconds = 600       # How often to compress images
+log_file_interval_seconds = 3600      # How often to manage log files
+file_backup_interval_seconds = 3600   # Interval for rename files task
 
 # --- Retry Mechanism Settings ---
 [Retries]

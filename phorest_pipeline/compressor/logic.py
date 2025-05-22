@@ -20,7 +20,7 @@ from phorest_pipeline.shared.states import CompressorState
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename="compressor.log")
 
 METADATA_FILENAME = Path("processing_manifest.json")
-POLL_INTERVAL = 2
+POLL_INTERVAL = COMPRESSOR_INTERVAL / 20 if COMPRESSOR_INTERVAL > (5 * 20) else 5
 
 
 def find_entry_to_compress(metadata_list: list) -> tuple[int, dict | None]:
@@ -50,7 +50,7 @@ def compress_image() -> None:
     entry_index, entry_to_compress = find_entry_to_compress(manifest_data)
 
     if not entry_to_compress:
-        logger.info("[WARN] Entry to compress disappeared. -> CHECKING")
+        logger.warning("Entry to compress disappeared. -> CHECKING")
         next_state = CompressorState.CHECKING
         return next_state
 
@@ -153,6 +153,7 @@ def perform_compression_cycle(current_state: CompressorState) -> CompressorState
             else:
                 logger.info("No entries found requiring compression.")
                 next_state = CompressorState.WAITING_TO_RUN
+                logger.info(f"Will wait for {COMPRESSOR_INTERVAL} seconds until next check...")
 
         case CompressorState.COMPRESSING_IMAGES:
             logger.info("--- Starting Image Compression ---")
@@ -162,9 +163,7 @@ def perform_compression_cycle(current_state: CompressorState) -> CompressorState
             time.sleep(0.1)  # Small pause before checking again
 
         case CompressorState.WAITING_TO_RUN:
-            logger.info(f"Waiting for {COMPRESSOR_INTERVAL} seconds until next check...")
             time.sleep(POLL_INTERVAL)
-            logger.info("WAITING -> CHECKING")
             now = time.monotonic()
             if now >= next_run_time:
                 next_state = CompressorState.IDLE
