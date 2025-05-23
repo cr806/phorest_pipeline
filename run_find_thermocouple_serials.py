@@ -3,11 +3,11 @@ import time
 from pathlib import Path
 
 # Define ANSI color codes for better terminal output
-COLOR_GREEN = "\033[92m"
-COLOR_RED = "\033[91m"
-COLOR_YELLOW = "\033[93m"
-COLOR_BLUE = "\033[94m"
-COLOR_END = "\033[0m"  # Resets the color
+# COLOR_GREEN = "\033[92m"
+# COLOR_RED = "\033[91m"
+# COLOR_YELLOW = "\033[93m"
+# COLOR_BLUE = "\033[94m"
+# COLOR_END = "\033[0m"  # Resets the color
 
 # Location where 1-Wire devices are exposed in the Linux file system
 DEVICE_LOC = Path("/sys/bus/w1/devices/")
@@ -92,21 +92,23 @@ def main():
     # --- Summary ---
     print("")
     print("")
-    print(f"\n{COLOR_BLUE}     --- Summary of Found Thermocouples ---     {COLOR_END}")
-    print(f"{COLOR_BLUE}--------------------------------------------------{COLOR_END}")
+    print("\n     --- Summary of Found Thermocouples ---     ")
+    print("--------------------------------------------------")
 
     if serial_numbers:
         print(
-            f"{COLOR_GREEN}Successfully found {len(serial_numbers)} 1-Wire temperature sensor(s):{COLOR_END}"
+            f"Successfully found {len(serial_numbers)} 1-Wire temperature sensor(s):"
+            # f"{COLOR_GREEN}Successfully found {len(serial_numbers)} 1-Wire temperature sensor(s):"
         )
         for idx, serial in enumerate(serial_numbers):
-            print(f"  {COLOR_YELLOW}Serial Number:      {COLOR_END} {serial}")
-        print(f"{COLOR_BLUE}--------------------------------------------------{COLOR_END}")
+            print(f"  Serial Number:       {serial}")
+        print("--------------------------------------------------")
         print("")
         print("")
     else:
         print(
-            f"{COLOR_RED}No 1-Wire temperature sensors (devices starting with '28-') were found.{COLOR_END}"
+            "No 1-Wire temperature sensors (devices starting with '28-') were found."
+            # f"{COLOR_RED}No 1-Wire temperature sensors (devices starting with '28-') were found."
         )
         print("Possible reasons:")
         print("  - Sensors not physically connected to the 1-Wire bus.")
@@ -116,7 +118,36 @@ def main():
         print(
             "  - Required kernel modules ('w1-gpio', 'w1-therm') failed to load (check messages above)."
         )
-        print(f"{COLOR_BLUE}--------------------------------------------------{COLOR_END}")
+        print("--------------------------------------------------")
+
+    # # --- Summary ---
+    # print("")
+    # print("")
+    # print(f"\n{COLOR_BLUE}     --- Summary of Found Thermocouples ---     {COLOR_END}")
+    # print(f"{COLOR_BLUE}--------------------------------------------------{COLOR_END}")
+
+    # if serial_numbers:
+    #     print(
+    #         f"{COLOR_GREEN}Successfully found {len(serial_numbers)} 1-Wire temperature sensor(s):{COLOR_END}"
+    #     )
+    #     for idx, serial in enumerate(serial_numbers):
+    #         print(f"  {COLOR_YELLOW}Serial Number:      {COLOR_END} {serial}")
+    #     print(f"{COLOR_BLUE}--------------------------------------------------{COLOR_END}")
+    #     print("")
+    #     print("")
+    # else:
+    #     print(
+    #         f"{COLOR_RED}No 1-Wire temperature sensors (devices starting with '28-') were found.{COLOR_END}"
+    #     )
+    #     print("Possible reasons:")
+    #     print("  - Sensors not physically connected to the 1-Wire bus.")
+    #     print(
+    #         "  - 1-Wire not properly configured or enabled on your system (e.g., in /boot/config.txt for Raspberry Pi)."
+    #     )
+    #     print(
+    #         "  - Required kernel modules ('w1-gpio', 'w1-therm') failed to load (check messages above)."
+    #     )
+    #     print(f"{COLOR_BLUE}--------------------------------------------------{COLOR_END}")
 
 
 if __name__ == "__main__":

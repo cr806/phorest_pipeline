@@ -1,143 +1,332 @@
 import curses
+import os
+import signal
 import subprocess
 import sys
-import os
-import signal # Needed for sending signals
-import time   # For pauses and simulating work
+from pathlib import Path
 
-# --- Global Storage for Running Processes ---
-# Stores a list of dictionaries, each representing a running background process.
-# Each dictionary contains:
-#   'name': The name of the script file.
-#   'pid': The Process ID.
-#   'process_obj': The actual subprocess.Popen object, allowing interaction (poll(), send_signal()).
-#   'log_path': The path to the specific log file for this process instance.
-running_processes = []
+# --- Configuration for PID File ---
+PID_FILE = "flags/background_pids.txt"  # File to store script_name,pid
 
 # --- Script Categories ---
-# These scripts will run synchronously, and their output will be displayed in the TUI.
 info_gathering_scripts = [
-    "test/script_01_environment_setup.py",
-    "test/script_02_database_information.py",
+    {"menu": "Check USB Storage", "script": "run_storage_check.py"},
+    {"menu": "Iniatialse Directories", "script": "run_create_directories.py"},
+    {"menu": "Find Thermocouple Serial Numbers", "script": "run_find_thermocouple_serials.py"},
+    {"menu": "Find Camera Index", "script": "run_find_camera_index.py"},
+    {"menu": "Locate Gratings in Image", "script": "prepare_files_for_image_analysis.py"},
 ]
 
-# These scripts will be launched in the background, and the TUI will continue running.
 background_scripts = [
-    "test/script_03_network_check.py",
-    "test/script_04_config_template_generation.py",
-    "test/script_05_user_guidance.py",
+    {"menu": "Start Continuous Image Capture", "script": "run_continuous_capture.py"},
+    {"menu": "Start Data Collection Process", "script": "run_data_collector.py"},
+    {"menu": "Start Periodic Image Collection Process", "script": "run_collector.py"},
+    {"menu": "Start Image Analysis Process", "script": "run_processor.py"},
+    {"menu": "Start Data Plotting Process", "script": "run_communicator.py"},
+    {"menu": "Start Data Compression Process", "script": "run_compressor.py"},
+    {"menu": "Start File Backup Process", "script": "run_file_backup.py"},
 ]
 
-# Special menu item for process management
-MANAGE_PROCESSES_OPTION = "Manage Running Processes"
 
-# Combine all script options for the main menu, plus the management option.
-all_scripts = info_gathering_scripts + background_scripts + [MANAGE_PROCESSES_OPTION]
-
-# --- Create Dummy Placeholder Scripts for Testing ---
-# These dummy scripts ensure that the TUI has executable files to work with,
-# simulating real scripts. They also include basic SIGINT handling for testing.
-for script_name in (info_gathering_scripts + background_scripts):
-    if not os.path.exists(script_name):
-        with open(script_name, "w") as f:
-            f.write(f'import time\n')
-            f.write(f'import sys\n')
-            f.write(f'import os\n')
-            f.write(f'import signal\n')
-            f.write(f'\n')
-            f.write(f'# Basic SIGINT (Ctrl+C) handler for graceful exit\n')
-            f.write(f'def handler(signum, frame):\n')
-            f.write(f'    print(f"[{os.getpid()}] {script_name} received SIGINT ({signum}). Exiting gracefully.", file=sys.stderr)\n')
-            f.write(f'    sys.exit(0) # Exit cleanly after SIGINT\n')
-            f.write(f'signal.signal(signal.SIGINT, handler)\n')
-            f.write(f'\n')
-            f.write(f'print(f"[{os.getpid()}] Starting {script_name}...")\n')
-
-            if script_name in info_gathering_scripts:
-                # Dummy content for info-gathering scripts
-                f.write(f'print(f"--- Output for {script_name} ---\\n")\n')
-                f.write(f'print(f"This is a simulated informational output for {script_name}.")\n')
-                f.write(f'print(f"Line 2 of info: More details here...")\n')
-                f.write(f'print(f"Remember to note down this value: XYZ123 (from PID {os.getpid()})")\n')
-                f.write(f'time.sleep(1) # Simulate some work\n')
-            else:
-                # Dummy content for background scripts (long-running)
-                f.write(f'print(f"[{os.getpid()}] {script_name} running in background. Will print heartbeat every 5s...", flush=True)\n')
-                f.write(f'for i in range(1, 100):\n') # Loop for a long time to keep process alive
-                f.write(f'    print(f"[{os.getpid()}] {script_name} heartbeat {i}/100", flush=True)\n')
-                f.write(f'    time.sleep(5) # Simulate work, allows for longer running\n')
-                f.write(f'print(f"[{os.getpid()}] {script_name} finished background task normally.")\n')
-
-# --- Helper to generate unique log file names for background processes ---
-def get_unique_log_filename(script_name, pid):
-    log_dir = "test/script_logs"
-    os.makedirs(log_dir, exist_ok=True) # Ensure the log directory exists
-    base_name = os.path.basename(script_name).replace(".py", "") # Remove .py extension
-    return os.path.join(log_dir, f"{base_name}_{pid}.log")
-
-# --- Function to run a background script and store its PID and Popen object ---
-def run_background_script(stdscr, script_name):
+# --- Interactive Function to Check and Manage Running Background Scripts ---
+def check_running_background_scripts_status(stdscr):
     """
-    Launches the given Python script in the background, detaches it from the TUI,
-    and stores its process information in the global running_processes list.
+    Loads PIDs from the file, checks their status using 'ps',
+    and presents an interactive list to manage them.
+    Allows sending SIGINT to selected processes.
     """
-    stdscr.clear()
-    stdscr.addstr(0, 0, f"Attempting to launch '{script_name}' in background...")
-    stdscr.refresh()
-    curses.napms(500) # Small delay to show the "Launching..." message
+    current_selected_row = 0
+    h, w = stdscr.getmaxyx()
 
-    try:
-        # Create a temporary log file name before knowing the actual PID
-        temp_log_path = get_unique_log_filename(script_name, "temp")
-        log_file = open(temp_log_path, "w") # Open for writing output
-
-        # Use subprocess.Popen to launch the script
-        # - [sys.executable, script_name]: Runs the script with the current Python interpreter.
-        # - stdin=subprocess.DEVNULL: Prevents the background script from reading TUI input.
-        # - stdout=log_file, stderr=subprocess.STDOUT: Redirects all output (stdout and stderr) to the log file.
-        # - preexec_fn=os.setsid: CRITICAL for detachment. Makes the child process the leader of a new session,
-        #   detaching it from the controlling terminal and the TUI's process group. This ensures it runs
-        #   even if the TUI exits.
-        process = subprocess.Popen(
-            [sys.executable, script_name],
-            stdin=subprocess.DEVNULL,
-            stdout=log_file,
-            stderr=subprocess.STDOUT,
-            preexec_fn=os.setsid,
-            close_fds=True # Close inherited file descriptors for robustness
+    while True:  # Loop for the interactive status screen
+        stdscr.clear()
+        stdscr.addstr(
+            0,
+            w // 2 - len("Manage Background Scripts") // 2,
+            "Manage Background Scripts",
+            curses.A_BOLD,
+        )
+        stdscr.addstr(
+            2,
+            0,
+            "Use UP/DOWN to navigate, ENTER to refresh, 'K' to send SIGINT, 'Q' to return to menu.",
         )
 
-        # After launching, we know the actual PID, so rename the log file to include it.
-        actual_log_path = get_unique_log_filename(script_name, process.pid)
-        log_file.close() # Close the original file handle before renaming
-        os.rename(temp_log_path, actual_log_path)
+        cleanup_pid_file()  # Always clean the file before displaying and interacting
+        tracked_pids = get_tracked_pids()  # Get the now cleaned list
 
+        # Filter for truly active processes to display for interaction
+        active_processes_to_display = []
+        for entry in tracked_pids:
+            cmd = is_pid_active(entry["pid"])
+            if cmd and (f"python {entry['name']}" in cmd or f"python3 {entry['name']}" in cmd):
+                active_processes_to_display.append(entry)
 
-        # Store the process's information in our global list
-        running_processes.append({
-            'name': script_name,
-            'pid': process.pid,
-            'process_obj': process,
-            'log_path': actual_log_path
-        })
+        results_lines = []
+        if not active_processes_to_display:
+            results_lines.append("No active background scripts currently tracked.")
+        else:
+            for entry in active_processes_to_display:
+                status_line = (
+                    f"Script: {entry['name']:<30} | PID: {entry['pid']:<6} | Status: ACTIVE"
+                )
+                results_lines.append(status_line)
 
-        # Provide visual feedback to the user
-        stdscr.clear()
-        stdscr.addstr(0, 0, f"'{script_name}' launched in background (PID: {process.pid}).", curses.A_BOLD)
-        stdscr.addstr(1, 0, f"Log: {actual_log_path}", curses.A_DIM)
-        stdscr.addstr(3, 0, "Press any key to return to menu...")
+        # Ensure current_selected_row is within bounds if the list changed
+        if len(active_processes_to_display) == 0:
+            current_selected_row = 0
+        else:
+            current_selected_row = min(current_selected_row, len(active_processes_to_display) - 1)
+            current_selected_row = max(
+                0, current_selected_row
+            )  # Prevent negative if list becomes empty
+
+        # Display results with scrolling
+        start_line_idx = 0  # This view always starts from the top if content is short
+        if len(results_lines) > (h - 6):  # if results overflow, allow scrolling
+            start_line_idx = max(0, current_selected_row - (h - 6) // 2)  # Center selected item
+            if start_line_idx + (h - 6) > len(results_lines):
+                start_line_idx = max(0, len(results_lines) - (h - 6))  # Adjust if near end
+
+        for i in range(start_line_idx, min(len(results_lines), start_line_idx + h - 6)):
+            line_to_display = results_lines[i]
+            attrs = curses.color_pair(3)  # Green for active processes
+
+            # Highlight the currently selected row
+            if (
+                i == current_selected_row and active_processes_to_display
+            ):  # Only highlight if there are items
+                attrs |= curses.A_REVERSE  # Reverse video for selected item
+
+            stdscr.addstr(4 + (i - start_line_idx), 0, line_to_display[: w - 1], attrs)
+
+        # Footer for navigation
+        footer_message = (
+            "Use UP/DOWN to navigate, ENTER to refresh, 'K' to send SIGINT, 'Q' to return to menu."
+        )
+        stdscr.addstr(h - 1, w // 2 - len(footer_message) // 2, footer_message, curses.A_BOLD)
         stdscr.refresh()
-        stdscr.getch() # Wait for user acknowledgment
-        return True # Indicate successful launch
+
+        key = stdscr.getch()
+
+        if key == curses.KEY_UP:
+            current_selected_row = max(0, current_selected_row - 1)
+        elif key == curses.KEY_DOWN:
+            current_selected_row = min(
+                len(active_processes_to_display) - 1, current_selected_row + 1
+            )
+        elif key == ord("k") or key == ord("K"):
+            if active_processes_to_display:
+                selected_process = active_processes_to_display[current_selected_row]
+                issue_sigint(stdscr, selected_process["pid"], selected_process["name"])
+                # After sending SIGINT, the loop will naturally redraw,
+                # which will call cleanup_pid_file and update the list.
+            else:
+                stdscr.addstr(
+                    h - 3,
+                    0,
+                    "No script selected or no active scripts to kill.",
+                    curses.color_pair(2) | curses.A_BOLD,
+                )
+                stdscr.refresh()
+                curses.napms(1000)  # Show message briefly
+        elif key == curses.KEY_ENTER or key in [10, 13]:  # Refresh list
+            # The loop naturally refreshes, but this gives an explicit "refresh"
+            pass
+        elif key == ord("q") or key == ord("Q"):
+            break  # Exit this management screen
+
+
+def start_all_background_scripts(stdscr):
+    scripts_to_start = [
+        "run_data_collector.py",
+        "run_collector.py",
+        "run_processor.py",
+        "run_communicator.py",
+        "run_compressor.py",
+        "run_file_backup.py",
+    ]
+    stdscr.clear()
+    h, w = stdscr.getmaxyx()
+
+    message = "Starting all data collection, analysis, and backup scripts..."
+    stdscr.addstr(0, w // 2 - len(message) // 2, message)
+    stdscr.refresh()
+    curses.napms(500)
+
+    for entry in scripts_to_start:
+        run_background_script_detached(stdscr, entry, ask_for_enter=False)
+        curses.napms(1000)
+
+
+def stop_all_background_scripts(stdscr):
+    tracked_pids = get_tracked_pids()
+
+    stdscr.clear()
+    h, w = stdscr.getmaxyx()
+
+    message = "Stopping all data collection, analysis, and backup scripts..."
+    stdscr.addstr(0, w // 2 - len(message) // 2, message)
+    stdscr.refresh()
+    curses.napms(500)
+
+    # Filter for truly active processes to display for interaction
+    active_processes_to_stop = []
+    for entry in tracked_pids:
+        cmd = is_pid_active(entry["pid"])
+        if cmd and (f"python {entry['name']}" in cmd or f"python3 {entry['name']}" in cmd):
+            active_processes_to_stop.append(entry)
+
+    for process in active_processes_to_stop:
+        issue_sigint(stdscr, process["pid"], process["name"])
+        curses.napms(500)
+
+
+multiple_scripts = [
+    {"menu": "\tSTART All processes for Data collection", "script": start_all_background_scripts},
+    {"menu": "\tSTOP All Data collection processes", "script": stop_all_background_scripts},
+    {"menu": "\tMANAGE Running processes separately", "script": check_running_background_scripts_status},
+]
+
+all_scripts = info_gathering_scripts + background_scripts + multiple_scripts
+
+
+# --- Helper functions for PID file management ---
+def get_tracked_pids():
+    """Reads the PID file and returns a list of (script_name, pid) dictionaries."""
+    tracked_pids = []
+    if Path(PID_FILE).exists():
+        with Path(PID_FILE).open("r") as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    parts = line.split(",")
+                    if len(parts) == 3:
+                        try:
+                            script_name = parts[0]
+                            pid = int(parts[1])
+                            status = parts[2].strip()
+                            tracked_pids.append(
+                                {
+                                    "name": script_name,
+                                    "pid": pid,
+                                    "status": status,
+                                }
+                            )
+                        except ValueError:
+                            # Skip malformed lines
+                            continue
+    return tracked_pids
+
+
+def add_pid_to_file(script_name, pid):
+    """Appends a new script_name,pid entry to the PID file."""
+    with Path(PID_FILE).open("a") as f:
+        f.write(f"{script_name},{pid},ACTIVE\n")
+
+
+def is_pid_active(pid):
+    """
+    Checks if a given PID corresponds to an active process using 'ps -p PID -o command='.
+    Returns the command string if active, None otherwise.
+    """
+    try:
+        result = subprocess.run(
+            ["ps", "-p", str(pid), "-o", "command="], capture_output=True, text=True, check=False
+        )
+
+        if result.returncode != 0:
+            return None  # PID does not exist or process is gone
+
+        command_output = result.stdout.strip()
+        if command_output:
+            return command_output
+        else:
+            return None
     except Exception as e:
-        # If launching fails, display an error and print to stderr for debugging outside TUI
-        stdscr.clear()
-        stdscr.addstr(0, 0, f"Failed to launch '{script_name}': {e}", curses.A_BOLD | curses.A_RED)
-        stdscr.addstr(1, 0, "Press any key to continue...")
-        stdscr.refresh()
-        stdscr.getch()
-        print(f"Error launching script '{script_name}': {e}", file=sys.stderr)
-        return False # Indicate failed launch
+        print(f"Error checking PID {pid} with ps: {e}", file=sys.stderr)
+        return None
+
+
+def is_script_already_running(script_name):
+    """
+    Checks if an instance of the given script_name is already running
+    by looking up tracked PIDs and verifying them with 'ps'.
+    Does NOT modify the PID file; it only reads.
+    Returns the PID if found, None otherwise.
+    """
+    tracked_pids = get_tracked_pids()  # Read all PIDs from the file
+
+    for entry in tracked_pids:
+        # Only check PIDs for the *specific* script we care about right now
+        if entry["name"] == script_name:
+            cmd = is_pid_active(entry["pid"])
+            if cmd:
+                # Double-check that the command string still matches the script
+                if f"python3 {script_name}" in cmd:
+                    return entry["pid"]  # Found an active instance
+
+    return None  # No active instance found for this script
+
+
+def cleanup_pid_file():
+    """
+    Reads the PID file, checks all PIDs for active processes,
+    and rewrites the file with only the active, matching PIDs.
+    This is an explicit cleanup step.
+    """
+    tracked_pids = get_tracked_pids()
+    updated_pids_list = []
+
+    for entry in tracked_pids:
+        cmd = is_pid_active(entry["pid"])
+        if cmd:
+            # Check if the PID is still running the expected script
+            if f"python3 {entry['name']}" in cmd:
+                updated_pids_list.append(entry)  # Keep this active entry
+        else:
+            updated_pids_list.append(
+                {
+                    "name": entry["name"],
+                    "pid": entry["pid"],
+                    "status": "DEAD",
+                }
+            )
+    # Rewrite the PID file with only the valid, active entries
+    with Path(PID_FILE).open("w") as f:
+        for entry in updated_pids_list:
+            if entry["status"] == "ACTIVE":
+                f.write(f"{entry['name']},{entry['pid']},{entry['status']}\n")
+
+
+def refresh_pid_file():
+    """
+    Reads the PID file, checks all PIDs for active processes,
+    and rewrites the file with only the active, matching PIDs.
+    This is an explicit cleanup step.
+    """
+    tracked_pids = get_tracked_pids()
+    updated_pids_list = []
+
+    for entry in tracked_pids:
+        cmd = is_pid_active(entry["pid"])
+        if cmd:
+            # Check if the PID is still running the expected script
+            if f"python3 {entry['name']}" in cmd:
+                updated_pids_list.append(entry)  # Keep this active entry
+        else:
+            updated_pids_list.append(
+                {
+                    "name": entry["name"],
+                    "pid": entry["pid"],
+                    "status": "DEAD",
+                }
+            )
+    # Rewrite the PID file with only the valid, active entries
+    with Path(PID_FILE).open("w") as f:
+        for entry in updated_pids_list:
+            f.write(f"{entry['name']},{entry['pid']},{entry['status']}\n")
+
 
 # --- Main Menu Drawing Function ---
 def draw_menu(stdscr, selected_row_idx):
@@ -148,50 +337,126 @@ def draw_menu(stdscr, selected_row_idx):
     title = "Project Setup Scripts"
     stdscr.addstr(0, w // 2 - len(title) // 2, title, curses.A_BOLD)
     stdscr.addstr(2, 0, "Use UP/DOWN arrows to navigate, ENTER to select, Q to quit.")
-    
-    # Display information about current running processes (updates dynamically)
-    active_count = len([p for p in running_processes if p['process_obj'].poll() is None])
-    stdscr.addstr(3, 0, f"Running background processes: {active_count}", curses.A_DIM)
-    stdscr.addstr(4, 0, "Scripts for information gathering are underlined.")
 
-    y_offset = 6 # Start menu items from row 6 to make space for header info
+    # Dynamically count active background processes for display.
+    active_count = 0
+    dead_count = 0
+    refresh_pid_file()  # Ensure file is somewhat clean before counting for display
+    for entry in get_tracked_pids():
+        cmd = is_pid_active(entry["pid"])
+        if cmd and (f"python {entry['name']}" in cmd or f"python3 {entry['name']}" in cmd):
+            active_count += 1
+        else:
+            dead_count += 1
+    stdscr.addstr(
+        3, 0, f"Currently tracked ACTIVE background processes: {active_count}", curses.A_DIM
+    )
+    stdscr.addstr(4, 0, f"Currently tracked DEAD background processes: {dead_count}", curses.A_DIM)
+    stdscr.addstr(5, 0, "Scripts for information gathering are underlined.")
+
+    y_offset = 7
 
     for idx, script_option in enumerate(all_scripts):
-        x = w // 2 - 20
+        x = w // 2 - 20 // 2
         y = y_offset + idx
-        
+
         attrs = 0
         if script_option in info_gathering_scripts:
-            attrs |= curses.A_UNDERLINE # Underline info scripts
-            
+            attrs |= curses.A_UNDERLINE
+
         if idx == selected_row_idx:
-            attrs |= curses.A_REVERSE # Highlight selected item
-        
-        stdscr.addstr(y, x, script_option, attrs)
+            attrs |= curses.A_REVERSE
+
+        stdscr.addstr(y, x, script_option["menu"], attrs)
 
     stdscr.refresh()
+
+
+# --- Function to run a background script (simplified) ---
+def run_background_script_detached(stdscr, script_name, ask_for_enter=True):
+    """
+    Launches the given Python script in the background, detaches it,
+    and appends its PID to a text file. Includes single instance check.
+    """
+    existing_pid = is_script_already_running(script_name)
+    if existing_pid:
+        stdscr.clear()
+        stdscr.addstr(
+            0,
+            0,
+            f"Error: '{script_name}' is already running with PID {existing_pid}.",
+            curses.color_pair(1) | curses.A_BOLD,
+        )
+        stdscr.addstr(2, 0, "Please stop the existing instance or choose another script.")
+        stdscr.addstr(4, 0, "Press any key to return to menu...")
+        stdscr.refresh()
+        stdscr.getch()
+        return False
+
+    stdscr.clear()
+    stdscr.addstr(0, 0, f"Attempting to launch '{script_name}' in background...")
+    stdscr.refresh()
+    curses.napms(500)
+
+    # sys.executable is used to ensure the script runs with the same Python interpreter
+    # it returns the path to the Python interpreter being used by the currrent script
+    # i.e. '/home/labuser/Documents/Python/phorest_pipeline/.venv/bin/python3'
+    try:
+        process = subprocess.Popen(
+            [sys.executable, script_name],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            preexec_fn=os.setsid,
+            close_fds=True,
+        )
+
+        add_pid_to_file(script_name, process.pid)
+
+        stdscr.clear()
+        stdscr.addstr(
+            0, 0, f"'{script_name}' launched in background (PID: {process.pid}).", curses.A_BOLD
+        )
+        if ask_for_enter:
+            stdscr.addstr(2, 0, "Press any key to return to menu...")
+            stdscr.refresh()
+            stdscr.getch()
+        else:
+            stdscr.refresh()
+        return True
+    except Exception as e:
+        stdscr.clear()
+        stdscr.addstr(
+            0, 0, f"Failed to launch '{script_name}': {e}", curses.color_pair(1) | curses.A_BOLD
+        )
+        stdscr.addstr(1, 0, "Press any key to continue...")
+        stdscr.refresh()
+        stdscr.getch()
+        print(f"Error launching script '{script_name}': {e}", file=sys.stderr)
+        return False
+
 
 # --- Function to display captured output from info-gathering scripts ---
 def display_script_output(stdscr, script_name):
     """
     Runs an information-gathering script, captures its output, and displays it in the TUI.
-    Includes basic scrolling for long outputs.
     """
+    ERROR_ATTRIBUTES = curses.color_pair(1) | curses.A_BOLD
+    # WARNING_ATTRIBUTES = curses.color_pair(2) | curses.A_BOLD
+    SUCCESS_ATTRIBUTES = curses.color_pair(3) | curses.A_BOLD
+    # SUCCESS_ATTRIBUTES = 0  # No attributes for success
+
     stdscr.clear()
     h, w = stdscr.getmaxyx()
 
     message = f"Running '{script_name}' and capturing output..."
     stdscr.addstr(0, w // 2 - len(message) // 2, message)
     stdscr.refresh()
-    curses.napms(500) # Small delay to show "Running..." message
+    curses.napms(500)
 
     try:
-        # subprocess.run is used for synchronous execution and output capture
         result = subprocess.run(
-            [sys.executable, script_name],
-            capture_output=True, # Captures stdout and stderr
-            text=True,           # Decodes output as string (UTF-8 by default)
-            check=True           # Raises CalledProcessError if script returns non-zero exit code
+            [sys.executable, script_name], capture_output=True, text=True, check=True
         )
 
         all_output_lines = []
@@ -205,298 +470,190 @@ def display_script_output(stdscr, script_name):
         current_scroll_pos = 0
         while True:
             stdscr.clear()
-            
-            # Display current viewable portion of the output
+            stdscr.addstr(0, 0, f"Output for '{script_name}'", curses.A_BOLD)
+
             start_line_idx = current_scroll_pos
-            end_line_idx = min(len(all_output_lines), current_scroll_pos + h - 4) # Reserve 4 lines for header/footer
+            end_line_idx = min(len(all_output_lines), current_scroll_pos + h - 4)
 
             for i in range(start_line_idx, end_line_idx):
                 line = all_output_lines[i]
-                display_line = line[:w-1] # Truncate line to fit screen width
-                
+                display_line = line[: w - 1]
+
                 attrs = 0
-                # Simple check to color lines from stderr red
-                if result.stderr and line in result.stderr.splitlines():
-                     attrs |= curses.A_RED
+                if line in result.stderr.splitlines():
+                    attrs |= ERROR_ATTRIBUTES
+                elif line in result.stdout.splitlines():
+                    attrs |= SUCCESS_ATTRIBUTES
                 stdscr.addstr(2 + (i - start_line_idx), 0, display_line, attrs)
 
-            stdscr.addstr(0, 0, f"Output for '{script_name}'", curses.A_BOLD) # Header
-            
-            # Footer for navigation instructions and scroll indicators
             footer_message = "Use UP/DOWN for scroll, ENTER to return to menu"
-            if len(all_output_lines) > (h - 4): # Only show scroll hints if content overflows
+            if len(all_output_lines) > (h - 4):
                 if current_scroll_pos > 0:
                     stdscr.addstr(h - 2, 0, " ^ (More above) ^ ", curses.A_DIM)
                 if current_scroll_pos + (h - 4) < len(all_output_lines):
-                     stdscr.addstr(h - 2, w - len(" v (More below) v ") -1, " v (More below) v ", curses.A_DIM)
-            
+                    stdscr.addstr(
+                        h - 2,
+                        w - len(" v (More below) v ") - 1,
+                        " v (More below) v ",
+                        curses.A_DIM,
+                    )
+
             stdscr.addstr(h - 1, w // 2 - len(footer_message) // 2, footer_message, curses.A_BOLD)
             stdscr.refresh()
 
-            key = stdscr.getch() # Wait for user input
+            key = stdscr.getch()
 
             if key == curses.KEY_UP:
                 current_scroll_pos = max(0, current_scroll_pos - 1)
             elif key == curses.KEY_DOWN:
                 max_scroll = max(0, len(all_output_lines) - (h - 4))
                 current_scroll_pos = min(max_scroll, current_scroll_pos + 1)
-            elif key == curses.KEY_ENTER or key in [10, 13]: # Enter key
-                break # Exit output display and return to main menu
+            elif key == curses.KEY_ENTER or key in [10, 13]:
+                break
 
     except subprocess.CalledProcessError as e:
-        # Handles cases where the script itself returns an error code
         stdscr.clear()
-        stdscr.addstr(0, 0, f"Error running script '{script_name}':", curses.A_BOLD | curses.A_RED)
+        stdscr.addstr(0, 0, f"Error running script '{script_name['script']}':", ERROR_ATTRIBUTES)
         stdscr.addstr(1, 0, f"Command: {e.cmd}")
         stdscr.addstr(2, 0, f"Return Code: {e.returncode}")
-        
+
         y_offset = 4
         if e.stdout:
             stdscr.addstr(y_offset, 0, "--- Script STDOUT ---", curses.A_BOLD)
             y_offset += 1
             for line in e.stdout.splitlines():
-                if y_offset < h - 4: stdscr.addstr(y_offset, 0, line); y_offset += 1
-                else: break
+                if y_offset < h - 4:
+                    stdscr.addstr(y_offset, 0, line)
+                    y_offset += 1
+                else:
+                    break
         if e.stderr:
-            if y_offset < h - 4: stdscr.addstr(y_offset, 0, "--- Script STDERR ---", curses.A_BOLD | curses.A_RED); y_offset += 1
+            if y_offset < h - 4:
+                stdscr.addstr(y_offset, 0, "--- Script STDERR ---", ERROR_ATTRIBUTES)
+                y_offset += 1
             for line in e.stderr.splitlines():
-                if y_offset < h - 4: stdscr.addstr(y_offset, 0, line, curses.A_RED); y_offset += 1
-                else: break
-        
+                if y_offset < h - 4:
+                    stdscr.addstr(y_offset, 0, line, ERROR_ATTRIBUTES)
+                    y_offset += 1
+                else:
+                    break
+
         footer_message = "Press any key to return to menu..."
         stdscr.addstr(h - 2, w // 2 - len(footer_message) // 2, footer_message, curses.A_BOLD)
         stdscr.refresh()
         stdscr.getch()
 
     except Exception as e:
-        # Catches any other unexpected errors during script execution
         stdscr.clear()
-        stdscr.addstr(0, 0, f"An unexpected error occurred: {e}", curses.A_BOLD | curses.A_RED)
+        stdscr.addstr(0, 0, f"An unexpected error occurred: {e}", ERROR_ATTRIBUTES)
         stdscr.addstr(2, 0, "Press any key to return to menu...")
         stdscr.refresh()
         stdscr.getch()
 
-# --- New Function to Manage Running Processes ---
-def manage_processes_screen(stdscr):
-    global running_processes # Declare global to modify the list (e.g., remove exited processes)
 
-    current_row_idx = 0 # Keeps track of the currently selected process in this screen
-    while True:
-        stdscr.clear()
-        h, w = stdscr.getmaxyx()
+# --- Function to Issue SIGINT to a PID ---
+def issue_sigint(stdscr, pid, script_name):
+    """Attempts to send SIGINT to the given PID."""
+    ERROR_ATTRIBUTES = curses.color_pair(1) | curses.A_BOLD
+    SUCCESS_ATTRIBUTES = curses.color_pair(3) | curses.A_BOLD
+    try:
+        os.kill(pid, signal.SIGINT)
+        message = f"Sent SIGINT to {script_name} (PID: {pid}). It should terminate gracefully."
+        stdscr.addstr(0, 0, message, SUCCESS_ATTRIBUTES)  # Green for success
+    except ProcessLookupError:
+        message = f"Error: Process with PID {pid} not found (already terminated?)."
+        stdscr.addstr(0, 0, message, ERROR_ATTRIBUTES)  # Red for error
+    except Exception as e:
+        message = f"Error sending SIGINT to {pid}: {e}"
+        stdscr.addstr(0, 0, message, ERROR_ATTRIBUTES)  # Red for error
 
-        title = "Manage Running Processes"
-        stdscr.addstr(0, w // 2 - len(title) // 2, title, curses.A_BOLD)
-        stdscr.addstr(2, 0, "Use UP/DOWN to navigate, ENTER to select/manage, R: Refresh, C: Clean Up, B: Back.")
-        stdscr.addstr(3, 0, "Select a process then press ENTER for options.")
+    stdscr.addstr(2, 0, "Press any key to continue...")
+    stdscr.refresh()
+    stdscr.getch()
 
-        # Prepare list of processes for display
-        display_processes = []
-        # Temporarily store active process indices for current_row_idx adjustment
-        # It's better to just manage 'running_processes' directly as it's modified.
-        
-        if not running_processes:
-            stdscr.addstr(5, 0, "No background scripts currently tracked.", curses.A_DIM)
-        else:
-            # Loop through tracked processes and format their display string
-            for idx, p_info in enumerate(running_processes):
-                pid = p_info['pid']
-                name = p_info['name']
-                # Check current status using .poll()
-                return_code = p_info['process_obj'].poll()
-                if return_code is None:
-                    status = "RUNNING"
-                else:
-                    status = f"EXITED ({return_code})"
-                
-                display_str = f"PID: {pid:<6} | Status: {status:<12} | Script: {name}"
-                display_processes.append(display_str)
-
-            # Display the processes list
-            for idx, proc_str in enumerate(display_processes):
-                y = 5 + idx # Start displaying from row 5
-                attrs = 0
-                if idx == current_row_idx:
-                    attrs |= curses.A_REVERSE # Highlight selected item
-                
-                stdscr.addstr(y, 0, proc_str[:w-1], attrs) # Truncate to fit screen width
-
-        stdscr.refresh()
-
-        key = stdscr.getch() # Wait for user input
-
-        if key == curses.KEY_UP:
-            current_row_idx = max(0, current_row_idx - 1)
-        elif key == curses.KEY_DOWN:
-            current_row_idx = min(len(display_processes) - 1, current_row_idx + 1)
-        elif key == ord('r') or key == ord('R'): # Refresh status
-            # Simply re-entering the loop will cause statuses to be re-polled and display updated
-            pass
-        elif key == ord('c') or key == ord('C'): # Clean up completed processes from the list
-            # Filter running_processes to only keep those that are still active
-            running_processes[:] = [p for p in running_processes if p['process_obj'].poll() is None]
-            # Adjust current_row_idx if the list size changed
-            current_row_idx = min(current_row_idx, len(running_processes) - 1 if running_processes else 0)
-        elif key == curses.KEY_ENTER or key in [10, 13]: # User selected a process for action
-            if running_processes: # Check if there are processes to select
-                selected_proc_info = running_processes[current_row_idx] # Get the actual process info dict
-                
-                # --- Sub-menu for managing the selected process ---
-                stdscr.clear()
-                stdscr.addstr(0, 0, f"Manage '{selected_proc_info['name']}' (PID: {selected_proc_info['pid']})", curses.A_BOLD)
-                
-                # Display current status of the selected process
-                current_status = "RUNNING" if selected_proc_info['process_obj'].poll() is None else f"EXITED ({selected_proc_info['process_obj'].poll()})"
-                stdscr.addstr(2, 0, f"Current Status: {current_status}", curses.A_DIM)
-                
-                stdscr.addstr(4, 0, "S: Stop (SIGINT), L: View Log, B: Back to process list")
-                stdscr.refresh()
-                
-                sub_key = stdscr.getch() # Wait for sub-menu action
-
-                if sub_key == ord('s') or sub_key == ord('S'): # Stop process (SIGINT)
-                    if selected_proc_info['process_obj'].poll() is None: # Only try to stop if running
-                        try:
-                            stdscr.addstr(6, 0, f"Sending SIGINT to {selected_proc_info['name']}...", curses.A_YELLOW)
-                            stdscr.refresh()
-                            selected_proc_info['process_obj'].send_signal(signal.SIGINT)
-                            
-                            # Give it a short time to terminate gracefully
-                            try:
-                                selected_proc_info['process_obj'].wait(timeout=5)
-                                stdscr.addstr(7, 0, f"'{selected_proc_info['name']}' terminated successfully.", curses.A_GREEN)
-                            except subprocess.TimeoutExpired:
-                                stdscr.addstr(7, 0, f"'{selected_proc_info['name']}' did not terminate gracefully after SIGINT.", curses.A_RED)
-                                stdscr.addstr(8, 0, "You might need to send SIGTERM/SIGKILL if it's unresponsive.", curses.A_RED)
-                        except ProcessLookupError: # Process might have just died unexpectedly
-                            stdscr.addstr(7, 0, "Process already terminated.", curses.A_YELLOW)
-                        except Exception as e:
-                            stdscr.addstr(7, 0, f"Error sending signal: {e}", curses.A_RED)
-                    else:
-                        stdscr.addstr(6, 0, "Process is not running, cannot send SIGINT.", curses.A_YELLOW)
-                    
-                    stdscr.addstr(h-2, 0, "Press any key to continue...")
-                    stdscr.refresh()
-                    stdscr.getch() # Wait for user to acknowledge action result
-                
-                elif sub_key == ord('l') or sub_key == ord('L'): # View Log file
-                    log_path = selected_proc_info['log_path']
-                    if os.path.exists(log_path):
-                        try:
-                            with open(log_path, 'r') as f:
-                                log_content = f.read()
-                            
-                            log_lines = log_content.splitlines()
-                            log_scroll_pos = 0
-                            while True: # Loop for log viewing with scrolling
-                                stdscr.clear()
-                                stdscr.addstr(0, 0, f"Log for '{selected_proc_info['name']}' (PID: {selected_proc_info['pid']})", curses.A_BOLD)
-                                stdscr.addstr(1, 0, f"File: {log_path}", curses.A_DIM)
-
-                                start_line_idx = log_scroll_pos
-                                end_line_idx = min(len(log_lines), log_scroll_pos + h - 4)
-                                for i in range(start_line_idx, end_line_idx):
-                                    stdscr.addstr(3 + (i - start_line_idx), 0, log_lines[i][:w-1]) # Truncate line
-
-                                footer_message = "Use UP/DOWN for scroll, ENTER to return to process menu"
-                                if len(log_lines) > (h - 4):
-                                    if log_scroll_pos > 0 and log_scroll_pos + (h - 4) < len(log_lines):
-                                        stdscr.addstr(h - 2, 0, " ^ (More above) ^ ", curses.A_DIM)
-                                        stdscr.addstr(h - 2, w - len(" v (More below) v ") -1, " v (More below) v ", curses.A_DIM)
-                                    elif log_scroll_pos > 0:
-                                        stdscr.addstr(h - 2, 0, " ^ (More above) ^ ", curses.A_DIM)
-                                    elif log_scroll_pos + (h - 4) < len(log_lines):
-                                        stdscr.addstr(h - 2, w - len(" v (More below) v ") -1, " v (More below) v ", curses.A_DIM)
-                                stdscr.addstr(h - 1, w // 2 - len(footer_message) // 2, footer_message, curses.A_BOLD)
-                                stdscr.refresh()
-                                log_key = stdscr.getch()
-                                if log_key == curses.KEY_UP:
-                                    log_scroll_pos = max(0, log_scroll_pos - 1)
-                                elif log_key == curses.KEY_DOWN:
-                                    max_log_scroll = max(0, len(log_lines) - (h - 4))
-                                    log_scroll_pos = min(max_log_scroll, log_scroll_pos + 1)
-                                elif log_key == curses.KEY_ENTER or log_key in [10, 13]:
-                                    break # Exit log viewer
-                        except Exception as e:
-                            stdscr.addstr(h-2, 0, f"Error reading log: {e}", curses.A_RED)
-                            stdscr.addstr(h-1, 0, "Press any key to continue...")
-                            stdscr.refresh()
-                            stdscr.getch()
-                    else:
-                        stdscr.addstr(h-2, 0, "Log file not found or already deleted.", curses.A_YELLOW)
-                        stdscr.addstr(h-1, 0, "Press any key to continue...")
-                        stdscr.refresh()
-                        stdscr.getch()
-                
-                # After any sub-action, loop for the manage_processes_screen continues.
-                # 'B' will exit this inner loop.
-            else: # If user pressed ENTER but there are no processes to select
-                stdscr.addstr(h - 2, 0, "No processes to manage.", curses.A_YELLOW)
-                stdscr.addstr(h - 1, 0, "Press any key to continue...")
-                stdscr.refresh()
-                stdscr.getch()
-
-        elif key == ord('b') or key == ord('B'): # Back to main menu from manage screen
-            break # Exit this management screen's loop
 
 # --- Main TUI Application Loop ---
 def main(stdscr):
     """Main function for the curses TUI application."""
-    # Basic curses configuration
-    curses.curs_set(0)  # Hide cursor
-    curses.noecho()     # Do not echo keypresses to the screen
-    curses.cbreak()     # React to keypresses instantly (no need for Enter key)
-    stdscr.keypad(True) # Enable special keys like arrow keys
+    curses.curs_set(0)
+    curses.noecho()
+    curses.cbreak()
+    stdscr.keypad(True)
 
-    current_row_idx = 0 # Index of the currently selected menu item
+    # --- Initialize Colors ---
+    if curses.has_colors():
+        curses.start_color()
+        curses.init_pair(
+            1, curses.COLOR_RED, curses.COLOR_BLACK
+        )  # Pair 1: Red text on Black background (for errors)
+        curses.init_pair(
+            2, curses.COLOR_YELLOW, curses.COLOR_BLACK
+        )  # Pair 2: Yellow text on Black background (for warnings)
+        curses.init_pair(
+            3, curses.COLOR_GREEN, curses.COLOR_BLACK
+        )  # Pair 3: Green text on Black background (for active status)
+
+    # ERROR_ATTRIBUTES = curses.color_pair(1) | curses.A_BOLD
+    WARNING_ATTRIBUTES = curses.color_pair(2) | curses.A_BOLD
+
+    cleanup_pid_file()
+
+    current_row_idx = 0
 
     while True:
-        draw_menu(stdscr, current_row_idx) # Redraw the main menu
+        draw_menu(stdscr, current_row_idx)
 
-        key = stdscr.getch() # Get user input
+        key = stdscr.getch()
 
         if key == curses.KEY_UP:
             current_row_idx = max(0, current_row_idx - 1)
         elif key == curses.KEY_DOWN:
             current_row_idx = min(len(all_scripts) - 1, current_row_idx + 1)
-        elif key == curses.KEY_ENTER or key in [10, 13]: # Enter key (10 and 13 are common ASCII for Enter)
-            selected_option = all_scripts[current_row_idx] # Get the selected menu item
+        elif key == curses.KEY_ENTER or key in [10, 13]:
+            selected_option = all_scripts[current_row_idx]
 
-            if selected_option == MANAGE_PROCESSES_OPTION:
-                manage_processes_screen(stdscr) # Navigate to the process management screen
+            if selected_option in multiple_scripts:
+                selected_option["script"](stdscr)
             elif selected_option in info_gathering_scripts:
-                display_script_output(stdscr, selected_option) # Run and display output synchronously
+                display_script_output(stdscr, selected_option["script"])
             elif selected_option in background_scripts:
-                # Launch background script asynchronously, TUI continues
                 stdscr.clear()
-                stdscr.addstr(0, 0, f"Launching '{selected_option}' in the background...")
+                stdscr.addstr(
+                    0, 0, f"Attempting to launch '{selected_option['script']}'...", curses.A_DIM
+                )
                 stdscr.refresh()
-                curses.napms(1000) # Short delay for visual feedback
+                curses.napms(500)
 
-                if run_background_script(stdscr, selected_option): # Call the background launcher
-                    # run_background_script already handles success/failure messages
-                    pass # The background script function handles the feedback, loop continues.
-                # Else, loop continues.
-            
-        elif key == ord('q') or key == ord('Q'): # Quit option
-            # Check for running processes before quitting
-            active_count = len([p for p in running_processes if p['process_obj'].poll() is None])
+                run_background_script_detached(stdscr, selected_option["script"])
+
+        elif key == ord("q") or key == ord("Q"):
+            active_count = 0
+            cleanup_pid_file()
+            for entry in get_tracked_pids():
+                cmd = is_pid_active(entry["pid"])
+                if cmd and (f"python {entry['name']}" in cmd or f"python3 {entry['name']}" in cmd):
+                    active_count += 1
+
             if active_count > 0:
-                # Warn user if background processes are still running
                 stdscr.clear()
-                stdscr.addstr(0, 0, f"WARNING: {active_count} background processes are still running!", curses.A_BOLD | curses.A_YELLOW)
-                stdscr.addstr(2, 0, "Quitting TUI will NOT stop them. Manage them via 'Manage Processes' or manually.")
+                stdscr.addstr(
+                    0,
+                    0,
+                    f"WARNING: {active_count} background processes are still running (tracked in {PID_FILE})!",
+                    WARNING_ATTRIBUTES,
+                )
+                stdscr.addstr(
+                    2, 0, "Quitting TUI will NOT stop them. Check 'ps aux' or stop manually."
+                )
                 stdscr.addstr(4, 0, "Press 'Q' again to force quit, or any other key to go back.")
                 stdscr.refresh()
-                second_key = stdscr.getch() # Wait for confirmation
-                if second_key == ord('q') or second_key == ord('Q'):
-                    return # User confirmed, exit TUI
-                # Else, loop continues, redraws main menu (user implicitly chose to go back)
+                second_key = stdscr.getch()
+                if second_key == ord("q") or second_key == ord("Q"):
+                    return
             else:
-                return # No active processes, exit TUI immediately
+                return
+
 
 # --- Entry point for the TUI application ---
-if __name__ == '__main__':
-    # curses.wrapper handles initialization and proper cleanup of the terminal
-    # even if errors occur.
+if __name__ == "__main__":
     curses.wrapper(main)

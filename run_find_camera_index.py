@@ -5,11 +5,11 @@ import cv2
 
 # Define ANSI color codes
 # These work in most modern terminals
-COLOR_GREEN = '\033[92m'
-COLOR_RED = '\033[91m'
-COLOR_YELLOW = '\033[93m'
-COLOR_BLUE = '\033[94m'
-COLOR_END = '\033[0m' # Resets the color
+# COLOR_GREEN = '\033[92m'
+# COLOR_RED = '\033[91m'
+# COLOR_YELLOW = '\033[93m'
+# COLOR_BLUE = '\033[94m'
+# COLOR_END = '\033[0m' # Resets the color
 
 
 def get_v4l2_devices():
@@ -135,22 +135,42 @@ def main():
     # --- Summary of Detected Cameras ---
     print("")
     print("")
-    print(f"\n{COLOR_BLUE}      --- Summary of Detected Cameras ---      {COLOR_END}")
-    print(f"{COLOR_BLUE}-------------------------------------------------{COLOR_END}")
+    print("\n      --- Summary of Detected Cameras ---      ")
+    print("-------------------------------------------------")
 
     if working_cameras:
         for camera in working_cameras:
-            print(f"{COLOR_YELLOW}Camera Name:                 {COLOR_END} '{camera['name']}'")
-            print(f"{COLOR_YELLOW}Recommended Index for Config:{COLOR_END}  {camera['index']}")
-            print(f"{COLOR_BLUE}-------------------------------------------------{COLOR_END}")
+            print(f"Camera Name:                  '{camera['name']}'")
+            print(f"Recommended Index for Config:  {camera['index']}")
+            print("-------------------------------------------------")
         print("")
         print("")
     else:
-        print(f"{COLOR_RED}No working cameras found in the first 10 indices using OpenCV.{COLOR_END}")
-        print("Possible reasons: No camera connected, incorrect drivers, or insufficient permissions.")
-        print(f"Ensure you have OpenCV (cv2) installed: {COLOR_YELLOW}'pip install opencv-python'{COLOR_END}")
-        print(f"{COLOR_BLUE}-------------------------------------------------{COLOR_END}")
+        print("No working cameras found in the first 10 indices using OpenCV.")
+        print(
+            "Possible reasons: No camera connected, incorrect drivers, or insufficient permissions."
+        )
+        print("Ensure you have OpenCV (cv2) installed: 'pip install opencv-python'")
+        print("-------------------------------------------------")
 
+    # # --- Summary of Detected Cameras ---
+    # print("")
+    # print("")
+    # print(f"\n{COLOR_BLUE}      --- Summary of Detected Cameras ---      {COLOR_END}")
+    # print(f"{COLOR_BLUE}-------------------------------------------------{COLOR_END}")
+
+    # if working_cameras:
+    #     for camera in working_cameras:
+    #         print(f"{COLOR_YELLOW}Camera Name:                 {COLOR_END} '{camera['name']}'")
+    #         print(f"{COLOR_YELLOW}Recommended Index for Config:{COLOR_END}  {camera['index']}")
+    #         print(f"{COLOR_BLUE}-------------------------------------------------{COLOR_END}")
+    #     print("")
+    #     print("")
+    # else:
+    #     print(f"{COLOR_RED}No working cameras found in the first 10 indices using OpenCV.{COLOR_END}")
+    #     print("Possible reasons: No camera connected, incorrect drivers, or insufficient permissions.")
+    #     print(f"Ensure you have OpenCV (cv2) installed: {COLOR_YELLOW}'pip install opencv-python'{COLOR_END}")
+    #     print(f"{COLOR_BLUE}-------------------------------------------------{COLOR_END}")
 
 
 if __name__ == "__main__":

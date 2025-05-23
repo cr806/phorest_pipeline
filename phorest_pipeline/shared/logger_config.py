@@ -2,6 +2,7 @@
 import logging
 import logging.handlers
 from pathlib import Path
+import sys
 
 from phorest_pipeline.shared.config import LOGS_DIR
 
@@ -52,9 +53,14 @@ def configure_logger(
     logger.addHandler(file_handler)
 
     if log_to_terminal:
-        console_handler = logging.StreamHandler()
+        console_handler = logging.StreamHandler(sys.stdout)
         console_handler.setFormatter(formatter)
         logger.addHandler(console_handler)
+
+        error_console_handler = logging.StreamHandler(sys.stderr)
+        error_console_handler.setLevel(logging.WARNING) # Only logs WARNING and above to stderr
+        error_console_handler.setFormatter(formatter)
+        logger.addHandler(error_console_handler)
 
     return logger
 

@@ -54,7 +54,7 @@ print('\nThese locations will be used:')
 print(f'\t{"Image folder:":<30} {PATH_TO_IMAGES}')
 print(f'\t{"Image type:":<30} {IMAGE_TYPE}')
 print(f'\t{"ROI metadata name:":<30} {ROI_METADATA_NAME}')
-input('Press Enter to continue...')
+# input('Press Enter to continue...')
 
 # 2. Generate ROI metadata and save plots of ROI locations
 print('\nGenerating ROI metadata (this may take a few seconds)...')
