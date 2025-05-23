@@ -11,7 +11,7 @@ PID_FILE = "flags/background_pids.txt"  # File to store script_name,pid
 # --- Script Categories ---
 info_gathering_scripts = [
     {"menu": "Check USB Storage", "script": "run_storage_check.py"},
-    {"menu": "Iniatialse Directories", "script": "run_create_directories.py"},
+    {"menu": "Iniatialise Directories", "script": "run_create_directories.py"},
     {"menu": "Find Thermocouple Serial Numbers", "script": "run_find_thermocouple_serials.py"},
     {"menu": "Find Camera Index", "script": "run_find_camera_index.py"},
     {"menu": "Locate Gratings in Image", "script": "prepare_files_for_image_analysis.py"},
@@ -19,7 +19,6 @@ info_gathering_scripts = [
 
 background_scripts = [
     {"menu": "Start Continuous Image Capture", "script": "run_continuous_capture.py"},
-    {"menu": "Start Data Collection Process", "script": "run_data_collector.py"},
     {"menu": "Start Periodic Image Collection Process", "script": "run_collector.py"},
     {"menu": "Start Image Analysis Process", "script": "run_processor.py"},
     {"menu": "Start Data Plotting Process", "script": "run_communicator.py"},
