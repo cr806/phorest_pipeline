@@ -8,7 +8,7 @@ from phorest_pipeline.shared.cameras import (
     CameraType,
 )
 
-CONFIG_FILE = Path("Phorest_config.toml")
+CONFIG_FILE = Path("configs", "Phorest_config.toml")
 
 
 def load_config():

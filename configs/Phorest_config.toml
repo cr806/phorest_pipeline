@@ -42,7 +42,7 @@ image_buffer_size = 10              # Maximum number of images to keep in the da
 # --- Camera Settings ---
 [Camera]
 camera = true                       # Enable or disable camera usage
-camera_type = "dummy"               # Type of camera: "dummy", "argus", "tis", "logitech"
+camera_type = "tis"                 # Type of camera: "dummy", "argus", "tis", "logitech"
 camera_id = 0                       # Camera device ID
 camera_exposure = 30                # Camera exposure setting
 # camera_brightness = 170           # Example: alternate brightness setting

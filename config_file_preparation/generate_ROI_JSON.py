@@ -20,7 +20,7 @@ from config_file_preparation.Locator_functions import (
 def generate_ROI_JSON(path_to_image, output_ROI_filename):
     """Main function to perform image alignment and feature localization."""
     # 1. Script input file data
-    feature_location_json = Path('Feature_locations.toml')
+    feature_location_toml = Path('configs', 'Feature_locations.toml')
     chip_location_json = Path('config_file_preparation', 'Label_templates', 'Chip_map.json')
     generated_results_root = Path('generated_files')
     calculated_image_feature_path = Path(generated_results_root, 'CalculatedImageFeatures.json')
@@ -39,7 +39,7 @@ def generate_ROI_JSON(path_to_image, output_ROI_filename):
         print(error)
         exit(1)
 
-    user_chip_mapping, error = load_user_feature_locations(feature_location_json)
+    user_chip_mapping, error = load_user_feature_locations(feature_location_toml)
     if error:
         print(error)
         exit(1)
