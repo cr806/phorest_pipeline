@@ -3,7 +3,7 @@
 # Initial laptop and phorest-pi setup
 - Plug phorest-pi, using any ethernet cable, directly into the laptop
 - Go to network settings on the laptop and ensure that `Pi direct connection` is available
-- Switch on the phorest-pi, after booting, the pi should revert to a static IP configuration, at this point the laptop's `Pi direct connection` should refresh to say it's connected and using IP 192.168.1.1
+- Switch on the phorest-pi, after booting, the laptop's `Pi direct connection` should refresh to say it's connected and using IP 192.168.1.1
 - The phorest-pi should now be available at IP 192.168.1.2
 
 # To access phorest config files and data
@@ -14,10 +14,7 @@
 # Running the phorest processes
 - Open a terminal on the laptop
 - Enter `ssh benjamin` (yes, the phorest-pi is called Benjamin)
-- Navigate to the project directory
-  `cd Documents/Python/phorest-pipeline`
-- Run master process controller TUI
-  `uv run phorest.py`
+- Enter `phorest`
 
 # Using phorest.py
 # After computer reboot - possibly after copying data off the USB stick (this should not be needed with the connection to the laptop)
@@ -81,4 +78,4 @@
 
 # Finally
 9. At any point in the main menu, press `Q` to quit, any processes that have been started will continue to run
-10. Run `uv run phorest.py` to start the master process controller TUI again, running processes will be listed and can be controlled (i.e. stopped or started again) as outlined above
+10. Run `phorest` to start the master process controller TUI again, running processes will be listed and can be controlled (i.e. stopped or started again) as outlined above

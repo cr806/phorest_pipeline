@@ -18,10 +18,7 @@ dependencies = [
 ]
 
 [project.scripts]
-# run-collector = "phorest_pipeline.collector.logic:run_collector"
-# run-processor = "phorest_pipeline.processor.logic:run_processor"
-# run-communicator = "phorest_pipeline.communicator.logic:run_communicator"
-# run-comntinuous-capture = "phorest_pipeline.collector.continuous_capture_logic:run_continuous_capture"
+phorest = "phorest:main"
 
 [tool.setuptools]
 # Tell setuptools exactly which top-level directories are packages

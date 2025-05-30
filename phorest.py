@@ -1,3 +1,4 @@
+# phorest.py
 import curses
 import os
 import signal
@@ -6,7 +7,8 @@ import sys
 from pathlib import Path
 
 # --- Configuration for PID File ---
-PID_FILE = Path("flags/background_pids.txt")  # File to store script_name,pid
+PROJECT_ROOT = Path(__file__).resolve().parent
+PID_FILE = Path(PROJECT_ROOT, "flags", "background_pids.txt")  # File to store script_name,pid
 if not PID_FILE.exists():
     PID_FILE.touch()
 
@@ -24,12 +26,12 @@ foreground_scripts = [
 ]
 
 background_scripts = [
+    {"menu": "\t\t( Start Periodic Image Collection Process )", "script": "run_collector.py"},
+    {"menu": "\t\t( Start Image Analysis Process )", "script": "run_processor.py"},
+    {"menu": "\t\t( Start Data Plotting Process )", "script": "run_communicator.py"},
+    {"menu": "\t\t( Start Data Compression Process )", "script": "run_compressor.py"},
+    {"menu": "\t\t( Start File Backup Process )", "script": "run_file_backup.py"},
     {"menu": "Start Continuous Image Capture", "script": "run_continuous_capture.py"},
-    {"menu": "Start Periodic Image Collection Process", "script": "run_collector.py"},
-    {"menu": "Start Image Analysis Process", "script": "run_processor.py"},
-    {"menu": "Start Data Plotting Process", "script": "run_communicator.py"},
-    {"menu": "Start Data Compression Process", "script": "run_compressor.py"},
-    {"menu": "Start File Backup Process", "script": "run_file_backup.py"},
 ]
 
 
@@ -190,15 +192,15 @@ def stop_all_background_scripts(stdscr):
 
 
 multiple_scripts = [
-    {"menu": "\tSTART All processes for Data collection", "script": start_all_background_scripts},
-    {"menu": "\tSTOP All Data collection processes", "script": stop_all_background_scripts},
+    {"menu": "START All processes for Data collection", "script": start_all_background_scripts},
+    {"menu": "STOP All Data collection processes", "script": stop_all_background_scripts},
     {
-        "menu": "\tMANAGE Running processes separately",
+        "menu": "MANAGE Running processes separately",
         "script": check_running_background_scripts_status,
     },
 ]
 
-all_scripts = foreground_scripts + background_scripts + multiple_scripts
+all_scripts = multiple_scripts + background_scripts + foreground_scripts
 
 
 # --- Helper functions for PID file management ---
@@ -371,8 +373,8 @@ def draw_menu(stdscr, selected_row_idx):
         y = y_offset + idx
 
         attrs = 0
-        if script_option in foreground_scripts:
-            attrs |= curses.A_UNDERLINE
+        # if script_option in foreground_scripts:
+        #     attrs |= curses.A_UNDERLINE
 
         if idx == selected_row_idx:
             attrs |= curses.A_REVERSE
@@ -616,7 +618,7 @@ def issue_sigint(stdscr, pid, script_name, ask_for_enter=True):
 
 
 # --- Main TUI Application Loop ---
-def main(stdscr):
+def run_tui_app(stdscr):
     """Main function for the curses TUI application."""
     curses.curs_set(0)
     curses.noecho()
@@ -697,6 +699,12 @@ def main(stdscr):
                 return
 
 
+def main():
+    """The entry point for the phorest TUI application."""
+    # The curses.wrapper handles the curses setup and passes 'stdscr' to run_tui_app
+    curses.wrapper(run_tui_app)
+
+
 # --- Entry point for the TUI application ---
 if __name__ == "__main__":
-    curses.wrapper(main)
+    curses.wrapper(run_tui_app)
