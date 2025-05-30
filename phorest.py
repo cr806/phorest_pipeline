@@ -176,8 +176,10 @@ def stop_all_background_scripts(stdscr):
         if cmd and (f"python {entry['name']}" in cmd or f"python3 {entry['name']}" in cmd):
             active_processes_to_stop.append(entry)
 
+    stdscr.clear()
+    stdscr.refresh()
     for process in active_processes_to_stop:
-        issue_sigint(stdscr, process["pid"], process["name"])
+        issue_sigint(stdscr, process["pid"], process["name"], ask_for_enter=False)
         curses.napms(500)
 
 
@@ -551,7 +553,7 @@ def display_script_output(stdscr, script_name):
 
 
 # --- Function to Issue SIGINT to a PID ---
-def issue_sigint(stdscr, pid, script_name):
+def issue_sigint(stdscr, pid, script_name, ask_for_enter=True):
     """Attempts to send SIGINT to the given PID."""
     ERROR_ATTRIBUTES = curses.color_pair(1) | curses.A_BOLD
     SUCCESS_ATTRIBUTES = curses.color_pair(3) | curses.A_BOLD
@@ -566,9 +568,12 @@ def issue_sigint(stdscr, pid, script_name):
         message = f"Error sending SIGINT to {pid}: {e}"
         stdscr.addstr(0, 0, message, ERROR_ATTRIBUTES)  # Red for error
 
-    stdscr.addstr(2, 0, "Press any key to continue...")
-    stdscr.refresh()
-    stdscr.getch()
+    if ask_for_enter:
+        stdscr.addstr(2, 0, "Press any key to continue...")
+        stdscr.refresh()
+        stdscr.getch()
+    else:
+        stdscr.refresh()
 
 
 # --- Main TUI Application Loop ---
