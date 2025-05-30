@@ -17,6 +17,7 @@
 - <Ok>
 
 - Activate new connection, select 'Activate a connection' select the new connection and activate
+  - If doing this via ssh, unplug ethernet connection and plug directly into laptop
 
 ## ARGUS laptop
 - Open 'Settings' -> 'Network'
@@ -30,5 +31,3 @@
   - Leave other tables blank, click 'Add'
 
 - When the pi is connected to the laptop, this connection should automatically become active.
-
-NB: this automatic switching between static and DHCP does not seem to work on the pi.
