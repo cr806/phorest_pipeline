@@ -1,8 +1,8 @@
 # phorest_pipeline/shared/logger_config.py
 import logging
 import logging.handlers
-from pathlib import Path
 import sys
+from pathlib import Path
 
 from phorest_pipeline.shared.config import LOGS_DIR
 
@@ -10,7 +10,7 @@ from phorest_pipeline.shared.config import LOGS_DIR
 def configure_logger(
     name=None,
     level=logging.INFO,
-    log_filename='app.log',
+    log_filename="app.log",
     rotate_daily=False,
     log_to_terminal=False,
 ):
@@ -33,21 +33,17 @@ def configure_logger(
             logger.removeHandler(handler)
 
     formatter = logging.Formatter(
-        '%(asctime)s - %(levelname)s - %(module)s - %(name)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S',
+        "%(asctime)s - %(levelname)s - %(module)s - %(name)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
     )
 
     log_file_path = Path(LOGS_DIR, log_filename)
     if rotate_daily:
         file_handler = logging.handlers.TimedRotatingFileHandler(
-            log_file_path,
-            when='midnight',
-            interval=1,
-            backupCount=1,
-            encoding='utf-8'
+            log_file_path, when="midnight", interval=1, backupCount=1, encoding="utf-8"
         )
     else:
-        file_handler = logging.FileHandler(log_file_path, encoding='utf-8')
+        file_handler = logging.FileHandler(log_file_path, encoding="utf-8")
 
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
@@ -58,16 +54,16 @@ def configure_logger(
         logger.addHandler(console_handler)
 
         error_console_handler = logging.StreamHandler(sys.stderr)
-        error_console_handler.setLevel(logging.WARNING) # Only logs WARNING and above to stderr
+        error_console_handler.setLevel(logging.WARNING)  # Only logs WARNING and above to stderr
         error_console_handler.setFormatter(formatter)
         logger.addHandler(error_console_handler)
 
     return logger
 
 
-if __name__ == '__main__':
-    LOGS_DIR = Path('logs')
+if __name__ == "__main__":
+    LOGS_DIR = Path("logs")
     LOGS_DIR.mkdir(parents=True, exist_ok=True)
-    logger = configure_logger(rotate_daily=True, log_filename='example.log')
-    logger.info('This is an info message.')
-    logger.error('This is an error message.')
+    logger = configure_logger(rotate_daily=True, log_filename="example.log")
+    logger.info("This is an info message.")
+    logger.error("This is an error message.")

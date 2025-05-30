@@ -6,10 +6,16 @@ import sys
 from pathlib import Path
 
 # --- Configuration for PID File ---
-PID_FILE = "flags/background_pids.txt"  # File to store script_name,pid
+PID_FILE = Path("flags/background_pids.txt")  # File to store script_name,pid
+if not PID_FILE.exists():
+    PID_FILE.touch()
+
+# Determine the project root dynamically using pathlib
+# This gets the directory where phorest.py resides
+PROJECT_ROOT = Path(__file__).resolve().parent
 
 # --- Script Categories ---
-info_gathering_scripts = [
+foreground_scripts = [
     {"menu": "Check USB Storage", "script": "run_storage_check.py"},
     {"menu": "Iniatialise Directories", "script": "run_create_directories.py"},
     {"menu": "Find Thermocouple Serial Numbers", "script": "run_find_thermocouple_serials.py"},
@@ -53,13 +59,14 @@ def check_running_background_scripts_status(stdscr):
 
         cleanup_pid_file()  # Always clean the file before displaying and interacting
         tracked_pids = get_tracked_pids()  # Get the now cleaned list
+        active_processes_to_display = tracked_pids
 
-        # Filter for truly active processes to display for interaction
-        active_processes_to_display = []
-        for entry in tracked_pids:
-            cmd = is_pid_active(entry["pid"])
-            if cmd and (f"python {entry['name']}" in cmd or f"python3 {entry['name']}" in cmd):
-                active_processes_to_display.append(entry)
+        # # Filter for truly active processes to display for interaction
+        # active_processes_to_display = []
+        # for entry in tracked_pids:
+        #     cmd = is_pid_active(entry["pid"])
+        #     if cmd and ("python3" in cmd) and (f"{entry['name']}" in cmd):
+        #         active_processes_to_display.append(entry)
 
         results_lines = []
         if not active_processes_to_display:
@@ -138,7 +145,6 @@ def check_running_background_scripts_status(stdscr):
 
 def start_all_background_scripts(stdscr):
     scripts_to_start = [
-        "run_data_collector.py",
         "run_collector.py",
         "run_processor.py",
         "run_communicator.py",
@@ -173,7 +179,7 @@ def stop_all_background_scripts(stdscr):
     active_processes_to_stop = []
     for entry in tracked_pids:
         cmd = is_pid_active(entry["pid"])
-        if cmd and (f"python {entry['name']}" in cmd or f"python3 {entry['name']}" in cmd):
+        if cmd and ("python3" in cmd) and (f"{entry['name']}" in cmd):
             active_processes_to_stop.append(entry)
 
     stdscr.clear()
@@ -186,18 +192,21 @@ def stop_all_background_scripts(stdscr):
 multiple_scripts = [
     {"menu": "\tSTART All processes for Data collection", "script": start_all_background_scripts},
     {"menu": "\tSTOP All Data collection processes", "script": stop_all_background_scripts},
-    {"menu": "\tMANAGE Running processes separately", "script": check_running_background_scripts_status},
+    {
+        "menu": "\tMANAGE Running processes separately",
+        "script": check_running_background_scripts_status,
+    },
 ]
 
-all_scripts = info_gathering_scripts + background_scripts + multiple_scripts
+all_scripts = foreground_scripts + background_scripts + multiple_scripts
 
 
 # --- Helper functions for PID file management ---
 def get_tracked_pids():
     """Reads the PID file and returns a list of (script_name, pid) dictionaries."""
     tracked_pids = []
-    if Path(PID_FILE).exists():
-        with Path(PID_FILE).open("r") as f:
+    if PID_FILE.exists():
+        with PID_FILE.open("r") as f:
             for line in f:
                 line = line.strip()
                 if line:
@@ -222,7 +231,7 @@ def get_tracked_pids():
 
 def add_pid_to_file(script_name, pid):
     """Appends a new script_name,pid entry to the PID file."""
-    with Path(PID_FILE).open("a") as f:
+    with PID_FILE.open("a") as f:
         f.write(f"{script_name},{pid},ACTIVE\n")
 
 
@@ -264,7 +273,7 @@ def is_script_already_running(script_name):
             cmd = is_pid_active(entry["pid"])
             if cmd:
                 # Double-check that the command string still matches the script
-                if f"python3 {script_name}" in cmd:
+                if ("python3" in cmd) and (f"{script_name}" in cmd):
                     return entry["pid"]  # Found an active instance
 
     return None  # No active instance found for this script
@@ -283,7 +292,7 @@ def cleanup_pid_file():
         cmd = is_pid_active(entry["pid"])
         if cmd:
             # Check if the PID is still running the expected script
-            if f"python3 {entry['name']}" in cmd:
+            if ("python3" in cmd) and (f"{entry['name']}" in cmd):
                 updated_pids_list.append(entry)  # Keep this active entry
         else:
             updated_pids_list.append(
@@ -294,7 +303,7 @@ def cleanup_pid_file():
                 }
             )
     # Rewrite the PID file with only the valid, active entries
-    with Path(PID_FILE).open("w") as f:
+    with PID_FILE.open("w") as f:
         for entry in updated_pids_list:
             if entry["status"] == "ACTIVE":
                 f.write(f"{entry['name']},{entry['pid']},{entry['status']}\n")
@@ -313,7 +322,7 @@ def refresh_pid_file():
         cmd = is_pid_active(entry["pid"])
         if cmd:
             # Check if the PID is still running the expected script
-            if f"python3 {entry['name']}" in cmd:
+            if ("python3" in cmd) and (f"{entry['name']}" in cmd):
                 updated_pids_list.append(entry)  # Keep this active entry
         else:
             updated_pids_list.append(
@@ -324,7 +333,7 @@ def refresh_pid_file():
                 }
             )
     # Rewrite the PID file with only the valid, active entries
-    with Path(PID_FILE).open("w") as f:
+    with PID_FILE.open("w") as f:
         for entry in updated_pids_list:
             f.write(f"{entry['name']},{entry['pid']},{entry['status']}\n")
 
@@ -345,7 +354,7 @@ def draw_menu(stdscr, selected_row_idx):
     refresh_pid_file()  # Ensure file is somewhat clean before counting for display
     for entry in get_tracked_pids():
         cmd = is_pid_active(entry["pid"])
-        if cmd and (f"python {entry['name']}" in cmd or f"python3 {entry['name']}" in cmd):
+        if cmd and ("python3" in cmd) and (f"{entry['name']}" in cmd):
             active_count += 1
         else:
             dead_count += 1
@@ -362,7 +371,7 @@ def draw_menu(stdscr, selected_row_idx):
         y = y_offset + idx
 
         attrs = 0
-        if script_option in info_gathering_scripts:
+        if script_option in foreground_scripts:
             attrs |= curses.A_UNDERLINE
 
         if idx == selected_row_idx:
@@ -399,17 +408,31 @@ def run_background_script_detached(stdscr, script_name, ask_for_enter=True):
     stdscr.refresh()
     curses.napms(500)
 
+    # Construct the full path to the script
+    full_script_path = Path(PROJECT_ROOT, 'src', script_name)
+
+    # Prepare environment variables for the subprocess
+    env = os.environ.copy()
+    # Add the project root to PYTHONPATH for the subprocess
+    if "PYTHONPATH" in env:
+        env["PYTHONPATH"] = f"{PROJECT_ROOT}{os.pathsep}{env['PYTHONPATH']}"
+    else:
+        env["PYTHONPATH"] = str(PROJECT_ROOT) # Convert Path to string for environment variable
+
+
     # sys.executable is used to ensure the script runs with the same Python interpreter
     # it returns the path to the Python interpreter being used by the currrent script
     # i.e. '/home/labuser/Documents/Python/phorest_pipeline/.venv/bin/python3'
     try:
         process = subprocess.Popen(
-            [sys.executable, script_name],
+            [sys.executable, str(full_script_path)],
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             preexec_fn=os.setsid,
             close_fds=True,
+            env=env,
+            cwd=str(PROJECT_ROOT),  # Set the working directory to the project root
         )
 
         add_pid_to_file(script_name, process.pid)
@@ -438,7 +461,7 @@ def run_background_script_detached(stdscr, script_name, ask_for_enter=True):
 
 
 # --- Function to display captured output from info-gathering scripts ---
-def display_script_output(stdscr, script_name):
+def run_foreground_script(stdscr, script_name):
     """
     Runs an information-gathering script, captures its output, and displays it in the TUI.
     """
@@ -455,9 +478,25 @@ def display_script_output(stdscr, script_name):
     stdscr.refresh()
     curses.napms(500)
 
+    # Construct the full path to the script
+    full_script_path = Path(PROJECT_ROOT, 'src', script_name)
+
+    # Prepare environment variables for the subprocess
+    env = os.environ.copy()
+    if "PYTHONPATH" in env:
+        env["PYTHONPATH"] = f"{PROJECT_ROOT}{os.pathsep}{env['PYTHONPATH']}"
+    else:
+        env["PYTHONPATH"] = str(PROJECT_ROOT) # Convert Path to string for environment variable
+
+
     try:
         result = subprocess.run(
-            [sys.executable, script_name], capture_output=True, text=True, check=True
+            [sys.executable, str(full_script_path)],
+            capture_output=True,
+            text=True,
+            check=True,
+            env=env,
+            cwd=str(PROJECT_ROOT)
         )
 
         all_output_lines = []
@@ -514,7 +553,7 @@ def display_script_output(stdscr, script_name):
 
     except subprocess.CalledProcessError as e:
         stdscr.clear()
-        stdscr.addstr(0, 0, f"Error running script '{script_name['script']}':", ERROR_ATTRIBUTES)
+        stdscr.addstr(0, 0, f"Error running script '{script_name}':", ERROR_ATTRIBUTES)
         stdscr.addstr(1, 0, f"Command: {e.cmd}")
         stdscr.addstr(2, 0, f"Return Code: {e.returncode}")
 
@@ -618,8 +657,8 @@ def main(stdscr):
 
             if selected_option in multiple_scripts:
                 selected_option["script"](stdscr)
-            elif selected_option in info_gathering_scripts:
-                display_script_output(stdscr, selected_option["script"])
+            elif selected_option in foreground_scripts:
+                run_foreground_script(stdscr, selected_option["script"])
             elif selected_option in background_scripts:
                 stdscr.clear()
                 stdscr.addstr(
@@ -635,7 +674,7 @@ def main(stdscr):
             cleanup_pid_file()
             for entry in get_tracked_pids():
                 cmd = is_pid_active(entry["pid"])
-                if cmd and (f"python {entry['name']}" in cmd or f"python3 {entry['name']}" in cmd):
+                if cmd and ("python3" in cmd) and (f"{entry['name']}" in cmd):
                     active_count += 1
 
             if active_count > 0:
@@ -643,7 +682,7 @@ def main(stdscr):
                 stdscr.addstr(
                     0,
                     0,
-                    f"WARNING: {active_count} background processes are still running (tracked in {PID_FILE})!",
+                    f"WARNING: {active_count} background processes are still running (tracked in {PID_FILE.as_posix()})!",
                     WARNING_ATTRIBUTES,
                 )
                 stdscr.addstr(

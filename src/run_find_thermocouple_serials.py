@@ -12,6 +12,42 @@ from pathlib import Path
 # Location where 1-Wire devices are exposed in the Linux file system
 DEVICE_LOC = Path("/sys/bus/w1/devices/")
 
+def check_w1_modules():
+    """
+    Checks if the 'w1-gpio' and 'w1-therm' kernel modules are currently loaded.
+    """
+    try:
+        # Run the lsmod command to list loaded kernel modules
+        result = subprocess.run(['lsmod'], capture_output=True, text=True, check=True)
+
+        loaded_modules = set()
+        # Skip the header line (first line)
+        for line in result.stdout.splitlines()[1:]:
+            parts = line.split()
+            if parts:
+                loaded_modules.add(parts[0])
+
+        # Check if both required modules are in the set of loaded modules
+        # lsmod typically lists them with underscores (w1_gpio, w1_therm)
+        # even if the actual module file uses hyphens (w1-gpio.ko)
+        w1_gpio_loaded = 'w1_gpio' in loaded_modules
+        w1_therm_loaded = 'w1_therm' in loaded_modules
+
+        return w1_gpio_loaded and w1_therm_loaded
+
+    except FileNotFoundError:
+        # This error occurs if 'lsmod' command itself is not found
+        print("Error: 'lsmod' command not found. Is kmod package installed?")
+        return False
+    except subprocess.CalledProcessError as e:
+        # This error occurs if 'lsmod' returns a non-zero exit code (e.g., permission issues, though unlikely for lsmod)
+        print(f"Error running 'lsmod': {e.stderr}")
+        return False
+    except Exception as e:
+        # Catch any other unexpected errors
+        print(f"An unexpected error occurred while checking modules: {e}")
+        return False
+
 
 def load_w1_modules():
     """
@@ -80,11 +116,12 @@ def main():
     print("--- 1-Wire Thermocouple Serial Number Finder ---")
     print("--------------------------------------------------")
 
-    # Step 1: Load 1-Wire modules (requires sudo/root)
-    if not load_w1_modules():
-        print("Cannot proceed without 1-Wire modules loaded. Please resolve the issue above.")
-        print("--------------------------------------------------")
-        return
+    # Step 1: Check 1-Wire modules are loaded, if not load them (loading requires sudo/root)
+    if not check_w1_modules():
+        if not load_w1_modules():
+            print("Cannot proceed without 1-Wire modules loaded. Please resolve the issue above.")
+            print("--------------------------------------------------")
+            return
 
     # Step 2: Find serial numbers
     serial_numbers = find_thermocouple_serial_numbers()
