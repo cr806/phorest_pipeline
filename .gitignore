@@ -82,6 +82,7 @@ compression_test/
 *_camera_parameter_scan/
 RPi/
 *.log
+INTERNAL_FILES/*.jpg
 
 # Directories to store actual data locally
 continuous_capture/
