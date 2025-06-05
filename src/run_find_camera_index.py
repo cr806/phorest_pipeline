@@ -92,7 +92,7 @@ def find_working_cameras_opencv(v4l2_device_map: dict):
     print("\nStarting OpenCV camera check (iterating indices 0-9)...")
     found_cameras = []
 
-    for i in range(5):  # Check the first 5 common camera indices
+    for i in range(10):  # Check the first 5 common camera indices
         print(f"  Checking camera index {i}...")
 
         cap = cv2.VideoCapture(i)  # Attempt to open the camera at this index
@@ -103,19 +103,19 @@ def find_working_cameras_opencv(v4l2_device_map: dict):
             continue
 
         ret, _ = cap.read()
+        camera_name = v4l2_device_map.get(i, f"Generic Camera (Index {i})")
         if ret:
-            camera_name = v4l2_device_map.get(i, f"Generic Camera (Index {i})")
             print(f"    SUCCESS: Camera '{camera_name}' found at index {i}.")
-            found_cameras.append({"name": camera_name, "index": i})
+            found_cameras.append({"name": camera_name, "index": i, "accessible": True})
         else:
             print(
                 f"    Index {i}: Accessible, but could not read a frame (might be in use or faulty)."
             )
+            found_cameras.append({"name": camera_name, "index": i, "accessible": False})
 
         cap.release()
 
         time.sleep(0.1)
-
     return found_cameras
 
 
@@ -139,10 +139,21 @@ def main():
     print("-------------------------------------------------")
 
     if working_cameras:
+        cam_name = []
         for camera in working_cameras:
-            print(f"Camera Name:                  '{camera['name']}'")
-            print(f"Recommended Index for Config:  {camera['index']}")
-            print("-------------------------------------------------")
+            if camera['name'] in cam_name:
+                continue
+            if camera['accessible']:
+                print(f"OpenCV controllable cameras:")
+                print(f"\tCamera Name:                  '{camera['name']}'")
+                print(f"\tRecommended Index for Config:  {camera['index']}")
+                print("-------------------------------------------------")
+            else:
+                print(f"libcamera controllable cameras:")
+                print(f"\tCamera Name:                  '{camera['name']}'")
+                print(f"\tRecommended Index for Config:  {camera['index']}")
+                print("-------------------------------------------------")   
+            cam_name.append(camera['name'])           
         print("")
         print("")
     else:
