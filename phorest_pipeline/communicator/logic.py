@@ -33,7 +33,9 @@ def find_processed_entries(metadata_list: list) -> list[dict]:
         # Find entry marked as processed
         if entry.get("processing_successful", False):
             processed_entries.append(entry)
-    return processed_entries
+    if processed_entries:
+        return processed_entries
+    return None
 
 
 def find_not_transmitted_entries(metadata_list: list) -> list[int]:
@@ -192,7 +194,8 @@ def perform_communication(current_state: CommunicatorState) -> CommunicatorState
 
             results_data = load_metadata(RESULTS_DIR, RESULTS_FILENAME)
             processed_entries = find_processed_entries(results_data)
-            communicate_results(processed_entries, results_data)
+            if processed_entries:
+                communicate_results(processed_entries, results_data)
 
             logger.info("COMMUNICATING -> IDLE")
             next_state = CommunicatorState.IDLE
