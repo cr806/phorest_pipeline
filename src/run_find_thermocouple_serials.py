@@ -10,7 +10,8 @@ from pathlib import Path
 # COLOR_END = "\033[0m"  # Resets the color
 
 # Location where 1-Wire devices are exposed in the Linux file system
-DEVICE_LOC = Path("/sys/bus/w1/devices/")
+DEVICE_LOC = Path("/", "sys", "bus", "w1", "devices")
+
 
 def check_w1_modules():
     """
@@ -18,7 +19,7 @@ def check_w1_modules():
     """
     try:
         # Run the lsmod command to list loaded kernel modules
-        result = subprocess.run(['lsmod'], capture_output=True, text=True, check=True)
+        result = subprocess.run(["lsmod"], capture_output=True, text=True, check=True)
 
         loaded_modules = set()
         # Skip the header line (first line)
@@ -30,8 +31,8 @@ def check_w1_modules():
         # Check if both required modules are in the set of loaded modules
         # lsmod typically lists them with underscores (w1_gpio, w1_therm)
         # even if the actual module file uses hyphens (w1-gpio.ko)
-        w1_gpio_loaded = 'w1_gpio' in loaded_modules
-        w1_therm_loaded = 'w1_therm' in loaded_modules
+        w1_gpio_loaded = "w1_gpio" in loaded_modules
+        w1_therm_loaded = "w1_therm" in loaded_modules
 
         return w1_gpio_loaded and w1_therm_loaded
 

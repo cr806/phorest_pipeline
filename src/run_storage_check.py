@@ -12,7 +12,6 @@ logger = configure_logger(
 EXPECTED_USB_UUID = 'BB92-0AA4'
 MOUNT_POINT = Path('/', 'mnt', 'ARGUS_data')
 TEST_FILE_NAME = Path('.usb_health_check_temp')
-LOG_FILE = Path('/', 'log', 'usb_health_check.log')
 
 
 def check_usb_mount_and_permissions(
