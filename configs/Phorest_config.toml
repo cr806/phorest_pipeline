@@ -44,10 +44,10 @@ image_buffer_size = 10              # Maximum number of images to keep in the da
 camera = true                       # Enable or disable camera usage
 camera_type = "tis"                 # Type of camera: "dummy", "argus", "tis", "logitech"
 camera_id = 0                       # Camera device ID
-camera_exposure = 30                # Camera exposure setting
+camera_exposure = 300                # Camera exposure setting
 # camera_brightness = 170           # Example: alternate brightness setting
 # camera_contrast = 40              # Example: alternate contrast setting
-camera_transform = "ROTATE_180"     # Image transformation: "NONE", "ROTATE_90", "ROTATE_180", "ROTATE_270", "FLIP_HORIZONTAL", "FLIP_VERTICAL"
+camera_transform = "NONE"     # Image transformation: "NONE", "ROTATE_90", "ROTATE_180", "ROTATE_270", "HORIZONTAL_FLIP", "VERTICAL_FLIP"
 
 # --- Temperature Sensor Settings ---
 [Temperature]

@@ -34,12 +34,12 @@
 #    ...
 
 
-chip_type = "IMECII_2"
+chip_type = "IMECII_4"
 
 [[features]]
-label = "D-Left"
-feature_location = [88, 850]
+label = "3A"
+feature_location = [980, 1816]
 
 [[features]]
-label = "E-Left"
-feature_location = [85, 124]
+label = "2A"
+feature_location = [1000, 2216]
