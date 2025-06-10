@@ -4,7 +4,7 @@ from pathlib import Path
 from phorest_pipeline.shared.logger_config import configure_logger
 
 USB_MOUNT_POINT = Path('/', 'mnt', 'ARGUS_data')
-PROJECT_ROOT = Path(__file__).resolve().parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 LOG_FILEPATH = Path(USB_MOUNT_POINT, 'logs', 'directory_setup.log')
 
 logger = configure_logger(
@@ -19,7 +19,6 @@ DIRECTORIES_TO_CREATE = [
     'logs',
     'results',
     'backup/data',
-    'backup/logs',
     'backup/results',
 ]
 
