@@ -23,6 +23,7 @@ foreground_scripts = [
     {"menu": "Find Thermocouple Serial Numbers", "script": "run_find_thermocouple_serials.py"},
     {"menu": "Find Camera Index", "script": "run_find_camera_index.py"},
     {"menu": "Locate Gratings in Image", "script": "prepare_files_for_image_analysis.py"},
+    {"menu": "\t\t( Check ROI listing )", "script": "check_roi_listing.py"},
 ]
 
 background_scripts = [
