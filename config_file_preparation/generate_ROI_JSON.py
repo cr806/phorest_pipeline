@@ -32,41 +32,34 @@ def generate_ROI_JSON(path_to_image, output_ROI_filename):
     result, error = create_directory_with_error_handling(generated_results_root)
     if error:
         print(error)
-        exit(1)
 
     image, error = load_image_and_normalise(path_to_image)
     if error:
         print(error)
-        exit(1)
 
     user_chip_mapping, error = load_user_feature_locations(feature_location_toml)
     if error:
         print(error)
-        exit(1)
 
     user_chip_mapping, error = load_chip_feature_locations(chip_location_json, user_chip_mapping)
     if error:
         print(error)
-        exit(1)
 
     # 2. Calculate angle and scale according to user's input
     result, error = chip_rotation_angle(user_chip_mapping, key='user_location')
     if error:
         print(error)
-        exit(1)
     user_chip_mapping, initial_rotation_angle = result
 
     result, error = user_chip_scale_factor(user_chip_mapping, key='user_location')
     if error:
         print(error)
-        exit(1)
     user_chip_mapping, _ = result
 
     # 3. Rotate image using user angle
     rotated_image, error = rotate_image(image, -initial_rotation_angle)
     if error:
         print(error)
-        exit(1)
 
     # 4. Refine feature locations using template matching
     result, error = refine_feature_locations(
@@ -74,28 +67,24 @@ def generate_ROI_JSON(path_to_image, output_ROI_filename):
     )
     if error:
         print(error)
-        exit(1)
     user_chip_mapping, refined_locations, _ = result
 
     # 5. Calculate rotation-angle / scale-factor of image from locatedd the image features (not from user input locations)
     result, error = chip_rotation_angle(user_chip_mapping, key='refined_location')
     if error:
         print(error)
-        exit(1)
     user_chip_mapping, refined_rotation_angle = result
 
     # user_chip_mapping['rotation_angle'] = initial_rotation_angle + refined_rotation_angle
     result, error = user_chip_scale_factor(user_chip_mapping, key='refined_location')
     if error:
         print(error)
-        exit(1)
     user_chip_mapping, refined_scale_factor = result
 
     # 6. Rotate image by refined rotation angle
     rotated_image, error = rotate_image(image, -user_chip_mapping['rotation_angle'])
     if error:
         print(error)
-        exit(1)
 
     # 6. Refine feature locations again with new rotation-angle / scale-factor using template matching
     result, error = refine_feature_locations(
@@ -103,20 +92,17 @@ def generate_ROI_JSON(path_to_image, output_ROI_filename):
     )
     if error:
         print(error)
-        exit(1)
     user_chip_mapping, refined_locations, template_shape = result
 
     # 7. Calculate offset between image and chip-map
     user_chip_mapping, error = calculate_chip_offset(user_chip_mapping)
     if error:
         print(error)
-        exit(1)
 
     # 8. Load and offset grating locations
     grating_data, error = load_and_offset_grating_data(chip_location_json, user_chip_mapping)
     if error:
         print(error)
-        exit(1)
 
     # 9.. Visualise feature location results
     visualize_features_with_matplotlib(
@@ -145,13 +131,11 @@ def generate_ROI_JSON(path_to_image, output_ROI_filename):
     )
     if error:
         print(error)
-        exit(1)
 
     # 13. Save calculated image features
     result, error = save_json(calculated_image_feature_path, user_chip_mapping)
     if error:
         print(error)
-        exit(1)
 
 
 if __name__ == '__main__':
