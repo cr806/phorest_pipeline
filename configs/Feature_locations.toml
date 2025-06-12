@@ -37,9 +37,9 @@
 chip_type = "IMECII_4"
 
 [[features]]
-label = "3A"
-feature_location = [980, 1816]
+label = "1C"
+feature_location = [2320, 2700]
 
 [[features]]
 label = "2A"
-feature_location = [1000, 2216]
+feature_location = [568, 2340]

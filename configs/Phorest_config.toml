@@ -47,7 +47,7 @@ camera_id = 0                       # Camera device ID
 camera_exposure = 300                # Camera exposure setting
 # camera_brightness = 170           # Example: alternate brightness setting
 # camera_contrast = 40              # Example: alternate contrast setting
-camera_transform = "NONE"     # Image transformation: "NONE", "ROTATE_90", "ROTATE_180", "ROTATE_270", "HORIZONTAL_FLIP", "VERTICAL_FLIP"
+camera_transform = "ROTATE_180"     # Image transformation: "NONE", "ROTATE_90", "ROTATE_180", "ROTATE_270", "HORIZONTAL_FLIP", "VERTICAL_FLIP"
 
 # --- Temperature Sensor Settings ---
 [Temperature]
