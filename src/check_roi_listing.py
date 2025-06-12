@@ -23,8 +23,8 @@ for k, v in roi_dict.items():
         continue
     roi_dict[k]["label"] = f"{v.get('label', None)}_flipped:{v.get('flip', None)}"
     roi_dict[k]["grating_origin"] = v.get("coords", None)
-    roi_dict[k]["x-size"] = v.get("size", [None, None])[0]
-    roi_dict[k]["y-size"] = v.get("size", [None, None])[1]
+    roi_dict[k]["x-size"] = v.get("size", [None, None])[1]
+    roi_dict[k]["y-size"] = v.get("size", [None, None])[0]
     grating_list.append(roi_dict[k])
 
 image, error = load_image_and_normalise(PATH_TO_IMAGE)
