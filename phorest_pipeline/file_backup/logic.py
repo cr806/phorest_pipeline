@@ -17,6 +17,7 @@ from phorest_pipeline.shared.states import BackupState
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename="file_backup.log")
 
 POLL_INTERVAL = FILE_BACKUP_INTERVAL / 20 if FILE_BACKUP_INTERVAL > (5 * 20) else 5
+BACKUP_ROOT_PATH = Path('backup')
 
 FILES_TO_PROCESS = [
     Path(DATA_DIR, "processing_manifest.json"),
@@ -24,6 +25,19 @@ FILES_TO_PROCESS = [
     Path(RESULTS_DIR, "communicating_results.csv"),
     Path(RESULTS_DIR, "processed_data_plot.png"),
 ]
+
+
+def find_non_gz_files(directory_path):
+    non_gz_files = []
+
+    if not directory_path.is_dir():
+        raise ValueError(f"'{directory_path}' is not a valid directory.")
+
+    for file_path in directory_path.rglob('*'):
+        if file_path.is_file() and file_path.suffix != '.gz':
+            non_gz_files.append(file_path)
+
+    return non_gz_files
 
 
 def compress_files(files_to_process: list[Path]):
@@ -70,7 +84,7 @@ def backup_and_empty_original_file(files_to_process: list[Path]) -> list[Path]:
             # 1. Generate the backup file name with datetime suffix
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             backup_file_path = Path(
-                "backup",
+                BACKUP_ROOT_PATH,
                 original_file_path.with_name(
                     f"{original_file_path.stem}_{timestamp}{original_file_path.suffix}"
                 ),
@@ -128,7 +142,8 @@ def perform_file_backup_cycle(current_state: BackupState) -> BackupState:
 
         case BackupState.BACKUP_FILES:
             logger.info("--- Backing up files ---")
-            files_to_compress = backup_and_empty_original_file(FILES_TO_PROCESS)
+            backup_and_empty_original_file(FILES_TO_PROCESS)
+            files_to_compress = find_non_gz_files(BACKUP_ROOT_PATH)
             compress_files(files_to_compress)
             logger.info("BACKUP_FILES -> IDLE")
             next_state = BackupState.IDLE

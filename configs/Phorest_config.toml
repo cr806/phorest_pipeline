@@ -23,9 +23,9 @@ results_ready = "results_ready.flag"  # Flag file indicating results are ready
 # --- Timing Intervals (in seconds) ---
 [Timing]
 collector_interval_seconds = 5        # Interval for data collection
-processor_interval_seconds = 60       # Interval for data processing
-communicator_interval_seconds = 20    # Interval for communication task
-enable_image_compression = true       # Enable or disable image compression
+processor_interval_seconds = 25       # Interval for data processing
+communicator_interval_seconds = 30    # Interval for communication task
+enable_image_compression = false       # Enable or disable image compression
 compress_interval_seconds = 600       # How often to compress images
 log_file_interval_seconds = 3600      # How often to manage log files
 file_backup_interval_seconds = 3600   # Interval for rename files task
@@ -37,14 +37,14 @@ collector_retry_delay_seconds = 3   # Delay before retrying collector operations
 
 # --- Data Buffer Settings ---
 [Buffer]
-image_buffer_size = 10              # Maximum number of images to keep in the data directory
+image_buffer_size = 2000              # Maximum number of images to keep in the data directory
 
 # --- Camera Settings ---
 [Camera]
 camera = true                       # Enable or disable camera usage
 camera_type = "tis"                 # Type of camera: "dummy", "argus", "tis", "logitech"
 camera_id = 0                       # Camera device ID
-camera_exposure = 300                # Camera exposure setting
+camera_exposure = 400                # Camera exposure setting
 # camera_brightness = 170           # Example: alternate brightness setting
 # camera_contrast = 40              # Example: alternate contrast setting
 camera_transform = "ROTATE_180"     # Image transformation: "NONE", "ROTATE_90", "ROTATE_180", "ROTATE_270", "HORIZONTAL_FLIP", "VERTICAL_FLIP"

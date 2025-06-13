@@ -43,3 +43,15 @@ feature_location = [2320, 2700]
 [[features]]
 label = "2A"
 feature_location = [568, 2340]
+
+[[features]]
+label = "3A"
+feature_location = [564, 1924]
+
+[[features]]
+label = "2C"
+feature_location = [2328, 2300]
+
+
+
+

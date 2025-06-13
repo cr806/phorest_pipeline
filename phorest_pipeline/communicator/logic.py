@@ -12,6 +12,7 @@ from phorest_pipeline.shared.config import (
     RESULTS_READY_FLAG,
     settings,
 )
+from phorest_pipeline.shared.helper_utils import move_existing_files_to_backup
 from phorest_pipeline.shared.logger_config import configure_logger
 from phorest_pipeline.shared.metadata_manager import load_metadata, save_metadata
 from phorest_pipeline.shared.states import CommunicatorState
@@ -216,6 +217,9 @@ def run_communicator():
         try:
             RESULTS_READY_FLAG.unlink(missing_ok=True)
             logger.info(f"Ensured flag {RESULTS_READY_FLAG} is initially removed.")
+            files_to_move = [Path(RESULTS_DIR, CSV_FILENAME), Path(RESULTS_DIR, RESULTS_IMAGE)]
+            move_existing_files_to_backup(files_to_move, logger=logger)
+            logger.info("Moved existing files to backup directory.")
         except OSError as e:
             logger.warning(f"Could not remove initial flag {RESULTS_READY_FLAG}: {e}")
 

@@ -15,6 +15,7 @@ from phorest_pipeline.shared.config import (
     RETRY_DELAY,
     settings,  # Import settings to check if config loaded ok
 )
+from phorest_pipeline.shared.helper_utils import move_existing_files_to_backup
 from phorest_pipeline.shared.logger_config import configure_logger
 from phorest_pipeline.shared.metadata_manager import add_entry
 from phorest_pipeline.shared.states import CollectorState
@@ -37,6 +38,7 @@ if ENABLE_CAMERA:
 
 METADATA_FILENAME = Path("processing_manifest.json")
 POLL_INTERVAL = COLLECTOR_INTERVAL / 5
+
 
 def ring_buffer_cleanup():
     logger.info("Performing ring buffer cleanup...")
@@ -193,6 +195,9 @@ def run_collector():
         try:
             DATA_READY_FLAG.unlink(missing_ok=True)
             logger.info(f"Ensured flag {DATA_READY_FLAG} is initially removed.")
+            files_to_move = [Path(DATA_DIR, METADATA_FILENAME)]
+            move_existing_files_to_backup(files_to_move, logger=logger)
+            logger.info("Moved existing files to backup directory.")
         except OSError as e:
             logger.warning(f"Could not remove initial flag {DATA_READY_FLAG}: {e}")
 
