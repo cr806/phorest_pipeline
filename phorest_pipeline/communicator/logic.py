@@ -119,18 +119,19 @@ def save_plot_of_results(csv_path: Path, image_path: Path) -> None:
         if temp_df.empty:
             logger.warning(f"No data found for ROI-label: {ROI}")
             continue
-        ax[0].plot(temp_df["timestamp"], temp_df[value_to_plot[analysis_method]], label=ROI)
+        ax[0].plot(list(range(temp_df["timestamp"].size)), temp_df[value_to_plot[analysis_method]], label=ROI)
         for temp_sensor in temp_sensors_to_plot:
             if idx == 0:
-                ax[1].plot(temp_df["timestamp"], temp_df[temp_sensor], label=temp_sensor)
+                ax[1].plot(list(range(temp_df["timestamp"].size)), temp_df[temp_sensor], label=temp_sensor)
 
-    ax[0].set_xlabel("Timestamp")
+    # ax[0].set_xlabel("Timestep")
     ax[0].set_ylabel("Mean pixel value")
     ax[1].set_ylabel("Temperature (°C)")
-    ax[1].set_ylim(0, 150)
+    ax[1].set_xlabel("Timestep")
+    # ax[1].set_ylim(0, 150)
     ax[0].legend(loc="upper left")
-    plt.gca().xaxis.set_major_locator(mdates.MinuteLocator(interval=60))
-    plt.xticks(rotation=45, ha="right")
+    # plt.gca().xaxis.set_major_locator(mdates.MinuteLocator(interval=60))
+    # plt.xticks(rotation=45, ha="right")
     # plt.tight_layout()
     plt.savefig(image_path)
 

@@ -28,7 +28,7 @@ communicator_interval_seconds = 30    # Interval for communication task
 enable_image_compression = false       # Enable or disable image compression
 compress_interval_seconds = 600       # How often to compress images
 log_file_interval_seconds = 3600      # How often to manage log files
-file_backup_interval_seconds = 3600   # Interval for rename files task
+file_backup_interval_seconds = 43200   # Interval for rename files task
 
 # --- Retry Mechanism Settings ---
 [Retries]
@@ -37,7 +37,7 @@ collector_retry_delay_seconds = 3   # Delay before retrying collector operations
 
 # --- Data Buffer Settings ---
 [Buffer]
-image_buffer_size = 2000              # Maximum number of images to keep in the data directory
+image_buffer_size = 50000              # Maximum number of images to keep in the data directory
 
 # --- Camera Settings ---
 [Camera]
