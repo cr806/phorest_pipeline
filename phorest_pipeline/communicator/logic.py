@@ -2,7 +2,6 @@
 import time
 from pathlib import Path
 
-import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import pandas as pd
 
@@ -119,10 +118,16 @@ def save_plot_of_results(csv_path: Path, image_path: Path) -> None:
         if temp_df.empty:
             logger.warning(f"No data found for ROI-label: {ROI}")
             continue
-        ax[0].plot(list(range(temp_df["timestamp"].size)), temp_df[value_to_plot[analysis_method]], label=ROI)
+        ax[0].plot(
+            list(range(temp_df["timestamp"].size)),
+            temp_df[value_to_plot[analysis_method]],
+            label=ROI,
+        )
         for temp_sensor in temp_sensors_to_plot:
             if idx == 0:
-                ax[1].plot(list(range(temp_df["timestamp"].size)), temp_df[temp_sensor], label=temp_sensor)
+                ax[1].plot(
+                    list(range(temp_df["timestamp"].size)), temp_df[temp_sensor], label=temp_sensor
+                )
 
     # ax[0].set_xlabel("Timestep")
     ax[0].set_ylabel("Mean pixel value")

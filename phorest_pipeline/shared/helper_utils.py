@@ -21,7 +21,7 @@ def move_existing_files_to_backup(source_files: list, logger: logging.Logger) ->
             logger.info(f"Source directory '{source_file}' does not exist. Skipping...")
             continue
         if source_file.is_dir():
-            logger.error(f"Error: Source path '{source_file}' is a directory.")
+            logger.error(f"Source path '{source_file}' is a directory.")
             continue
         files_to_move.append(source_file)
 
@@ -33,7 +33,7 @@ def move_existing_files_to_backup(source_files: list, logger: logging.Logger) ->
         destination_path.mkdir(parents=True, exist_ok=True)
         if not destination_path.is_dir():
             logger.error(
-                f"Error: Destination path '{destination_path}' exists but is not a directory."
+                f"Destination path '{destination_path}' exists but is not a directory."
             )
             return
     except Exception as e:
