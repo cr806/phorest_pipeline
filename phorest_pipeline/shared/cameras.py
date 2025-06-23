@@ -8,6 +8,7 @@ class CameraType(Enum):
     LOGITECH = auto()
     ARGUS = auto()
     TIS = auto()
+    HAWKEYE = auto()
     DUMMY = auto()
 
 

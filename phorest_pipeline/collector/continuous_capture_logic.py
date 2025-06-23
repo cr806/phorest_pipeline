@@ -26,11 +26,14 @@ if ENABLE_CAMERA:
         from phorest_pipeline.collector.argus_camera_controller import camera_controller
     elif CAMERA_TYPE == CameraType.TIS:
         from phorest_pipeline.collector.tis_camera_controller import camera_controller
+    elif CAMERA_TYPE == CameraType.HAWKEYE:
+        from phorest_pipeline.collector.hawkeye_camera_controller import camera_controller
     elif CAMERA_TYPE == CameraType.DUMMY:
         from phorest_pipeline.collector.dummy_camera_controller import camera_controller
     logger.info(f'Camera type: {CAMERA_TYPE}')
 
 SAVENAME = 'continuous_capture_frame.jpg'
+RESOLUTION = (640, 480)
 
 
 def perform_continuous_capture(
@@ -65,7 +68,7 @@ def perform_continuous_capture(
 
             if ENABLE_CAMERA:
                 logger.info('Camera is enabled.')
-                cam_status, cam_msg, _ = camera_controller(CONTINUOUS_DIR, savename=filename)
+                cam_status, cam_msg, _ = camera_controller(CONTINUOUS_DIR, savename=filename, resolution=RESOLUTION)
                 if cam_status != 0:
                     collection_successful = False
                     logger.error(cam_msg)
