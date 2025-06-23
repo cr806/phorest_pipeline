@@ -34,7 +34,7 @@ from phorest_pipeline.shared.logger_config import configure_logger
 
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename='processor.log')
 
-IMAGE_SIZE_THRESHOLD = 1_000_000  # Bits
+IMAGE_SIZE_THRESHOLD = 15_000  # Bits
 
 
 def process_image(image_meta: dict | None) -> tuple[list | None, str | None]:
@@ -61,7 +61,7 @@ def process_image(image_meta: dict | None) -> tuple[list | None, str | None]:
         image_size_good = image_filepath.stat().st_size > IMAGE_SIZE_THRESHOLD
 
         if not image_size_good:
-            return None, 'Image does not match size criteria : {image_filepath}'
+            return None, f'Image does not match size criteria : {image_filepath}'
 
         # Load image
         image_data = cv2.imread(str(image_filepath), cv2.IMREAD_UNCHANGED)

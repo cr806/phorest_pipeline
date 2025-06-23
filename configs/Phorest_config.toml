@@ -37,7 +37,9 @@ collector_retry_delay_seconds = 3   # Delay before retrying collector operations
 
 # --- Data Buffer Settings ---
 [Buffer]
-image_buffer_size = 10              # Maximum number of images to keep in the data directory
+
+image_buffer_size = 50              # Maximum number of images to keep in the data directory
+
 
 # --- Camera Settings ---
 [Camera]

@@ -8,6 +8,8 @@ from phorest_pipeline.processor.process_image import process_image
 from phorest_pipeline.shared.config import (
     DATA_DIR,
     DATA_READY_FLAG,
+    ENABLE_CAMERA,
+    ENABLE_THERMOCOUPLE,
     PROCESSOR_INTERVAL,
     RESULTS_DIR,
     RESULTS_READY_FLAG,
@@ -96,40 +98,42 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
                 )
 
                 # --- Attempt Processing ---
-                image_meta = entry_to_process.get("camera_data")
-                image_results, img_proc_error_msg = process_image(image_meta)
+                image_results = None
+                img_proc_error_msg = 'Camera not enabled'
+                if ENABLE_CAMERA:
+                    image_meta = entry_to_process.get("camera_data")
+                    image_results, img_proc_error_msg = process_image(image_meta)
 
-                temperature_results = entry_to_process.get("temperature_data", {}).get("data")
-
+                temperature_data = None
+                if ENABLE_THERMOCOUPLE:
+                    temperature_data = entry_to_process.get("temperature_data", {})
+                
                 processing_timestamp = datetime.datetime.now().isoformat()
-                processing_successful = img_proc_error_msg is None
 
-                if not processing_successful:
+                if img_proc_error_msg:
                     logger.error(f"Image processing failed: {img_proc_error_msg}")
                     # Optionally, you could set a flag or take other actions here
 
                 # --- Aggregate Results ---
                 final_result_entry = {
                     "manifest_entry_timestamp": entry_to_process.get("entry_timestamp_iso"),
-                    "image_timestamp": entry_to_process.get("camera_data", {}).get(
+                    "image_timestamp": entry_to_process.get("camera_data", {"timestamp_iso": None}).get(
                         "timestamp_iso"
                     ),
-                    "temperature_timestamp": entry_to_process.get("temperature_data", {}).get(
-                        "timestamp_iso"
-                    ),
+                    "temperature_timestamp": temperature_data.get("timestamp_iso") if temperature_data else None,
                     "image_filename": image_meta.get("filename") if image_meta else None,
                     "processing_timestamp_iso": processing_timestamp,
-                    "processing_successful": processing_successful,
                     "processing_error_message": img_proc_error_msg,
                     "image_analysis": image_results,
-                    "temperature_readings": temperature_results,
+                    "temperature_readings": temperature_data.get("data") if temperature_data else None,
                 }
+
                 append_metadata(RESULTS_DIR, RESULTS_FILENAME, final_result_entry)
 
                 # --- Update Manifest ---
                 entry_to_process["processed"] = True
                 entry_to_process["processing_timestamp_iso"] = processing_timestamp
-                entry_to_process["processing_error"] = not processing_successful
+                entry_to_process["processing_error"] = True if img_proc_error_msg else False
                 entry_to_process["processing_error_msg"] = img_proc_error_msg
 
                 # Replace the old entry with the updated one in the list
@@ -139,7 +143,7 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
                 save_metadata(DATA_DIR, METADATA_FILENAME, manifest_data)
 
                 logger.info(
-                    f"Processed entry index {entry_index}. Success: {processing_successful}\n\n"
+                    f"Processed entry index {entry_index}. Success: {True if img_proc_error_msg else False}\n\n"
                 )
 
                 # --- Stay in PROCESSING state ---
@@ -181,12 +185,12 @@ def run_processor():
 
     # Initial cleanup: remove data flag if it exists on startup
     if settings:
+        files_to_move = [Path(RESULTS_DIR, RESULTS_FILENAME)]
+        move_existing_files_to_backup(files_to_move, logger=logger)
+        logger.info("Moved existing files to backup directory.")
         try:
             DATA_READY_FLAG.unlink(missing_ok=True)
             logger.info(f"Ensured flag {DATA_READY_FLAG} is initially removed.")
-            files_to_move = [Path(RESULTS_DIR, RESULTS_FILENAME)]
-            move_existing_files_to_backup(files_to_move, logger=logger)
-            logger.info("Moved existing files to backup directory.")
         except OSError as e:
             logger.warning(f"Could not remove initial flag {DATA_READY_FLAG}: {e}")
 
@@ -207,6 +211,9 @@ def run_processor():
                 time.sleep(0.1)  # Prevent busy-looping when idle/waiting
     except KeyboardInterrupt:
         logger.info("Shutdown requested.")
+    except Exception as e:
+        logger.error(f"UNEXPECTED ERROR in main loop: {e}")
+        current_state = ProcessorState.FATAL_ERROR
     finally:
         # No flags need specific cleanup here unless DATA_READY might be left mid-operation
         if settings:
