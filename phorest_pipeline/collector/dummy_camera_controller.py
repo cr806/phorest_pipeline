@@ -13,7 +13,7 @@ DUMMY_IMAGE_PATH = Path('phorest_pipeline/collector/dummy_image.tif')
 CAMERA_INDEX = 'DUMMY'
 
 
-def camera_controller(data_dir: Path, savename: Path = None) -> tuple[int, str, dict | None]:
+def camera_controller(data_dir: Path, savename: Path = None, resolution: tuple = None) -> tuple[int, str, dict | None]:
     """
     Dummy camera controller, copies dummy image, returns status and metadata dict.
 

@@ -16,13 +16,13 @@ logger = configure_logger(name=__name__, rotate_daily=True, log_filename='camera
 
 BUFFER_CLEAR_UP_FRAMES = 5
 
-RESOLTION = (4000, 3000)
+RESOLUTION = (4000, 3000)
 IMAGE_FORMAT = 'GREY'
 GAIN_VALUE = 32  # Low value to reduce noise
 CAMERA_BRIGHTNESS = 500
 
 
-def camera_controller(data_dir: Path, savename: Path = None) -> tuple[int, str, dict | None]:
+def camera_controller(data_dir: Path, savename: Path = None, resolution: tuple = None) -> tuple[int, str, dict | None]:
     """
     Controls camera, captures image, saves, returns status and metadata dict.
 
@@ -32,11 +32,14 @@ def camera_controller(data_dir: Path, savename: Path = None) -> tuple[int, str, 
         message: Status message string.
         metadata_dict: Dictionary with capture details on success, None on failure.
     """
-    logger.info('--- Starting Argus Camera Controller ---')
+    logger.info('--- Starting TIS Camera Controller ---')
 
     cap = None
     filepath = None
     metadata_dict = None
+    if resolution:
+        global RESOLUTION
+        RESOLUTION = resolution
 
     try:
         logger.info(f'Opening camera {CAMERA_INDEX}...')
@@ -63,14 +66,14 @@ def camera_controller(data_dir: Path, savename: Path = None) -> tuple[int, str, 
         # --- Camera Settings ---
         # 0. Set resolution and image format
         logger.info('Attempting to set resolution')
-        success = cap.set(cv2.CAP_PROP_FRAME_WIDTH, RESOLTION[0])
-        success = success and cap.set(cv2.CAP_PROP_FRAME_HEIGHT, RESOLTION[1])
+        success = cap.set(cv2.CAP_PROP_FRAME_WIDTH, RESOLUTION[0])
+        success = success and cap.set(cv2.CAP_PROP_FRAME_HEIGHT, RESOLUTION[1])
         if not success:
-            logger.error(f'Failed to set the RESOLUTION to: {RESOLTION[0]}x{RESOLTION[1]}')
+            logger.error(f'Failed to set the RESOLUTION to: {RESOLUTION[0]}x{RESOLUTION[1]}')
         else:
             width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
             height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-            if width != RESOLTION[0] or height != RESOLTION[1]:
+            if width != RESOLUTION[0] or height != RESOLUTION[1]:
                 logger.error(f'Camera resolution not set correctly: {width}x{height}')
         logger.info('Camera resolution set')
 

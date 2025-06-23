@@ -5,6 +5,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+from phorest_pipeline.collector.tis_camera_controller import RESOLUTION
 from phorest_pipeline.shared.config import (
     CAMERA_BRIGHTNESS,
     CAMERA_INDEX,
@@ -13,11 +14,12 @@ from phorest_pipeline.shared.config import (
 from phorest_pipeline.shared.logger_config import configure_logger
 
 BUFFER_CLEAR_UP_FRAMES = 5
+RESOLUTION = (640, 480)
 
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename='camera.log')
 
 
-def camera_controller(data_dir: Path, savename: Path = None) -> tuple[int, str, dict | None]:
+def camera_controller(data_dir: Path, savename: Path = None, resolution: tuple = None) -> tuple[int, str, dict | None]:
     """
     Controls camera, captures image, saves, returns status and metadata dict.
 
@@ -32,6 +34,10 @@ def camera_controller(data_dir: Path, savename: Path = None) -> tuple[int, str, 
     filepath = None
     metadata_dict = None
 
+    if resolution:
+        global RESOLUTION
+        RESOLUTION = resolution
+
     try:
         logger.info(f'Opening camera {CAMERA_INDEX}...')
         cap = cv2.VideoCapture(CAMERA_INDEX)
@@ -42,6 +48,19 @@ def camera_controller(data_dir: Path, savename: Path = None) -> tuple[int, str, 
         time.sleep(0.1)
 
         # --- Camera Settings ---
+        # 0. Set resolution and image format
+        logger.info('Attempting to set resolution')
+        success = cap.set(cv2.CAP_PROP_FRAME_WIDTH, RESOLUTION[0])
+        success = success and cap.set(cv2.CAP_PROP_FRAME_HEIGHT, RESOLUTION[1])
+        if not success:
+            logger.error(f'Failed to set the RESOLUTION to: {RESOLUTION[0]}x{RESOLUTION[1]}')
+        else:
+            width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+            height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+            if width != RESOLUTION[0] or height != RESOLUTION[1]:
+                logger.error(f'Camera resolution not set correctly: {width}x{height}')
+        logger.info('Camera resolution set')
+
         # 1. Set Brightness: brightness
         success = cap.set(cv2.CAP_PROP_BRIGHTNESS, CAMERA_BRIGHTNESS)
         if not success:
