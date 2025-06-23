@@ -7,6 +7,8 @@ import pandas as pd
 
 from phorest_pipeline.shared.config import (
     COMMUNICATOR_INTERVAL,
+    ENABLE_CAMERA,
+    ENABLE_THERMOCOUPLE,
     RESULTS_DIR,
     RESULTS_READY_FLAG,
     settings,
@@ -50,43 +52,51 @@ def find_not_transmitted_entries(metadata_list: list) -> list[int]:
 
 def save_results_json_as_csv(processed_entries: list[dict], csv_path: Path) -> None:
     logger.info(f"Parsing results JSON to CSV and saving to {csv_path}")
-    try:
-        target_dictionary = processed_entries[0]["image_analysis"][1]
-        headers = list(target_dictionary.keys())
-    except (IndexError, KeyError) as e:
-        logger.error(f"Error accessing data: {e}")
-
+    
+    headers = []
     records = []
     for entry in processed_entries:
         # Extract the image_timestamp once per entry
         timestamp = entry.get("image_timestamp")
 
-        # Extract the temperature sensor data once per entry
-        temp_sensors = entry.get("temperature_readings", {}).keys()
-        temp_dict = {}
-        for sensor in temp_sensors:
-            temp_dict[f"temperature_{sensor.lower().replace(' ', '_')}"] = entry.get(
-                "temperature_readings", {}
-            ).get(sensor, None)
+        if ENABLE_THERMOCOUPLE:
+            # Extract the temperature sensor data once per entry
+            temp_sensors = entry.get("temperature_readings", {}).keys()
+            temp_dict = {}
+            for sensor in temp_sensors:
+                temp_dict[f"temperature_{sensor.lower().replace(' ', '_')}"] = entry.get(
+                    "temperature_readings", {}
+                ).get(sensor, None)
 
-        # Iterate through each item in the "image_analysis" list
-        for analysis_item in entry.get("image_analysis", []):
-            # We are interested in elements that have "ROI-label" as a key
-            if "ROI-label" in analysis_item:
-                row_data = {}
+        if ENABLE_CAMERA:
+            if not headers:
+                try:
+                    target_dictionary = processed_entries[0]["image_analysis"][1]
+                    headers = list(target_dictionary.keys())
+                except (IndexError, KeyError) as e:
+                    logger.error(f"Error accessing data: {e}")
+            # Iterate through each item in the "image_analysis" list
+            for analysis_item in entry.get("image_analysis", []):
+                # We are interested in elements that have "ROI-label" as a key
+                if "ROI-label" in analysis_item:
+                    image_dict = {}
 
-                row_data["timestamp"] = timestamp
+                    image_dict["timestamp"] = timestamp
 
-                for field in headers:
-                    value = analysis_item.get(field)
-                    if isinstance(value, dict):
-                        # It's a dictionary so pull out "Mean"
-                        value = value.get("Mean")
-                    row_data[field] = value
+                    for field in headers:
+                        value = analysis_item.get(field)
+                        if isinstance(value, dict):
+                            # It's a dictionary so pull out "Mean"
+                            value = value.get("Mean")
+                        image_dict[field] = value
 
-                row_data.update(temp_dict)
+                    if ENABLE_THERMOCOUPLE:
+                        image_dict.update(temp_dict)
 
-                records.append(row_data)
+                    records.append(image_dict)
+        else:
+            if ENABLE_THERMOCOUPLE:
+                records.append(temp_dict)
 
     # Create the DataFrame
     df = pd.DataFrame(records)
@@ -99,35 +109,37 @@ def save_plot_of_results(csv_path: Path, image_path: Path) -> None:
     # Load the CSV data for plotting
     data = pd.read_csv(csv_path)
 
-    analysis_method = data["Analysis-method"].unique()[0]
-    value_to_plot = {
-        "max_intensity": "max_intensity",
-        "centre": "centre",
-        "gaussian": "mu",
-        "fano": "resonance",
-    }
-
-    ROIs_to_plot = data["ROI-label"].unique()
-    temp_sensors_to_plot = [t for t in data.columns if "temperature" in t]
-    if len(ROIs_to_plot) == 0:
-        logger.warning("No ROI-labels found in the data.")
-        return
     _, ax = plt.subplots(2, 1, figsize=(12, 6))
-    for idx, ROI in enumerate(ROIs_to_plot):
-        temp_df = data[data["ROI-label"] == ROI]
-        if temp_df.empty:
-            logger.warning(f"No data found for ROI-label: {ROI}")
-            continue
-        ax[0].plot(
-            list(range(temp_df["timestamp"].size)),
-            temp_df[value_to_plot[analysis_method]],
-            label=ROI,
-        )
+    if ENABLE_CAMERA:
+        analysis_method = data["Analysis-method"].unique()[0]
+        value_to_plot = {
+            "max_intensity": "max_intensity",
+            "centre": "centre",
+            "gaussian": "mu",
+            "fano": "resonance",
+        }
+
+        ROIs_to_plot = data["ROI-label"].unique()
+        if len(ROIs_to_plot) == 0:
+            logger.warning("No ROI-labels found in the data.")
+            return
+        for ROI in ROIs_to_plot:
+            temp_df = data[data["ROI-label"] == ROI]
+            if temp_df.empty:
+                logger.warning(f"No data found for ROI-label: {ROI}")
+                continue
+            ax[0].plot(
+                list(range(temp_df["timestamp"].size)),
+                temp_df[value_to_plot[analysis_method]],
+                label=ROI,
+            )
+    
+    if ENABLE_THERMOCOUPLE:
+        temp_sensors_to_plot = [t for t in data.columns if "temperature" in t]
         for temp_sensor in temp_sensors_to_plot:
-            if idx == 0:
-                ax[1].plot(
-                    list(range(temp_df["timestamp"].size)), temp_df[temp_sensor], label=temp_sensor
-                )
+            ax[1].plot(
+                list(range(temp_df["timestamp"].size)), temp_df[temp_sensor], label=temp_sensor
+            )
 
     # ax[0].set_xlabel("Timestep")
     ax[0].set_ylabel("Mean pixel value")
@@ -201,6 +213,7 @@ def perform_communication(current_state: CommunicatorState) -> CommunicatorState
 
             results_data = load_metadata(RESULTS_DIR, RESULTS_FILENAME)
             processed_entries = find_processed_entries(results_data)
+            logger.info(f"Found {len(processed_entries)} processed entries to communicate.")
             if processed_entries:
                 communicate_results(processed_entries, results_data)
 
@@ -220,12 +233,12 @@ def run_communicator():
 
     # Initial cleanup: remove results flag if it exists on startup
     if settings:
+        files_to_move = [Path(RESULTS_DIR, CSV_FILENAME), Path(RESULTS_DIR, RESULTS_IMAGE)]
+        move_existing_files_to_backup(files_to_move, logger=logger)
+        logger.info("Moved existing files to backup directory.")
         try:
             RESULTS_READY_FLAG.unlink(missing_ok=True)
             logger.info(f"Ensured flag {RESULTS_READY_FLAG} is initially removed.")
-            files_to_move = [Path(RESULTS_DIR, CSV_FILENAME), Path(RESULTS_DIR, RESULTS_IMAGE)]
-            move_existing_files_to_backup(files_to_move, logger=logger)
-            logger.info("Moved existing files to backup directory.")
         except OSError as e:
             logger.warning(f"Could not remove initial flag {RESULTS_READY_FLAG}: {e}")
 
@@ -235,6 +248,8 @@ def run_communicator():
             time.sleep(0.1)  # Small sleep to prevent busy-looping
     except KeyboardInterrupt:
         logger.info("Shutdown requested.")
+    except Exception as e:
+        logger.error(f"Unexpected error: {e}")
     finally:
         # Cleanup on exit
         if settings:

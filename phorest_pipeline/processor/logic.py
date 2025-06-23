@@ -109,6 +109,8 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
                     temperature_data = entry_to_process.get("temperature_data", {})
                 
                 processing_timestamp = datetime.datetime.now().isoformat()
+                if image_results or temperature_data:
+                    processing_successful = True
 
                 if img_proc_error_msg:
                     logger.error(f"Image processing failed: {img_proc_error_msg}")
@@ -123,6 +125,7 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
                     "temperature_timestamp": temperature_data.get("timestamp_iso") if temperature_data else None,
                     "image_filename": image_meta.get("filename") if image_meta else None,
                     "processing_timestamp_iso": processing_timestamp,
+                    "processing_successful": processing_successful,
                     "processing_error_message": img_proc_error_msg,
                     "image_analysis": image_results,
                     "temperature_readings": temperature_data.get("data") if temperature_data else None,
