@@ -54,6 +54,7 @@ def move_existing_files_to_backup(source_files: list, logger: logging.Logger) ->
                 item.with_name(f"{item.stem}_{timestamp}{item.suffix}"),
             )
             try:
+                destination_file_path.parent.mkdir(parents=True, exist_ok=True)
                 shutil.move(str(item), str(destination_file_path))
                 logger.info(f"Moved: '{item}' to '{destination_file_path}'")
                 files_moved_count += 1

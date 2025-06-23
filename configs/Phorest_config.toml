@@ -37,21 +37,21 @@ collector_retry_delay_seconds = 3   # Delay before retrying collector operations
 
 # --- Data Buffer Settings ---
 [Buffer]
-image_buffer_size = 50000              # Maximum number of images to keep in the data directory
+image_buffer_size = 50              # Maximum number of images to keep in the data directory
 
 # --- Camera Settings ---
 [Camera]
 camera = true                       # Enable or disable camera usage
 camera_type = "tis"                 # Type of camera: "dummy", "argus", "tis", "logitech"
-camera_id = 0                       # Camera device ID
+camera_id = 8                       # Camera device ID
 camera_exposure = 400                # Camera exposure setting
 # camera_brightness = 170           # Example: alternate brightness setting
 # camera_contrast = 40              # Example: alternate contrast setting
-camera_transform = "ROTATE_180"     # Image transformation: "NONE", "ROTATE_90", "ROTATE_180", "ROTATE_270", "HORIZONTAL_FLIP", "VERTICAL_FLIP"
+camera_transform = "NONE"     # Image transformation: "NONE", "ROTATE_90", "ROTATE_180", "ROTATE_270", "HORIZONTAL_FLIP", "VERTICAL_FLIP"
 
 # --- Temperature Sensor Settings ---
 [Temperature]
-thermocouple = true                 # Enable or disable thermocouple usage
+thermocouple = false                 # Enable or disable thermocouple usage
 
 [Temperature.thermocouple_sensors]
 "28-00000ff8fa16" = "Sensor 1"
