@@ -20,6 +20,7 @@ class CommunicatorState(Enum):
     IDLE = auto()
     WAITING_FOR_RESULTS = auto()
     COMMUNICATING = auto()
+    FATAL_ERROR = auto()
 
 
 class CompressorState(Enum):

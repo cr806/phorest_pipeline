@@ -64,6 +64,16 @@ def move_existing_files_to_backup(source_files: list, logger: logging.Logger) ->
             except Exception as e:
                 logger.error(f"Unexpected error moving '{item.name}': {e}")
                 errors_count += 1
+
+            # Check for and remove associated .tmp file
+            temp_file_path = item.with_suffix(item.suffix + '.tmp')
+            if temp_file_path.exists():
+                try:
+                    temp_file_path.unlink() # Delete the temporary file
+                    logger.info(f"Cleaned up stale temporary file: {temp_file_path.name}.")
+                except OSError as e:
+                    logger.error(f"Could not delete stale temporary file {temp_file_path.name}: {e}")
+
         else:
             logger.info(f"Skipped directory: '{item.name}'")
 

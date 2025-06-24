@@ -12,14 +12,13 @@ from phorest_pipeline.shared.config import (
 )
 from phorest_pipeline.shared.logger_config import configure_logger
 from phorest_pipeline.shared.metadata_manager import (
-    load_metadata,
-    save_metadata,
+    load_metadata_with_lock,
 )
 from phorest_pipeline.shared.states import CompressorState
 
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename="compressor.log")
 
-METADATA_FILENAME = Path("processing_manifest.json")
+METADATA_FILENAME = Path("metadata_manifest.json")
 POLL_INTERVAL = COMPRESSOR_INTERVAL / 20 if COMPRESSOR_INTERVAL > (5 * 20) else 5
 
 
@@ -32,13 +31,13 @@ def find_entry_to_compress(metadata_list: list) -> tuple[int, dict | None]:
     """
     for index, entry in enumerate(metadata_list):
         camera_data = entry.get("camera_data")
-        # Check criteria: processed, has camera data, type is 'image', filename is PNG
+        # Check criteria: processed, has camera data, type is 'image', filename is not PNG or JPG
         if (
-            entry.get("processed")
+            entry.get("processing_status", 'pending') == "processed"
             and not entry.get("compression_attempted", False)
             and camera_data
             and camera_data.get("type") == "image"  # Check type
-            and camera_data.get("filename", "").lower().endswith(".png")
+            and not (camera_data.get("filename", "").lower().endswith(".png") or camera_data.get("filename", "").lower().endswith(".jpg"))
             and Path(camera_data.get("filepath"), camera_data.get("filename")).exists()
         ):
             return index, entry
@@ -46,7 +45,7 @@ def find_entry_to_compress(metadata_list: list) -> tuple[int, dict | None]:
 
 
 def compress_image() -> None:
-    manifest_data = load_metadata(DATA_DIR, METADATA_FILENAME)
+    manifest_data = load_metadata_with_lock(DATA_DIR, METADATA_FILENAME)
     entry_index, entry_to_compress = find_entry_to_compress(manifest_data)
 
     if not entry_to_compress:
@@ -56,11 +55,11 @@ def compress_image() -> None:
 
     camera_data = entry_to_compress["camera_data"]
     original_filename = Path(camera_data["filename"])
-    original_filepath = Path(DATA_DIR, original_filename)
+    original_filepath = Path(camera_data["filepath"], original_filename)
 
     # Generate new filename and path
     webp_filename = original_filename.with_suffix(".webp")
-    webp_filepath = Path(DATA_DIR, webp_filename)
+    webp_filepath = Path(camera_data["filepath"], webp_filename)
 
     compression_error_msg = None
 
@@ -99,26 +98,6 @@ def compress_image() -> None:
         logger.info(f"[ERROR] Compression failed for {original_filename}: {e}")
         compression_error_msg = f"Compression failed: {e}"
 
-    # --- Update Manifest Entry (update after attempt) ---
-    entry_to_compress["compression_attempted"] = True
-
-    # --- Update Manifest Entry ---
-    if compression_error_msg is None:
-        camera_data["type"] = "compressed_image"  # Change type
-        camera_data["filename"] = webp_filename.as_posix()  # Update filename
-    else:  # Compression failed
-        camera_data["error_flag"] = True
-        existing_error_msg = camera_data.get("error_message", "")
-        camera_data["error_message"] = (
-            " | ".join([existing_error_msg, compression_error_msg])
-            if existing_error_msg
-            else compression_error_msg
-        )
-
-    # Save the updated entry back into the list
-    manifest_data[entry_index] = entry_to_compress
-    save_metadata(DATA_DIR, METADATA_FILENAME, manifest_data)
-
     status = "Success" if compression_error_msg is None else "FAILED"
     logger.info(f"Updated manifest for entry index {entry_index}. Status: {status}")
 
@@ -141,11 +120,11 @@ def perform_compression_cycle(current_state: CompressorState) -> CompressorState
 
         case CompressorState.CHECKING:
             logger.info("--- Checking Manifest for Compression Work ---")
-            manifest_data = load_metadata(DATA_DIR, METADATA_FILENAME)
+            manifest_data = load_metadata_with_lock(DATA_DIR, METADATA_FILENAME)
             entry_index, entry_to_compress = find_entry_to_compress(manifest_data)
 
             if entry_to_compress:
-                img_filename = entry_to_compress.get("camera_data", {}).get("filename", "N/A")
+                img_filename = entry_to_compress.get("camera_data", {"filename": None}).get("filename")
                 logger.info(
                     f"Found entry to compress at index {entry_index} (Image: {img_filename})"
                 )

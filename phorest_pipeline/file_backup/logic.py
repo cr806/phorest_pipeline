@@ -20,7 +20,7 @@ POLL_INTERVAL = FILE_BACKUP_INTERVAL / 20 if FILE_BACKUP_INTERVAL > (5 * 20) els
 BACKUP_ROOT_PATH = Path('backup')
 
 FILES_TO_PROCESS = [
-    Path(DATA_DIR, "processing_manifest.json"),
+    Path(DATA_DIR, "metadata_manifest.json"),
     Path(RESULTS_DIR, "processing_results.json"),
     Path(RESULTS_DIR, "communicating_results.csv"),
     Path(RESULTS_DIR, "processed_data_plot.png"),

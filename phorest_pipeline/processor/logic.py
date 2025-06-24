@@ -1,5 +1,6 @@
 # phorest_pipeline/processor/logic.py
 import datetime
+from email.mime import image
 import sys
 import time
 from pathlib import Path
@@ -19,12 +20,16 @@ from phorest_pipeline.shared.helper_utils import move_existing_files_to_backup
 from phorest_pipeline.shared.logger_config import configure_logger
 
 # Assuming metadata_manager handles loading/saving the manifest
-from phorest_pipeline.shared.metadata_manager import append_metadata, load_metadata, save_metadata
+from phorest_pipeline.shared.metadata_manager import (
+    append_metadata,
+    _load_metadata,
+    update_metatdata_manifest_entry_status,
+)
 from phorest_pipeline.shared.states import ProcessorState
 
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename="processor.log")
 
-METADATA_FILENAME = Path("processing_manifest.json")
+METADATA_FILENAME = Path("metadata_manifest.json")
 RESULTS_FILENAME = Path("processing_results.json")
 
 POLL_INTERVAL = PROCESSOR_INTERVAL / 20 if PROCESSOR_INTERVAL > (5 * 20) else 5
@@ -32,19 +37,27 @@ POLL_INTERVAL = PROCESSOR_INTERVAL / 20 if PROCESSOR_INTERVAL > (5 * 20) else 5
 
 # Helper Function: Find next unprocessed entry
 def find_unprocessed_entry(metadata_list: list) -> tuple[int, dict | None]:
-    """Finds the index and data of the first entry with 'processed': False."""
+    """
+    Finds the index and data of the first entry with 'processing_status': 'pending'.
+    Also logs warnings for 'processing' or other unexpected statuses.
+    """
     for index, entry in enumerate(metadata_list):
-        if not entry.get("processed", False):  # Find first entry not marked as processed
+        status = entry.get("processing_status", "unknown") # Default to 'unknown' if not set
+        if status == "pending":
             # Basic validation: Check if necessary data exists in entry
             if entry.get("camera_data") and entry["camera_data"].get("filename"):
                 return index, entry
-            elif entry.get("temperature_data"):
-                # We need the image.
-                logger.warning(
-                    f"Entry {index} found unprocessed but missing camera data filename. Skipping."
-                )
+            # Special case: If only temperature data is expected, handle it
+            elif not ENABLE_CAMERA and ENABLE_THERMOCOUPLE and entry.get("temperature_data"):
+                return index, entry
             else:
-                logger.warning(f"Entry {index} found unprocessed but missing key data. Skipping.")
+                logger.warning(
+                    f"Entry {index} found with status '{status}' but missing required data (camera filename or temp data if camera disabled). Skipping."
+                )
+        elif status == "processing":
+            # This indicates a previous crash or a long-running task.
+            # Possibly re-evaluate these after a timeout.
+            logger.warning(f"Entry {index} found with status 'processing'. It might be stuck or still being processed by another instance. Skipping for now.")
     return -1, None
 
 
@@ -55,9 +68,8 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
 
     if settings is None:
         logger.info("Configuration error. Halting.")
-        time.sleep(PROCESSOR_INTERVAL * 5)
-        # Consider adding a FATAL_ERROR state for the processor too
-        return current_state
+        time.sleep(POLL_INTERVAL * 5)
+        return ProcessorState.FATAL_ERROR
 
     match current_state:
         case ProcessorState.IDLE:
@@ -88,85 +100,133 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
                 time.sleep(POLL_INTERVAL)
 
         case ProcessorState.PROCESSING:
-            logger.info("--- Checking for Unprocessed Data ---")
-            manifest_data = load_metadata(DATA_DIR, METADATA_FILENAME)
-            entry_index, entry_to_process = find_unprocessed_entry(manifest_data)
+            # 1. Acquire lock, mark entry as 'processing'
+            if _current_processing_entry_data is None:
+                logger.info("--- Checking for PENDING Data to Process ---")
+                try:
+                    manifest_data = _load_metadata(DATA_DIR, METADATA_FILENAME)
+                    entry_index, entry_to_process = find_unprocessed_entry(manifest_data)
 
-            if entry_to_process:
-                logger.info(
-                    f"Found unprocessed entry at index {entry_index} (Image: {entry_to_process.get('camera_data', {}).get('filename')})"
-                )
-
-                # --- Attempt Processing ---
-                image_results = None
-                img_proc_error_msg = 'Camera not enabled'
-                if ENABLE_CAMERA:
-                    image_meta = entry_to_process.get("camera_data")
-                    image_results, img_proc_error_msg = process_image(image_meta)
-
-                temperature_data = None
-                if ENABLE_THERMOCOUPLE:
-                    temperature_data = entry_to_process.get("temperature_data", {})
+                    if entry_to_process:
+                        _current_processing_entry_index = entry_index
+                        _current_processing_entry_data = entry_to_process.copy()
                 
-                processing_timestamp = datetime.datetime.now().isoformat()
-                if image_results or temperature_data:
-                    processing_successful = True
+                        logger.info(
+                            f"Marking entry {entry_index} as 'processing' (Image: {_current_processing_entry_data.get('camera_data', {}).get('filename')})"
+                        )
 
-                if img_proc_error_msg:
-                    logger.error(f"Image processing failed: {img_proc_error_msg}")
-                    # Optionally, you could set a flag or take other actions here
+                        update_metatdata_manifest_entry_status(
+                            DATA_DIR, METADATA_FILENAME,
+                            _current_processing_entry_index,
+                            'processing',
+                            processing_timestamp_iso=datetime.datetime.now().isoformat()
+                        )
+                        logger.info(f"Successfully marked entry {entry_index} as 'processing'.")
+                    else:
+                        logger.info("No more PENDING entries found in manifest.")
+                        logger.info(f"Creating flag: {RESULTS_READY_FLAG}")
+                        try:
+                            RESULTS_READY_FLAG.touch()
+                            logger.info("PROCESSING -> IDLE")
+                            next_state = ProcessorState.IDLE
+                        except OSError as e:
+                            logger.error(f"Could not create flag {RESULTS_READY_FLAG}: {e}")
+                            time.sleep(5)
+                            next_state = ProcessorState.PROCESSING
+                except Exception as e:
+                    logger.error(f"Error during manifest read/mark phase: {e}")
+                    _current_processing_entry_data = None # Reset
+                    _current_processing_entry_index = -1
+                    time.sleep(POLL_INTERVAL)
+                    next_state = ProcessorState.PROCESSING
+            
+            # 2. Process the entry (outside of file lock)
+            if _current_processing_entry_data is not None:
+                logger.info(f"Performing processing for entry {_current_processing_entry_index} (Image: {_current_processing_entry_data.get('camera_data', {}).get('filename')})...")
 
-                # --- Aggregate Results ---
-                final_result_entry = {
-                    "manifest_entry_timestamp": entry_to_process.get("entry_timestamp_iso"),
-                    "image_timestamp": entry_to_process.get("camera_data", {"timestamp_iso": None}).get(
-                        "timestamp_iso"
-                    ),
-                    "temperature_timestamp": temperature_data.get("timestamp_iso") if temperature_data else None,
-                    "image_filename": image_meta.get("filename") if image_meta else None,
-                    "processing_timestamp_iso": processing_timestamp,
-                    "processing_successful": processing_successful,
-                    "processing_error_message": img_proc_error_msg,
-                    "image_analysis": image_results,
-                    "temperature_readings": temperature_data.get("data") if temperature_data else None,
-                }
+                image_results = None
+                img_proc_error_msg = None 
+                processing_successful = False
+                
+                try:
+                    if ENABLE_CAMERA:
+                        image_meta = _current_processing_entry_data.get("camera_data")
+                        if image_meta and image_meta.get("filename"):
+                            image_results, img_proc_error_msg = process_image(image_meta)
+                        else:
+                            img_proc_error_msg = "Camera enabled but no image data or filename found in entry."
+                            logger.warning(img_proc_error_msg)
+                            image_results = None # Ensure no partial results
+                    else:
+                        img_proc_error_msg = 'Camera not enabled, skipping image processing.'
 
-                append_metadata(RESULTS_DIR, RESULTS_FILENAME, final_result_entry)
+                    temperature_data = None
+                    if ENABLE_THERMOCOUPLE:
+                        temperature_data = _current_processing_entry_data.get("temperature_data", {})
+                    else:
+                        logger.info("Temperature collection not enabled, skipping temperature data.")
 
-                # --- Update Manifest ---
-                entry_to_process["processed"] = True
-                entry_to_process["processing_timestamp_iso"] = processing_timestamp
-                entry_to_process["processing_error"] = True if img_proc_error_msg else False
-                entry_to_process["processing_error_msg"] = img_proc_error_msg
+                    if (ENABLE_CAMERA and image_results) or (ENABLE_THERMOCOUPLE and temperature_data):
+                        processing_successful = True
+                    elif ENABLE_CAMERA and img_proc_error_msg: # If camera was enabled but failed
+                        processing_successful = False
+                    elif not ENABLE_CAMERA and not ENABLE_THERMOCOUPLE: # If neither enabled, nothing to process
+                         processing_successful = False
+                         img_proc_error_msg = "Neither camera nor thermocouple enabled for processing."
 
-                # Replace the old entry with the updated one in the list
-                manifest_data[entry_index] = entry_to_process
+                    if not processing_successful and not img_proc_error_msg:
+                        img_proc_error_msg = "Processing failed for unknown reason, no successful results."
+                        logger.error(f"Image processing failed: {img_proc_error_msg}")
 
-                # Save the entire updated manifest
-                save_metadata(DATA_DIR, METADATA_FILENAME, manifest_data)
+                    # --- Aggregate Results ---
+                    final_result_entry = {
+                        "manifest_entry_timestamp": _current_processing_entry_data.get("entry_timestamp_iso"),
+                        "image_timestamp": image_results.get("camera_data", {"timestamp_iso": None}).get(
+                            "timestamp_iso"
+                        ) if image_results else None,
+                        "temperature_timestamp": temperature_data.get("timestamp_iso") if temperature_data else None,
+                        "image_filename": image_results.get("camera_data", {}).get("filename") if image_results else None,
+                        "processing_timestamp_iso": datetime.datetime.now().isoformat(),
+                        "processing_successful": processing_successful,
+                        "processing_error_message": img_proc_error_msg,
+                        "image_analysis": image_results,
+                        "temperature_readings": temperature_data.get("data") if temperature_data else None,
+                    }
 
-                logger.info(
-                    f"Processed entry index {entry_index}. Success: {True if img_proc_error_msg else False}\n\n"
+                    append_metadata(RESULTS_DIR, RESULTS_FILENAME, final_result_entry)
+                    logger.info(f"Appended results to {RESULTS_FILENAME.name} for entry {_current_processing_entry_index}. Success: {processing_successful}")
+                except Exception as e:
+                    logger.error(f"Critical error during image processing for entry {_current_processing_entry_index}: {e}", exc_info=True)
+                    img_proc_error_msg = f"Critical processing error: {e}"
+                    processing_successful = False
+                    image_results = None # Clear results if error occurred
+                    temperature_data = None # Clear data if error occurred
+
+                # 3. Acquire lock, update manifest with final status and results
+                logger.info(f"Updating manifest for entry {_current_processing_entry_index}...")
+                update_metatdata_manifest_entry_status(
+                    DATA_DIR, METADATA_FILENAME,
+                    _current_processing_entry_index,
+                    'processed' if processing_successful else 'failed',
+                    processing_timestamp_iso=datetime.datetime.now().isoformat(),
+                    processing_error=not processing_successful,
+                    processing_error_msg=img_proc_error_msg,
+                    image_analysis_results=image_results,
+                    temperature_processing_results=temperature_data.get('data') if temperature_data else None,
                 )
+                logger.info(f"Manifest entry {_current_processing_entry_index} updated with final status and results.")
 
-                # --- Stay in PROCESSING state ---
-                # Immediately check for the next unprocessed entry without waiting for the flag
-                next_state = ProcessorState.PROCESSING
-                # Optional small delay to prevent tight loop if errors occur fast
-                time.sleep(0.1)
+                # Reset global state for next cycle
+                _current_processing_entry_data = None
+                _current_processing_entry_index = -1
+
+                next_state = ProcessorState.PROCESSING # Immediately check for next entry
 
             else:
-                # No unprocessed entries found
-                logger.info("No more unprocessed entries found in manifest.")
-                logger.info(f"Creating flag: {RESULTS_READY_FLAG}")
-                try:
-                    RESULTS_READY_FLAG.touch()
-                    logger.info("PROCESSING -> IDLE")
-                    next_state = ProcessorState.IDLE
-                except OSError as e:
-                    logger.error(f"Could not create flag {RESULTS_READY_FLAG}: {e}")
-                    time.sleep(5)
-                    next_state = ProcessorState.PROCESSING  # Retry flag creation
+                logger.info("No entry selected for processing. Transitioning out of PROCESSING state.")
+                next_state = ProcessorState.IDLE # Or WAITING_FOR_DATA
+                # The RESULTS_READY_FLAG is handled in the `if entry_to_process:` block (inverted if statement)
+
 
         case ProcessorState.FATAL_ERROR:
             # Should not technically be called again once in this state if loop breaks
@@ -220,6 +280,15 @@ def run_processor():
     finally:
         # No flags need specific cleanup here unless DATA_READY might be left mid-operation
         if settings:
+            logger.info("Performing final cleanup of temporary files...")
+            results_temp_path = Path(RESULTS_DIR, RESULTS_FILENAME).with_suffix(RESULTS_FILENAME.suffix + '.tmp')
+            if results_temp_path.exists():
+                try:
+                    results_temp_path.unlink()
+                    logger.info(f"Cleaned up {results_temp_path.name} on shutdown.")
+                except OSError as e:
+                    logger.error(f"Could not clean up {results_temp_path.name} on shutdown: {e}")
+
             logger.info("Cleaning up flags...")
             try:
                 DATA_READY_FLAG.unlink(missing_ok=True)

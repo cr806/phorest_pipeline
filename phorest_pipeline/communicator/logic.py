@@ -1,8 +1,10 @@
 # src/process_pipeline/communicator/logic.py
 import time
+import sys
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 import pandas as pd
 
 from phorest_pipeline.shared.config import (
@@ -15,7 +17,7 @@ from phorest_pipeline.shared.config import (
 )
 from phorest_pipeline.shared.helper_utils import move_existing_files_to_backup
 from phorest_pipeline.shared.logger_config import configure_logger
-from phorest_pipeline.shared.metadata_manager import load_metadata, save_metadata
+from phorest_pipeline.shared.metadata_manager import load_metadata_with_lock, save_metadata_with_lock
 from phorest_pipeline.shared.states import CommunicatorState
 
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename="comms.log")
@@ -33,31 +35,40 @@ def find_processed_entries(metadata_list: list) -> list[dict]:
     processed_entries = []
     for entry in metadata_list:
         # Find entry marked as processed
-        if entry.get("processing_successful", False):
+        if entry.get("processing_status", 'pending') == "processed":
             processed_entries.append(entry)
-    if processed_entries:
-        return processed_entries
-    return None
+    return processed_entries
 
 
-def find_not_transmitted_entries(metadata_list: list) -> list[int]:
+def find_not_transmitted_entries_indices(metadata_list: list) -> list[int]:
     """Finds all entry indexes with 'processed': True."""
-    processed_entries = []
+    not_transmitted_indices = []
     for index, entry in enumerate(metadata_list):
         # Find entry marked as processed and not yet transmitted
-        if entry.get("processing_successful", False) and not entry.get("data_transmitted", False):
-            processed_entries.append(index)
-    return processed_entries
+        if (entry.get("processing_status", 'pending') == "processed") and not entry.get("data_transmitted", False):
+            not_transmitted_indices.append(index)
+    return not_transmitted_indices
 
 
 def save_results_json_as_csv(processed_entries: list[dict], csv_path: Path) -> None:
     logger.info(f"Parsing results JSON to CSV and saving to {csv_path}")
+
+    if not processed_entries:
+        logger.info("No processed entries provided for CSV conversion. Skipping.")
+        # Ensure an empty CSV is created or old one is cleared if no data
+        try:
+            pd.DataFrame().to_csv(csv_path, index=False)
+            logger.info(f"Created/cleared empty CSV at {csv_path}")
+        except Exception as e:
+            logger.error(f"Failed to create/clear CSV at {csv_path}: {e}")
+        return
+
     
     headers = []
     records = []
     for entry in processed_entries:
         # Extract the image_timestamp once per entry
-        timestamp = entry.get("image_timestamp")
+        timestamp = entry.get("image_timestamp", None)
 
         if ENABLE_THERMOCOUPLE:
             # Extract the temperature sensor data once per entry
@@ -99,6 +110,8 @@ def save_results_json_as_csv(processed_entries: list[dict], csv_path: Path) -> N
                     records.append(image_dict)
         else:
             if ENABLE_THERMOCOUPLE:
+                if not timestamp:
+                    temp_dict["timestamp"] = entry.get("temperature_timestamp", None)
                 records.append(temp_dict)
 
     # Create the DataFrame
@@ -109,67 +122,155 @@ def save_results_json_as_csv(processed_entries: list[dict], csv_path: Path) -> N
 def save_plot_of_results(csv_path: Path, image_path: Path) -> None:
     logger.info(f"Generating chart of results and saving to {image_path}")
 
+    if not csv_path.exists() or csv_path.stat().st_size == 0:
+        logger.warning(f"CSV file for plotting not found or is empty at {csv_path}. Skipping plot generation.")
+        # Ensure previous plot is cleared or not generated
+        if image_path.exists():
+            try:
+                image_path.unlink()
+                logger.info(f"Removed old plot image: {image_path.name}")
+            except OSError as e:
+                logger.error(f"Failed to remove old plot image {image_path.name}: {e}")
+        return
+    
     # Load the CSV data for plotting
     data = pd.read_csv(csv_path)
 
-    _, ax = plt.subplots(2, 1, figsize=(12, 6))
-    if ENABLE_CAMERA:
-        analysis_method = data["Analysis-method"].unique()[0]
-        value_to_plot = {
-            "max_intensity": "max_intensity",
-            "centre": "centre",
-            "gaussian": "mu",
-            "fano": "resonance",
-        }
+    if data.empty:
+        logger.warning("No data in CSV after loading. Skipping plot generation.")
+        if image_path.exists():
+            try:
+                image_path.unlink()
+                logger.info(f"Removed old plot image: {image_path.name}")
+            except OSError as e:
+                logger.error(f"Failed to remove old plot image {image_path.name}: {e}")
+        return
 
-        ROIs_to_plot = data["ROI-label"].unique()
-        if len(ROIs_to_plot) == 0:
-            logger.warning("No ROI-labels found in the data.")
-            return
-        for ROI in ROIs_to_plot:
-            temp_df = data[data["ROI-label"] == ROI]
-            if temp_df.empty:
-                logger.warning(f"No data found for ROI-label: {ROI}")
-                continue
-            ax[0].plot(
-                list(range(temp_df["timestamp"].size)),
-                temp_df[value_to_plot[analysis_method]],
-                label=ROI,
-            )
+    # Convert timestamp column to datetime objects for plotting
+    data["timestamp"] = pd.to_datetime(data["timestamp"])
+
+    fig, ax = plt.subplots(2, 1, figsize=(14, 8), sharex=True)
+
+    # Format x-axis as time
+    formatter = mdates.DateFormatter('%H:%M:%S')
+    ax[1].xaxis.set_major_formatter(formatter)
+    plt.setp(ax[1].xaxis.get_majorticklabels(), rotation=45, ha="right") # Rotate for readability
+
+    if ENABLE_CAMERA:
+        if "Analysis-method" in data.columns and not data["Analysis-method"].empty:
+            analysis_method = data["Analysis-method"].unique()[0]
+
+            value_to_plot = {
+                "max_intensity": "max_intensity",
+                "centre": "centre",
+                "gaussian": "mu",
+                "fano": "resonance",
+            }
+
+            plot_col_name = value_to_plot.get(analysis_method)
+            if plot_col_name and plot_col_name in data.columns:
+                ROIs_to_plot = data["ROI-label"].unique()
+                if ROIs_to_plot.size == 0:
+                    logger.warning("No ROI-labels found in the data.")
+                else:
+                    for ROI in ROIs_to_plot:
+                        temp_df = data[data["ROI-label"] == ROI]
+                        if temp_df.empty:
+                            logger.warning(f"No data found for ROI-label: {ROI}")
+                            continue
+                        ax[0].plot(
+                            # list(range(temp_df["timestamp"].size)),
+                            temp_df["timestamp"],
+                            temp_df[plot_col_name],
+                            label=ROI,
+                        )
+            else:
+                logger.warning(f"Column to plot '{plot_col_name}' not found for analysis method '{analysis_method}'. Skipping camera plot.")
+        else:
+            logger.warning("No 'Analysis-method' column found in data. Skipping camera plot.")
+    else:
+        logger.info("Camera not enabled. Skipping image analysis plot.")
+
     
     if ENABLE_THERMOCOUPLE:
         temp_sensors_to_plot = [t for t in data.columns if "temperature" in t]
-        for temp_sensor in temp_sensors_to_plot:
-            ax[1].plot(
-                list(range(temp_df["timestamp"].size)), temp_df[temp_sensor], label=temp_sensor
-            )
+        if temp_sensors_to_plot:
+            for temp_sensor in temp_sensors_to_plot:
+                if temp_sensor in data.columns:
+                    ax[1].plot(
+                        # list(range(temp_df["timestamp"].size)),
+                        temp_df["timestamp"],
+                        temp_df[temp_sensor],
+                        label=temp_sensor
+                    )
+                else:
+                    logger.warning(f"Temperature sensor '{temp_sensor}' not found in data. Skipping plot for this sensor.")
+            ax[1].legend(loc="upper left")
+        else:
+            logger.warning("No temperature sensors found in data. Skipping temperature plot.")
+    else:
+        logger.info("Thermocouple not enabled. Skipping temperature plot.")
 
-    # ax[0].set_xlabel("Timestep")
     ax[0].set_ylabel("Mean pixel value")
     ax[1].set_ylabel("Temperature (°C)")
-    ax[1].set_xlabel("Timestep")
-    # ax[1].set_ylim(0, 150)
+    ax[1].set_xlabel("Time")
+
     ax[0].legend(loc="upper left")
-    # plt.gca().xaxis.set_major_locator(mdates.MinuteLocator(interval=60))
-    # plt.xticks(rotation=45, ha="right")
-    # plt.tight_layout()
-    plt.savefig(image_path)
+
+    fig.tight_layout()
+    try:
+        plt.savefig(image_path)
+        logger.info(f"Chart saved to {image_path}")
+    except Exception as e:
+        logger.error(f"Failed to save plot to {image_path}: {e}", exc_info=True)
+    finally:
+        plt.close(fig)
 
 
 def communicate_results(processed_entries: list[dict], results_data: list[dict]) -> None:
     """Simulate communication of results to a CSV file."""
 
+    if not processed_entries:
+        logger.info("No processed entries to communicate. Skipping CSV/plot generation.")
+        return
+    
     csv_path = Path(RESULTS_DIR, CSV_FILENAME)
-    save_results_json_as_csv(processed_entries, csv_path)
-
     image_path = Path(RESULTS_DIR, RESULTS_IMAGE)
-    save_plot_of_results(csv_path, image_path)
 
-    # Update the metadata to mark entries as transmitted
-    for idx in find_not_transmitted_entries(processed_entries):
-        results_data[idx]["data_transmitted"] = True
-    # Save the entire updated manifest
-    save_metadata(RESULTS_DIR, RESULTS_FILENAME, results_data)
+    try:
+        save_results_json_as_csv(processed_entries, csv_path)
+        save_plot_of_results(csv_path, image_path)
+    except Exception as e:
+        logger.error(f"Error during CSV/Plot generation: {e}", exc_info=True)
+        return
+
+    # --- Update the results JSON to mark entries as transmitted ---
+    # Need to load the manifest again under lock *just* before modifying and saving
+    # to ensure we have the most up-to-date version and don't overwrite changes
+    # from the processor that might have occurred between the initial load and now.
+    
+    logger.info("Attempting to update processing_results.json to mark entries as transmitted.")
+    try:
+        indices_to_mark_transmitted = find_not_transmitted_entries_indices(results_data)
+
+        # Load the latest version of the results file under lock
+        current_results_data_for_update = load_metadata_with_lock(RESULTS_DIR, RESULTS_FILENAME)
+
+        # Apply updates to the new data
+        for idx_in_original_list in indices_to_mark_transmitted:
+            if 0 <= idx_in_original_list < len(current_results_data_for_update):
+                current_results_data_for_update[idx_in_original_list]["data_transmitted"] = True
+            else:
+                logger.warning(f"Attempted to mark non-existent entry at index {idx_in_original_list} as transmitted. Data inconsistency?")
+                
+        # Save the entire updated manifest back under lock
+        save_metadata_with_lock(RESULTS_DIR, RESULTS_FILENAME, current_results_data_for_update)
+        logger.info("Successfully marked processed entries as transmitted in processing_results.json.")
+        
+    except Exception as e:
+        logger.error(f"CRITICAL ERROR: Failed to update processing_results.json to mark transmitted entries: {e}", exc_info=True)
+        # TODO: This is a critical failure. The system will retry but these entries won't be marked.
+        #       Consider a FATAL_ERROR state for the communicator if this persists.
 
 
 def perform_communication(current_state: CommunicatorState) -> CommunicatorState:
@@ -179,7 +280,7 @@ def perform_communication(current_state: CommunicatorState) -> CommunicatorState
     if settings is None:
         logger.info("Configuration error. Halting.")
         time.sleep(POLL_INTERVAL * 5)
-        return current_state  # Consider a FATAL_ERROR state
+        return CommunicatorState.FATAL_ERROR
 
     match current_state:
         case CommunicatorState.IDLE:
@@ -202,8 +303,10 @@ def perform_communication(current_state: CommunicatorState) -> CommunicatorState
                         next_state = CommunicatorState.COMMUNICATING
                     except FileNotFoundError:
                         logger.info("Flag disappeared before deletion. Re-checking...")
+                        next_state = CommunicatorState.WAITING_FOR_RESULTS
                     except OSError as e:
                         logger.error(f"Could not delete flag {RESULTS_READY_FLAG}: {e}")
+                        next_state = CommunicatorState.WAITING_FOR_RESULTS
                         time.sleep(POLL_INTERVAL)
                 else:
                     next_state = CommunicatorState.IDLE
@@ -214,15 +317,25 @@ def perform_communication(current_state: CommunicatorState) -> CommunicatorState
         case CommunicatorState.COMMUNICATING:
             logger.info("--- Running Communication ---")
 
-            results_data = load_metadata(RESULTS_DIR, RESULTS_FILENAME)
-            processed_entries = find_processed_entries(results_data)
-            logger.info(f"Found {len(processed_entries)} processed entries to communicate.")
-            if processed_entries:
-                communicate_results(processed_entries, results_data)
+            try:
+                results_data = load_metadata_with_lock(RESULTS_DIR, RESULTS_FILENAME)
+                processed_entries = find_processed_entries(results_data)
+                logger.info(f"Found {len(processed_entries)} processed entries to communicate.")
+                if processed_entries:
+                    communicate_results(processed_entries, results_data)
 
-            logger.info("COMMUNICATING -> IDLE")
-            next_state = CommunicatorState.IDLE
-
+                logger.info("COMMUNICATING -> IDLE")
+                next_state = CommunicatorState.IDLE
+            except Exception as e:
+                logger.error(f"Error during COMMUNICATING state: {e}", exc_info=True)
+                # If loading fails, or any part of communication, retry after a delay
+                next_state = CommunicatorState.COMMUNICATING # Stay in COMMUNICATING to retry
+                time.sleep(POLL_INTERVAL * 5)
+        
+        case CommunicatorState.FATAL_ERROR:
+            logger.error("[FATAL ERROR] Shutting down communicator.")
+            time.sleep(10) # Prevent busy-looping in fatal state
+    
     return next_state
 
 
@@ -248,18 +361,26 @@ def run_communicator():
     try:
         while True:
             current_state = perform_communication(current_state)
+            if current_state == CommunicatorState.FATAL_ERROR:
+                logger.error("Exiting due to FATAL_ERROR state.")
+                break
             time.sleep(0.1)  # Small sleep to prevent busy-looping
     except KeyboardInterrupt:
         logger.info("Shutdown requested.")
     except Exception as e:
         logger.error(f"Unexpected error: {e}")
+        current_state = CommunicatorState.FATAL_ERROR
     finally:
         # Cleanup on exit
         if settings:
             logger.info("Cleaning up flags...")
-        try:
-            RESULTS_READY_FLAG.unlink(missing_ok=True)
-        except OSError as e:
-            logger.error(f"Could not clean up flag {RESULTS_READY_FLAG} on exit: {e}")
+            try:
+                RESULTS_READY_FLAG.unlink(missing_ok=True)
+            except OSError as e:
+                logger.error(f"Could not clean up flag {RESULTS_READY_FLAG} on exit: {e}")
         logger.info("--- Communicator Stopped ---")
         print("--- Communicator Stopped ---")
+        if current_state == CommunicatorState.FATAL_ERROR:
+            sys.exit(1) # Exit with error code if fatal
+        else:
+            sys.exit(0) # Exit cleanly
