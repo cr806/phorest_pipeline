@@ -71,10 +71,13 @@ def save_results_json_as_csv(processed_entries: list[dict], csv_path: Path) -> N
         if ENABLE_CAMERA:
             if not headers:
                 try:
-                    target_dictionary = processed_entries[0]["image_analysis"][1]
+                    if len(entry["image_analysis"]) < 2:
+                        logger.warning("Expected at least two items in 'image_analysis'. Using first item.")
+                        continue
+                    target_dictionary = entry["image_analysis"][1]
                     headers = list(target_dictionary.keys())
                 except (IndexError, KeyError) as e:
-                    logger.error(f"Error accessing data: {e}")
+                    logger.error(f"Error accessing data: {e}: {processed_entries = } {target_dictionary = }")
             # Iterate through each item in the "image_analysis" list
             for analysis_item in entry.get("image_analysis", []):
                 # We are interested in elements that have "ROI-label" as a key
