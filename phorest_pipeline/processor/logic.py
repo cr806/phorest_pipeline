@@ -34,6 +34,9 @@ RESULTS_FILENAME = Path("processing_results.json")
 
 POLL_INTERVAL = PROCESSOR_INTERVAL / 20 if PROCESSOR_INTERVAL > (5 * 20) else 5
 
+# Global variable to store the entry being processed outside of the lock
+_current_processing_entry_data: dict | None = None
+_current_processing_entry_index: int = -1
 
 # Helper Function: Find next unprocessed entry
 def find_unprocessed_entry(metadata_list: list) -> tuple[int, dict | None]:
