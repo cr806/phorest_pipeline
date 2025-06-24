@@ -68,6 +68,7 @@ def find_unprocessed_entry(metadata_list: list) -> tuple[int, dict | None]:
 def perform_processing(current_state: ProcessorState) -> ProcessorState:
     """State machine logic for the processor."""
     next_state = current_state
+    global _current_processing_entry_data, _current_processing_entry_index
 
     if settings is None:
         logger.info("Configuration error. Halting.")
@@ -184,11 +185,9 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
                     # --- Aggregate Results ---
                     final_result_entry = {
                         "manifest_entry_timestamp": _current_processing_entry_data.get("entry_timestamp_iso"),
-                        "image_timestamp": image_results.get("camera_data", {"timestamp_iso": None}).get(
-                            "timestamp_iso"
-                        ) if image_results else None,
+                        "image_timestamp": image_meta.get("timestamp_iso") if image_meta else None,
                         "temperature_timestamp": temperature_data.get("timestamp_iso") if temperature_data else None,
-                        "image_filename": image_results.get("camera_data", {}).get("filename") if image_results else None,
+                        "image_filename": image_meta.get("filename") if image_meta else None,
                         "processing_timestamp_iso": datetime.datetime.now().isoformat(),
                         "processing_successful": processing_successful,
                         "processing_error_message": img_proc_error_msg,

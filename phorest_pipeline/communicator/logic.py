@@ -35,7 +35,7 @@ def find_processed_entries(metadata_list: list) -> list[dict]:
     processed_entries = []
     for entry in metadata_list:
         # Find entry marked as processed
-        if entry.get("processing_status", 'pending') == "processed":
+        if entry.get("processing_successful", False):
             processed_entries.append(entry)
     return processed_entries
 
@@ -45,7 +45,7 @@ def find_not_transmitted_entries_indices(metadata_list: list) -> list[int]:
     not_transmitted_indices = []
     for index, entry in enumerate(metadata_list):
         # Find entry marked as processed and not yet transmitted
-        if (entry.get("processing_status", 'pending') == "processed") and not entry.get("data_transmitted", False):
+        if entry.get("processing_successful", False) and not entry.get("data_transmitted", False):
             not_transmitted_indices.append(index)
     return not_transmitted_indices
 
