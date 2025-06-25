@@ -13,6 +13,7 @@ from phorest_pipeline.shared.config import (
 from phorest_pipeline.shared.logger_config import configure_logger
 from phorest_pipeline.shared.metadata_manager import (
     load_metadata_with_lock,
+    update_metadata_manifest_entry,
 )
 from phorest_pipeline.shared.states import CompressorState
 
@@ -82,6 +83,15 @@ def compress_image() -> None:
             raise OSError(f"cv2.imwrite failed to save Lossless WebP {webp_filepath}")
 
         logger.info("Lossless WebP compression successful.")
+        # --- Update Manifest ---
+        logger.info(f"Updating manifest for entry index {entry_index}...")
+        update_metadata_manifest_entry(
+            DATA_DIR,
+            METADATA_FILENAME,
+            entry_index,
+            compression_attempted=True,
+            new_filename=webp_filename.name,
+        )
 
         # --- Delete Original File ---
         logger.info(f"Deleting original file: {original_filepath}")
