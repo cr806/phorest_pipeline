@@ -39,29 +39,28 @@ _current_processing_entry_data: dict | None = None
 _current_processing_entry_index: int = -1
 
 # Helper Function: Find next unprocessed entry
-def find_unprocessed_entry(metadata_list: list) -> tuple[int, dict | None]:
+def find_all_unprocessed_entries(metadata_list: list) -> list[tuple[int, dict]]:
     """
-    Finds the index and data of the first entry with 'processing_status': 'pending'.
-    Also logs warnings for 'processing' or other unexpected statuses.
+    Finds the index and data of all entries with 'processing_status': 'pending'.
+    Returns a list of tuples (index, entry_data).
     """
+    entries_to_process = []
     for index, entry in enumerate(metadata_list):
-        status = entry.get("processing_status", "unknown") # Default to 'unknown' if not set
+        status = entry.get("processing_status", "unknown")
         if status == "pending":
-            # Basic validation: Check if necessary data exists in entry
+            # You can add the same validation as before
             if entry.get("camera_data") and entry["camera_data"].get("filename"):
-                return index, entry
-            # Special case: If only temperature data is expected, handle it
+                entries_to_process.append((index, entry))
             elif not ENABLE_CAMERA and ENABLE_THERMOCOUPLE and entry.get("temperature_data"):
-                return index, entry
+                 entries_to_process.append((index, entry))
             else:
                 logger.warning(
-                    f"Entry {index} found with status '{status}' but missing required data (camera filename or temp data if camera disabled). Skipping."
+                    f"Entry {index} found with status 'pending' but missing required data. Skipping."
                 )
         elif status == "processing":
-            # This indicates a previous crash or a long-running task.
-            # Possibly re-evaluate these after a timeout.
-            logger.warning(f"Entry {index} found with status 'processing'. It might be stuck or still being processed by another instance. Skipping for now.")
-    return -1, None
+            logger.warning(f"Entry {index} found with status 'processing'. It might be stuck. Skipping for now.")
+
+    return entries_to_process
 
 
 # Main State Machine Logic
@@ -78,9 +77,10 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
     match current_state:
         case ProcessorState.IDLE:
             logger.info("IDLE -> WAITING_FOR_DATA")
-            next_state = ProcessorState.WAITING_FOR_DATA
             global next_run_time
             next_run_time = time.monotonic() + PROCESSOR_INTERVAL
+            logger.info(f"Next run time set to {next_run_time} (in {PROCESSOR_INTERVAL} seconds).")
+            next_state = ProcessorState.WAITING_FOR_DATA
 
         case ProcessorState.WAITING_FOR_DATA:
             logger.info(f"Waiting for {PROCESSOR_INTERVAL} seconds until next cycle...")
@@ -103,141 +103,146 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
             else:
                 time.sleep(POLL_INTERVAL)
 
-
         case ProcessorState.PROCESSING:
-            # 1. Acquire lock, mark entry as 'processing'
-            if _current_processing_entry_data is None:
-                logger.info("--- Checking for PENDING Data to Process ---")
-                try:
-                    manifest_data = load_metadata_with_lock(DATA_DIR, METADATA_FILENAME)
-                    entry_index, entry_to_process = find_unprocessed_entry(manifest_data)
-
-                    if entry_to_process:
-                        _current_processing_entry_index = entry_index
-                        _current_processing_entry_data = entry_to_process.copy()
+            pending_batch = []
                 
-                        logger.info(
-                            f"Marking entry {entry_index} as 'processing' (Image: {_current_processing_entry_data.get('camera_data', {}).get('filename')})"
-                        )
+            # 1. Acquire lock ONCE, find all pending entries, and mark them all as 'processing'.
+            logger.info("--- Checking for PENDING Data to Process ---")
+            try:
+                manifest_data = load_metadata_with_lock(DATA_DIR, METADATA_FILENAME)
+                pending_batch = find_all_unprocessed_entries(manifest_data)
 
+                if pending_batch:
+                    indices_to_mark = [index for index, entry in pending_batch]
+                    logger.info(f"Found batch of {len(pending_batch)} entries to process. Marking as 'processing': {indices_to_mark}")
+                    
+                    update_metadata_manifest_entry(
+                        DATA_DIR, METADATA_FILENAME,
+                        entry_index=indices_to_mark,
+                        status='processing',
+                        processing_timestamp_iso=datetime.datetime.now().isoformat()
+                    )
+                else:
+                    logger.info("No more PENDING entries found in manifest.")
+                    logger.info("PROCESSING -> IDLE")
+                    next_state = ProcessorState.IDLE
+                    # Ensure flag is present
+                    try:
+                        RESULTS_READY_FLAG.touch()
+                    except OSError as e:
+                        logger.error(f"Could not create flag {RESULTS_READY_FLAG}: {e}")
+                    return next_state
+
+            except Exception as e:
+                logger.error(f"Error during manifest read/mark phase: {e}", exc_info=True)
+                time.sleep(POLL_INTERVAL)
+                next_state = ProcessorState.PROCESSING # Retry finding entries
+                return next_state
+
+
+            # 2. Process the entire batch (outside of the file lock)
+            if pending_batch:
+                logger.info(f"--- Starting processing for batch of {len(pending_batch)} entries ---")
+                all_results_for_manifest_update = []
+                all_results_for_append = []
+
+                for entry_index, entry_data in pending_batch:
+                    logger.info(f"Processing entry {entry_index} (Image: {entry_data.get('camera_data', {}).get('filename')})...")
+                    image_results, img_proc_error_msg, processing_successful = None, None, False
+
+                    try:
+                        if ENABLE_CAMERA:
+                            image_meta = entry_data.get("camera_data")
+                            if image_meta and image_meta.get("filename"):
+                                image_results, img_proc_error_msg = process_image(image_meta)
+                            else:
+                                img_proc_error_msg = "Camera enabled but no image data or filename found in entry."
+                        else:
+                            img_proc_error_msg = 'Camera not enabled, skipping image processing.'
+
+                        temperature_data = entry_data.get("temperature_data", {}) if ENABLE_THERMOCOUPLE else None
+                        
+                        if (ENABLE_CAMERA and image_results) or (ENABLE_THERMOCOUPLE and temperature_data and not temperature_data.get('error_flag')):
+                            processing_successful = True
+
+                        if not processing_successful and not img_proc_error_msg:
+                            img_proc_error_msg = "Processing failed for an unknown reason."
+                        
+                        logger.info(f"Finished processing entry {entry_index}. Success: {processing_successful}")
+
+                        # --- Aggregate results for this single entry ---
+                        final_result_entry = {
+                            "manifest_entry_timestamp": entry_data.get("entry_timestamp_iso"),
+                            "image_timestamp": image_meta.get("timestamp_iso") if image_meta else None,
+                            "temperature_timestamp": temperature_data.get("timestamp_iso") if temperature_data else None,
+                            "image_filename": image_meta.get("filename") if image_meta else None,
+                            "processing_timestamp_iso": datetime.datetime.now().isoformat(),
+                            "processing_successful": processing_successful,
+                            "processing_error_message": img_proc_error_msg,
+                            "image_analysis": image_results,
+                            "temperature_readings": temperature_data.get("data") if temperature_data else None,
+                        }
+                        all_results_for_append.append(final_result_entry)
+
+                        # --- Store data needed for the final manifest update ---
+                        all_results_for_manifest_update.append({
+                            'index': entry_index,
+                            'status': 'processed' if processing_successful else 'failed',
+                            'error_msg': img_proc_error_msg,
+                        })
+
+                    except Exception as e:
+                        logger.error(f"Critical error during image processing for entry {entry_index}: {e}", exc_info=True)
+                        # Log failure for this specific entry and continue with the batch
+                        all_results_for_manifest_update.append({
+                            'index': entry_index,
+                            'status': 'failed',
+                            'error_msg': f"Critical processing error: {e}",
+                        })
+
+                # 3. Collate results and perform a single batch update
+                logger.info(f"--- Collating results for batch update ---")
+
+                # Append individual results to the results.json file
+                # (Optimise this to accept a list of results?)
+                try:
+                    if all_results_for_append:
+                        for result in all_results_for_append:
+                            append_metadata(RESULTS_DIR, RESULTS_FILENAME, result)
+                        logger.info(f"Appended {len(all_results_for_append)} results to {RESULTS_FILENAME.name}.")
+                except Exception as e:
+                    logger.error(f"Error appending to results file: {e}", exc_info=True)
+
+
+                # Prepare lists for the single manifest update call
+                if all_results_for_manifest_update:
+                    update_indices = [res['index'] for res in all_results_for_manifest_update]
+                    update_statuses = [res['status'] for res in all_results_for_manifest_update]
+                    update_error_msgs = [res['error_msg'] for res in all_results_for_manifest_update]
+                    
+                    try:
                         update_metadata_manifest_entry(
-                            DATA_DIR, METADATA_FILENAME,
-                            _current_processing_entry_index,
-                            status='processing',
-                            processing_timestamp_iso=datetime.datetime.now().isoformat()
+                            data_dir=DATA_DIR,
+                            metadata_filename=METADATA_FILENAME,
+                            entry_index=update_indices,
+                            status=update_statuses,
+                            processing_timestamp_iso=datetime.datetime.now().isoformat(), # Apply same timestamp to whole batch
+                            processing_error=[s == 'failed' for s in update_statuses],
+                            processing_error_msg=update_error_msgs,
                         )
-                        logger.info(f"Successfully marked entry {entry_index} as 'processing'.")
+                        logger.info(f"Successfully performed batch update on manifest for {len(update_indices)} entries.")
+
+                        logger.info(f"Creating results ready flag: {RESULTS_READY_FLAG}")
                         try:
                             RESULTS_READY_FLAG.touch()
                         except OSError as e:
-                            logger.error(f"Could not create flag {RESULTS_READY_FLAG}: {e}")
-                            next_state = ProcessorState.PROCESSING
-                    else:
-                        logger.info("No more PENDING entries found in manifest.")
-                        logger.info(f"Creating flag: {RESULTS_READY_FLAG}")
-                        logger.info("PROCESSING -> IDLE")
-                        next_state = ProcessorState.IDLE
-                except Exception as e:
-                    logger.error(f"Error during manifest read/mark phase: {e}")
-                    _current_processing_entry_data = None # Reset
-                    _current_processing_entry_index = -1
-                    time.sleep(POLL_INTERVAL)
-                    next_state = ProcessorState.PROCESSING
-            
-            # 2. Process the entry (outside of file lock)
-            if _current_processing_entry_data is not None:
-                logger.info(f"Performing processing for entry {_current_processing_entry_index} (Image: {_current_processing_entry_data.get('camera_data', {}).get('filename')})...")
+                            logger.error(f"Could not create results ready flag {RESULTS_READY_FLAG}: {e}")
 
-                image_results = None
-                img_proc_error_msg = None 
-                processing_successful = False
-                
-                try:
-                    if ENABLE_CAMERA:
-                        image_meta = _current_processing_entry_data.get("camera_data")
-                        if image_meta and image_meta.get("filename"):
-                            image_results, img_proc_error_msg = process_image(image_meta)
-                        else:
-                            img_proc_error_msg = "Camera enabled but no image data or filename found in entry."
-                            logger.warning(img_proc_error_msg)
-                            image_results = None # Ensure no partial results
-                    else:
-                        img_proc_error_msg = 'Camera not enabled, skipping image processing.'
+                    except Exception as e:
+                        logger.error(f"Critical error during final batch update of manifest: {e}", exc_info=True)
 
-                    temperature_data = None
-                    if ENABLE_THERMOCOUPLE:
-                        temperature_data = _current_processing_entry_data.get("temperature_data", {})
-                    else:
-                        logger.info("Temperature collection not enabled, skipping temperature data.")
-
-                    if (ENABLE_CAMERA and image_results) or (ENABLE_THERMOCOUPLE and temperature_data):
-                        processing_successful = True
-                    elif ENABLE_CAMERA and img_proc_error_msg: # If camera was enabled but failed
-                        processing_successful = False
-                    elif not ENABLE_CAMERA and not ENABLE_THERMOCOUPLE: # If neither enabled, nothing to process
-                         processing_successful = False
-                         img_proc_error_msg = "Neither camera nor thermocouple enabled for processing."
-
-                    if not processing_successful and img_proc_error_msg:
-                        img_proc_error_msg = "Processing failed for unknown reason, no successful results."
-                        logger.error(f"Image processing failed: {img_proc_error_msg}")
-
-                    # --- Aggregate Results ---
-                    final_result_entry = {
-                        "manifest_entry_timestamp": _current_processing_entry_data.get("entry_timestamp_iso"),
-                        "image_timestamp": image_meta.get("timestamp_iso") if image_meta else None,
-                        "temperature_timestamp": temperature_data.get("timestamp_iso") if temperature_data else None,
-                        "image_filename": image_meta.get("filename") if image_meta else None,
-                        "processing_timestamp_iso": datetime.datetime.now().isoformat(),
-                        "processing_successful": processing_successful,
-                        "processing_error_message": img_proc_error_msg,
-                        "image_analysis": image_results,
-                        "temperature_readings": temperature_data.get("data") if temperature_data else None,
-                    }
-
-                    append_metadata(RESULTS_DIR, RESULTS_FILENAME, final_result_entry)
-                    logger.info(f"Appended results to {RESULTS_FILENAME.name} for entry {_current_processing_entry_index}. Success: {processing_successful}")
-                    if processing_successful:
-                        logger.info(f"Processing completed successfully for entry {_current_processing_entry_index}.")
-                except Exception as e:
-                    logger.error(f"Critical error during image processing for entry {_current_processing_entry_index}: {e}", exc_info=True)
-                    img_proc_error_msg = f"Critical processing error: {e}"
-                    processing_successful = False
-                    image_results = None # Clear results if error occurred
-                    temperature_data = None # Clear data if error occurred
-
-                # 3. Acquire lock, update manifest with final status and results
-                logger.info(f"Updating manifest for entry {_current_processing_entry_index}...")
-                update_metadata_manifest_entry(
-                    DATA_DIR, METADATA_FILENAME,
-                    _current_processing_entry_index,
-                    status='processed' if processing_successful else 'failed',
-                    processing_timestamp_iso=datetime.datetime.now().isoformat(),
-                    processing_error=not processing_successful,
-                    processing_error_msg=img_proc_error_msg,
-                    image_analysis_results=image_results,
-                    temperature_processing_results=temperature_data.get('data') if temperature_data else None,
-                )
-                logger.info(f"Manifest entry {_current_processing_entry_index} updated with final status and results.")
-
-                # Reset global state for next cycle
-                _current_processing_entry_data = None
-                _current_processing_entry_index = -1
-
-                next_state = ProcessorState.PROCESSING # Immediately check for next entry
-
-            else:
-                logger.info("No entry selected for processing. Transitioning out of PROCESSING state.")
-                next_state = ProcessorState.IDLE # Or WAITING_FOR_DATA
-                # The RESULTS_READY_FLAG is handled in the `if entry_to_process:` block (inverted if statement)
-
-
-        case ProcessorState.FATAL_ERROR:
-            # Should not technically be called again once in this state if loop breaks
-            logger.error("[FATAL ERROR] Shutting down processor.")
-            time.sleep(10)  # Sleep long if it somehow gets called
-
-    return next_state
+            # Loop back immediately to check for more data
+            next_state = ProcessorState.PROCESSING
 
 
 # Main execution loop function
