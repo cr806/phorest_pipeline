@@ -22,7 +22,7 @@ from phorest_pipeline.shared.logger_config import configure_logger
 # Assuming metadata_manager handles loading/saving the manifest
 from phorest_pipeline.shared.metadata_manager import (
     append_metadata,
-    _load_metadata,
+    load_metadata_with_lock,
     update_metatdata_manifest_entry_status,
 )
 from phorest_pipeline.shared.states import ProcessorState
@@ -103,12 +103,13 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
             else:
                 time.sleep(POLL_INTERVAL)
 
+
         case ProcessorState.PROCESSING:
             # 1. Acquire lock, mark entry as 'processing'
             if _current_processing_entry_data is None:
                 logger.info("--- Checking for PENDING Data to Process ---")
                 try:
-                    manifest_data = _load_metadata(DATA_DIR, METADATA_FILENAME)
+                    manifest_data = load_metadata_with_lock(DATA_DIR, METADATA_FILENAME)
                     entry_index, entry_to_process = find_unprocessed_entry(manifest_data)
 
                     if entry_to_process:
@@ -178,7 +179,7 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
                          processing_successful = False
                          img_proc_error_msg = "Neither camera nor thermocouple enabled for processing."
 
-                    if not processing_successful and not img_proc_error_msg:
+                    if not processing_successful and img_proc_error_msg:
                         img_proc_error_msg = "Processing failed for unknown reason, no successful results."
                         logger.error(f"Image processing failed: {img_proc_error_msg}")
 
@@ -197,6 +198,8 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
 
                     append_metadata(RESULTS_DIR, RESULTS_FILENAME, final_result_entry)
                     logger.info(f"Appended results to {RESULTS_FILENAME.name} for entry {_current_processing_entry_index}. Success: {processing_successful}")
+                    if processing_successful:
+                        logger.info(f"Processing completed successfully for entry {_current_processing_entry_index}.")
                 except Exception as e:
                     logger.error(f"Critical error during image processing for entry {_current_processing_entry_index}: {e}", exc_info=True)
                     img_proc_error_msg = f"Critical processing error: {e}"
