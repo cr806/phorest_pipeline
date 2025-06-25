@@ -23,7 +23,7 @@ from phorest_pipeline.shared.logger_config import configure_logger
 from phorest_pipeline.shared.metadata_manager import (
     append_metadata,
     load_metadata_with_lock,
-    update_metatdata_manifest_entry_status,
+    update_metadata_manifest_entry,
 )
 from phorest_pipeline.shared.states import ProcessorState
 
@@ -120,10 +120,10 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
                             f"Marking entry {entry_index} as 'processing' (Image: {_current_processing_entry_data.get('camera_data', {}).get('filename')})"
                         )
 
-                        update_metatdata_manifest_entry_status(
+                        update_metadata_manifest_entry(
                             DATA_DIR, METADATA_FILENAME,
                             _current_processing_entry_index,
-                            'processing',
+                            status='processing',
                             processing_timestamp_iso=datetime.datetime.now().isoformat()
                         )
                         logger.info(f"Successfully marked entry {entry_index} as 'processing'.")
@@ -209,10 +209,10 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
 
                 # 3. Acquire lock, update manifest with final status and results
                 logger.info(f"Updating manifest for entry {_current_processing_entry_index}...")
-                update_metatdata_manifest_entry_status(
+                update_metadata_manifest_entry(
                     DATA_DIR, METADATA_FILENAME,
                     _current_processing_entry_index,
-                    'processed' if processing_successful else 'failed',
+                    status='processed' if processing_successful else 'failed',
                     processing_timestamp_iso=datetime.datetime.now().isoformat(),
                     processing_error=not processing_successful,
                     processing_error_msg=img_proc_error_msg,
