@@ -129,8 +129,7 @@ def add_entry(
             'processing_timestamp_iso': None,
             'processing_error': False,
             'processing_error_msg': None,
-            'image_analysis_results': None,
-            'temperature_processing_results': None,
+            'compression_attempted': False,
         }
 
         metadata_list.append(new_manifest_entry)
@@ -174,18 +173,18 @@ def update_metadata_manifest_entry(
     data_dir: Path,
     metadata_filename: Path,
     entry_index: int | list[int],
-    status: str | None = None,
-    processing_timestamp_iso: str | None = None,
-    processing_error: bool = False,
-    processing_error_msg: str | None = None,
-    image_analysis_results: dict | None = None,
-    temperature_processing_results: dict | None = None,
+    status: str | list[str] | None = None,
+    processing_timestamp_iso: str | list[str] | None = None,
+    processing_error: bool | list[bool] | None = None,
+    processing_error_msg: str | list[str] | None = None,
     compression_attempted: bool = False,
     new_filename: str | None = None,
 ):
     """
-    Updates the status and results of a specific entry in the processing manifest,
-    protected by a file lock. Used by the Processor for marking entries.
+    Updates status and results for one or more entries in the processing manifest.
+    If 'entry_index' is a list, data arguments (e.g., 'status', 'processing_error_msg')
+    can also be lists of the same length to apply unique values to each entry.
+    If data arguments are single values, they are applied to all specified entries.
     """
     manifest_path = Path(data_dir, metadata_filename)
     lock_fd = None
@@ -196,34 +195,49 @@ def update_metadata_manifest_entry(
 
         metadata_list = _load_metadata(data_dir, metadata_filename) # Safe to read under lock
 
-        if not isinstance(entry_index, list):
-            entry_index = [entry_index]
-        
-        for index in entry_index:
-            if 0 <= index < len(metadata_list):
-                entry_to_update = metadata_list[index]
-                if status:
-                    entry_to_update['processing_status'] = status
-                if processing_timestamp_iso:
-                    entry_to_update['processing_timestamp_iso'] = processing_timestamp_iso
-                if processing_error:
-                    entry_to_update['processing_error'] = processing_error
-                if processing_error_msg:
-                    entry_to_update['processing_error_msg'] = processing_error_msg
-                if image_analysis_results:
-                    entry_to_update['image_analysis_results'] = image_analysis_results
-                if temperature_processing_results:
-                    entry_to_update['temperature_processing_results'] = temperature_processing_results
-                if compression_attempted:
-                    entry_to_update['compression_attempted'] = compression_attempted
-                if new_filename:
-                    if 'camera_data' in entry_to_update and entry_to_update['camera_data']:
-                        entry_to_update['camera_data']['filename'] = new_filename
+        indices = entry_index if isinstance(entry_index, list) else [entry_index]
+        num_indices = len(indices)
 
-                _save_metadata(data_dir, metadata_filename, metadata_list) # Safe to save under lock
-                logger.info(f'[METADATA] Manifest entry {index} updated to status: {status}.')
+        def get_value_for_index(arg, i):
+            if isinstance(arg, list):
+                if len(arg) != num_indices:
+                    logger.warning(f"[METADATA] Argument list length mismatch for entry {indices[i]}. Using None.")
+                    return None
+                return arg[i]
+            return arg
+        
+        for i, index_to_update in enumerate(indices):
+            if 0 <= index_to_update < len(metadata_list):
+                entry = metadata_list[index_to_update]
+
+                current_status = get_value_for_index(status, i)
+                if current_status is not None:
+                    entry['processing_status'] = current_status
+                
+                current_ts = get_value_for_index(processing_timestamp_iso, i)
+                if current_ts is not None:
+                    entry['processing_timestamp_iso'] = current_ts
+               
+                current_err = get_value_for_index(processing_error, i)
+                if current_err is not None:
+                    entry['processing_error'] = current_err
+
+                current_err_msg = get_value_for_index(processing_error_msg, i)
+                if current_err_msg is not None:
+                    entry['processing_error_msg'] = current_err_msg
+
+                if compression_attempted:
+                    entry['compression_attempted'] = compression_attempted
+
+                if new_filename:
+                    if 'camera_data' in entry and entry['camera_data']:
+                        entry['camera_data']['filename'] = new_filename
             else:
-                logger.warning(f'[METADATA] Attempted to update non-existent manifest entry at index {index}.')
+                logger.warning(f'[METADATA] Attempted to update non-existent manifest entry at index {index_to_update}.')
+            
+            _save_metadata(data_dir, metadata_filename, metadata_list)
+            logger.info(f'[METADATA] Batch update successful for {len(indices)} manifest entries.')
+
     except Exception as e:
         logger.error(f"[METADATA] Error in update_manifest_entry_status: {e}")
         raise # Re-raise to propagate error
