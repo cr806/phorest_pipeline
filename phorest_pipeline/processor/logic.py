@@ -127,17 +127,16 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
                             processing_timestamp_iso=datetime.datetime.now().isoformat()
                         )
                         logger.info(f"Successfully marked entry {entry_index} as 'processing'.")
+                        try:
+                            RESULTS_READY_FLAG.touch()
+                        except OSError as e:
+                            logger.error(f"Could not create flag {RESULTS_READY_FLAG}: {e}")
+                            next_state = ProcessorState.PROCESSING
                     else:
                         logger.info("No more PENDING entries found in manifest.")
                         logger.info(f"Creating flag: {RESULTS_READY_FLAG}")
-                        try:
-                            RESULTS_READY_FLAG.touch()
-                            logger.info("PROCESSING -> IDLE")
-                            next_state = ProcessorState.IDLE
-                        except OSError as e:
-                            logger.error(f"Could not create flag {RESULTS_READY_FLAG}: {e}")
-                            time.sleep(5)
-                            next_state = ProcessorState.PROCESSING
+                        logger.info("PROCESSING -> IDLE")
+                        next_state = ProcessorState.IDLE
                 except Exception as e:
                     logger.error(f"Error during manifest read/mark phase: {e}")
                     _current_processing_entry_data = None # Reset
