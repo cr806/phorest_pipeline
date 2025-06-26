@@ -106,7 +106,7 @@ def add_entry(
 
     try:
         lock_fd = _acquire_lock(manifest_path)
-        logger.info('[METADATA] Updating processing manifest (locked section)...')
+        logger.info('[METADATA] [ADD] Updating processing manifest (locked section)...')
 
         metadata_list = _load_metadata(data_dir, metadata_filename) # Safe to read under lock
 
@@ -137,15 +137,15 @@ def add_entry(
 
         img_name = camera_meta.get('filename') if camera_meta else 'N/A'
         status_log = 'FAILED' if overall_collection_error else 'OK'
-        logger.info(f'[METADATA] Added entry to manifest: Status={status_log}, Image={img_name}')
+        logger.info(f'[METADATA] [ADD] Added entry to manifest: Status={status_log}, Image={img_name}')
     except Exception as e:
-        logger.error(f"[METADATA] Error in add_entry (manifest write): {e}")
+        logger.error(f"[METADATA] [ADD] Error in add_entry (manifest write): {e}")
         raise # Re-raise to propagate error to collector
     finally:
         _release_lock(lock_fd, manifest_path.name) # Ensure lock is always released
 
 
-def append_metadata(data_dir: Path, metadata_filename: Path, metadata_dict: dict):
+def append_metadata(data_dir: Path, metadata_filename: Path, metadata_to_append: dict | list[dict]):
     """
     Appends a new entry to a specified metadata file (e.g., processing_results.json),
     protected by a file lock specific to that file.
@@ -156,14 +156,21 @@ def append_metadata(data_dir: Path, metadata_filename: Path, metadata_dict: dict
 
     try:
         lock_fd = _acquire_lock(target_file_path)
-        logger.info(f'[METADATA] Updating {metadata_filename.name} (locked section)...')
+
+        entries_to_add = metadata_to_append if isinstance(metadata_to_append, list) else [metadata_to_append]
+
+        if not entries_to_add:
+            logger.info(f'[METADATA] [APPEND] append called with no entries for {metadata_filename.name}. Returning.')
+            return
+
+        logger.info(f'[METADATA] [APPEND] Appending {len(entries_to_add)} entries to {metadata_filename.name} (locked section)...')
 
         metadata_list = _load_metadata(data_dir, metadata_filename) # Safe to read under lock
-        metadata_list.append(metadata_dict)
+        metadata_list.extend(metadata_to_append)
         _save_metadata(data_dir, metadata_filename, metadata_list)
-        logger.info(f'[METADATA] Appended entry to {metadata_filename.name}.')
+        logger.info(f'[METADATA] [APPEND] Successfully appended {len(entries_to_add)} entries to {metadata_filename.name}.')
     except Exception as e:
-        logger.error(f"[METADATA] Error in append_metadata ({metadata_filename.name} write): {e}")
+        logger.error(f"[METADATA] [APPEND] Error in append_metadata ({metadata_filename.name} write): {e}")
         raise # Re-raise to propagate error
     finally:
         _release_lock(lock_fd, target_file_path.name) # Ensure lock is always released
@@ -191,7 +198,7 @@ def update_metadata_manifest_entry(
 
     try:
         lock_fd = _acquire_lock(manifest_path)
-        logger.info(f'[METADATA] Updating manifest entry {entry_index} status (locked section)...')
+        logger.info(f'[METADATA] [UPDATE] Updating manifest entry {entry_index} status (locked section)...')
 
         metadata_list = _load_metadata(data_dir, metadata_filename) # Safe to read under lock
 
@@ -201,7 +208,7 @@ def update_metadata_manifest_entry(
         def get_value_for_index(arg, i):
             if isinstance(arg, list):
                 if len(arg) != num_indices:
-                    logger.warning(f"[METADATA] Argument list length mismatch for entry {indices[i]}. Using None.")
+                    logger.warning(f"[METADATA] [UPDATE] Argument list length mismatch for entry {indices[i]}. Using None.")
                     return None
                 return arg[i]
             return arg
@@ -233,13 +240,13 @@ def update_metadata_manifest_entry(
                     if 'camera_data' in entry and entry['camera_data']:
                         entry['camera_data']['filename'] = new_filename
             else:
-                logger.warning(f'[METADATA] Attempted to update non-existent manifest entry at index {index_to_update}.')
+                logger.warning(f'[METADATA] [UPDATE] Attempted to update non-existent manifest entry at index {index_to_update}.')
             
-            _save_metadata(data_dir, metadata_filename, metadata_list)
-            logger.info(f'[METADATA] Batch update successful for {len(indices)} manifest entries.')
+        _save_metadata(data_dir, metadata_filename, metadata_list)
+        logger.info(f'[METADATA] [UPDATE] Batch update successful for {len(indices)} manifest entries.')
 
     except Exception as e:
-        logger.error(f"[METADATA] Error in update_manifest_entry_status: {e}")
+        logger.error(f"[METADATA] [UPDATE] Error in update_manifest_entry_status: {e}")
         raise # Re-raise to propagate error
     finally:
         _release_lock(lock_fd, manifest_path.name) # Ensure lock is always released
@@ -258,7 +265,7 @@ def load_metadata_with_lock(data_dir: Path, metadata_filename: Path) -> list:
         lock_fd = _acquire_lock(metadata_path)
         loaded_data = _load_metadata(data_dir, metadata_filename)  # Safe to read under lock
     except Exception as e:
-        logger.error(f"[METADATA] Error loading metadata with lock: {e}")
+        logger.error(f"[METADATA] [LOAD] Error loading metadata with lock: {e}")
         raise # Re-raise to propagate error
     finally:
         _release_lock(lock_fd, metadata_path.name)
@@ -277,7 +284,7 @@ def save_metadata_with_lock(data_dir: Path, metadata_filename: Path, metadata_li
         lock_fd = _acquire_lock(metadata_path)
         _save_metadata(data_dir, metadata_filename, metadata_list)  # Safe to save under lock
     except Exception as e:
-        logger.error(f"[METADATA] Error saving metadata with lock: {e}")
+        logger.error(f"[METADATA] [SAVE] Error saving metadata with lock: {e}")
         raise # Re-raise to propagate error
     finally:
         _release_lock(lock_fd, metadata_path.name)  # Ensure lock is always released

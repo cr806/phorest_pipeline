@@ -203,13 +203,10 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
                 # 3. Collate results and perform a single batch update
                 logger.info(f"--- Collating results for batch update ---")
 
-                # Append individual results to the results.json file
-                # (Optimise this to accept a list of results?)
+                # Append collated results to the results.json file
                 try:
                     if all_results_for_append:
-                        for result in all_results_for_append:
-                            append_metadata(RESULTS_DIR, RESULTS_FILENAME, result)
-                        logger.info(f"Appended {len(all_results_for_append)} results to {RESULTS_FILENAME.name}.")
+                        append_metadata(RESULTS_DIR, RESULTS_FILENAME, all_results_for_append)
                 except Exception as e:
                     logger.error(f"Error appending to results file: {e}", exc_info=True)
 
@@ -243,6 +240,13 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
 
             # Loop back immediately to check for more data
             next_state = ProcessorState.PROCESSING
+        
+        case ProcessorState.FATAL_ERROR:
+            # Should not technically be called again once in this state if loop breaks
+            logger.error("[FATAL ERROR] Shutting down processor.")
+            time.sleep(10)  # Sleep long if it somehow gets called
+
+    return next_state
 
 
 # Main execution loop function
