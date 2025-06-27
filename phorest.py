@@ -16,6 +16,10 @@ if not PID_FILE.exists():
 # This gets the directory where phorest.py resides
 PROJECT_ROOT = Path(__file__).resolve().parent
 
+# Define minimum dimensions for the TUI window
+MIN_HEIGHT = 23
+MIN_WIDTH = 80
+
 # --- Script Categories ---
 foreground_scripts = [
     {"menu": "Check USB Storage", "script": "run_storage_check.py"},
@@ -354,7 +358,7 @@ def draw_menu(stdscr, selected_row_idx):
     # Dynamically count active background processes for display.
     active_count = 0
     dead_count = 0
-    refresh_pid_file()  # Ensure file is somewhat clean before counting for display
+    refresh_pid_file()  # Ensure file is clean before counting for display
     for entry in get_tracked_pids():
         cmd = is_pid_active(entry["pid"])
         if cmd and ("python3" in cmd) and (f"{entry['name']}" in cmd):
@@ -621,6 +625,17 @@ def issue_sigint(stdscr, pid, script_name, ask_for_enter=True):
 # --- Main TUI Application Loop ---
 def run_tui_app(stdscr):
     """Main function for the curses TUI application."""
+
+    # --- Check Terminal Size ---
+    h, w = stdscr.getmaxyx()
+    if h < MIN_HEIGHT or w < MIN_WIDTH:
+        # Return a dictionary with error info. The wrapper will handle teardown.
+        return {
+            "error": "size",
+            "current_h": h, "current_w": w,
+            "required_h": MIN_HEIGHT, "required_w": MIN_WIDTH
+        }
+
     curses.curs_set(0)
     curses.noecho()
     curses.cbreak()
@@ -703,9 +718,16 @@ def run_tui_app(stdscr):
 def main():
     """The entry point for the phorest TUI application."""
     # The curses.wrapper handles the curses setup and passes 'stdscr' to run_tui_app
-    curses.wrapper(run_tui_app)
+    result = curses.wrapper(run_tui_app)
+
+    if isinstance(result, dict) and result.get("error") == "size":
+        print("Error: Terminal window is too small.", file=sys.stderr)
+        print(f"       Current dimensions: {result['current_w']} width x {result['current_h']} height.", file=sys.stderr)
+        print(f"       Required minimum dimensions: {result['required_w']} width x {result['required_h']} height.", file=sys.stderr)
+        print("\nPlease resize your terminal window and run the script again.", file=sys.stderr)
+        sys.exit(1)
 
 
 # --- Entry point for the TUI application ---
 if __name__ == "__main__":
-    curses.wrapper(run_tui_app)
+    main()
