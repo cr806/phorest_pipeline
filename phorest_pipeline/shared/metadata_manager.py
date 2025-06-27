@@ -3,7 +3,9 @@ import datetime
 import json
 import fcntl # For file locking (Unix/Linux specific)
 import os
+import shutil
 from pathlib import Path
+from contextlib import contextmanager
 
 from phorest_pipeline.shared.logger_config import configure_logger
 
@@ -94,6 +96,24 @@ def _save_metadata(data_dir: Path, metadata_filename: Path, metadata_list: list)
         raise # Re-raise to propagate error
 
 
+@contextmanager
+def lock_and_manage_file(file_path: Path):
+    """
+    A context manager to safely lock a file path for an arbitrary operation.
+    Usage:
+        with lock_and_manage_file(my_path):
+            # ... perform file operations here ...
+    """
+    lock_fd = None
+    try:
+        lock_fd = _acquire_lock(file_path)
+        logger.debug(f"[METADATA] [CONTEXT_LOCK] Acquired lock for {file_path.name}")
+        yield  # Passes control back to the 'with' block
+    finally:
+        _release_lock(lock_fd, file_path.name)
+        logger.debug(f"[METADATA] [CONTEXT_LOCK] Released lock for {file_path.name}")
+    
+
 def add_entry(
     data_dir: Path, metadata_filename: Path, camera_meta: dict | None, temps_meta: dict | None
 ):
@@ -102,47 +122,44 @@ def add_entry(
     Used by the Collector.
     """
     manifest_path = Path(data_dir, metadata_filename)
-    lock_fd = None
 
     try:
-        lock_fd = _acquire_lock(manifest_path)
-        logger.info('[METADATA] [ADD] Updating processing manifest (locked section)...')
+        with lock_and_manage_file(manifest_path):
+            logger.info('[METADATA] [ADD] Updating processing manifest (locked section)...')
 
-        metadata_list = _load_metadata(data_dir, metadata_filename) # Safe to read under lock
+            metadata_list = _load_metadata(data_dir, metadata_filename) # Safe to read under lock
 
-        overall_collection_error = False
-        error_messages = []
-        if camera_meta and camera_meta.get('error_flag', False):
-            overall_collection_error = True
-            error_messages.append(f'Camera: {camera_meta.get("error_message", "Unknown error")}')
-        if temps_meta and temps_meta.get('error_flag', False):
-            overall_collection_error = True
-            error_messages.append(f'Temps: {temps_meta.get("error_message", "Unknown error")}')
+            overall_collection_error = False
+            error_messages = []
+            if camera_meta and camera_meta.get('error_flag', False):
+                overall_collection_error = True
+                error_messages.append(f'Camera: {camera_meta.get("error_message", "Unknown error")}')
+            if temps_meta and temps_meta.get('error_flag', False):
+                overall_collection_error = True
+                error_messages.append(f'Temps: {temps_meta.get("error_message", "Unknown error")}')
 
-        new_manifest_entry = {
-            'entry_timestamp_iso': datetime.datetime.now().isoformat(),
-            'collection_error': overall_collection_error,
-            'collection_error_msg': ' | '.join(error_messages) if error_messages else None,
-            'camera_data': camera_meta,
-            'temperature_data': temps_meta,
-            'processing_status': 'pending', # This field will allow the lock to be released while processing happens
-            'processing_timestamp_iso': None,
-            'processing_error': False,
-            'processing_error_msg': None,
-            'compression_attempted': False,
-        }
+            new_manifest_entry = {
+                'entry_timestamp_iso': datetime.datetime.now().isoformat(),
+                'collection_error': overall_collection_error,
+                'collection_error_msg': ' | '.join(error_messages) if error_messages else None,
+                'camera_data': camera_meta,
+                'temperature_data': temps_meta,
+                'processing_status': 'pending', # This field will allow the lock to be released while processing happens
+                'processing_timestamp_iso': None,
+                'processing_error': False,
+                'processing_error_msg': None,
+                'compression_attempted': False,
+            }
 
-        metadata_list.append(new_manifest_entry)
-        _save_metadata(data_dir, metadata_filename, metadata_list) # Safe to save under lock
+            metadata_list.append(new_manifest_entry)
+            _save_metadata(data_dir, metadata_filename, metadata_list) # Safe to save under lock
 
-        img_name = camera_meta.get('filename') if camera_meta else 'N/A'
-        status_log = 'FAILED' if overall_collection_error else 'OK'
-        logger.info(f'[METADATA] [ADD] Added entry to manifest: Status={status_log}, Image={img_name}')
+            img_name = camera_meta.get('filename') if camera_meta else 'N/A'
+            status_log = 'FAILED' if overall_collection_error else 'OK'
+            logger.info(f'[METADATA] [ADD] Added entry to manifest: Status={status_log}, Image={img_name}')
     except Exception as e:
         logger.error(f"[METADATA] [ADD] Error in add_entry (manifest write): {e}")
         raise # Re-raise to propagate error to collector
-    finally:
-        _release_lock(lock_fd, manifest_path.name) # Ensure lock is always released
 
 
 def append_metadata(data_dir: Path, metadata_filename: Path, metadata_to_append: dict | list[dict]):
@@ -152,28 +169,24 @@ def append_metadata(data_dir: Path, metadata_filename: Path, metadata_to_append:
     Used by the Processor for its results file.
     """
     target_file_path = Path(data_dir, metadata_filename) # Full path to the target file
-    lock_fd = None
 
     try:
-        lock_fd = _acquire_lock(target_file_path)
+        with lock_and_manage_file(target_file_path):
+            entries_to_add = metadata_to_append if isinstance(metadata_to_append, list) else [metadata_to_append]
 
-        entries_to_add = metadata_to_append if isinstance(metadata_to_append, list) else [metadata_to_append]
+            if not entries_to_add:
+                logger.info(f'[METADATA] [APPEND] append called with no entries for {metadata_filename.name}. Returning.')
+                return
 
-        if not entries_to_add:
-            logger.info(f'[METADATA] [APPEND] append called with no entries for {metadata_filename.name}. Returning.')
-            return
+            logger.info(f'[METADATA] [APPEND] Appending {len(entries_to_add)} entries to {metadata_filename.name} (locked section)...')
 
-        logger.info(f'[METADATA] [APPEND] Appending {len(entries_to_add)} entries to {metadata_filename.name} (locked section)...')
-
-        metadata_list = _load_metadata(data_dir, metadata_filename) # Safe to read under lock
-        metadata_list.extend(metadata_to_append)
-        _save_metadata(data_dir, metadata_filename, metadata_list)
-        logger.info(f'[METADATA] [APPEND] Successfully appended {len(entries_to_add)} entries to {metadata_filename.name}.')
+            metadata_list = _load_metadata(data_dir, metadata_filename) # Safe to read under lock
+            metadata_list.extend(entries_to_add)
+            _save_metadata(data_dir, metadata_filename, metadata_list)
+            logger.info(f'[METADATA] [APPEND] Successfully appended {len(entries_to_add)} entries to {metadata_filename.name}.')
     except Exception as e:
         logger.error(f"[METADATA] [APPEND] Error in append_metadata ({metadata_filename.name} write): {e}")
         raise # Re-raise to propagate error
-    finally:
-        _release_lock(lock_fd, target_file_path.name) # Ensure lock is always released
 
 
 def update_metadata_manifest_entry(
@@ -194,62 +207,63 @@ def update_metadata_manifest_entry(
     If data arguments are single values, they are applied to all specified entries.
     """
     manifest_path = Path(data_dir, metadata_filename)
-    lock_fd = None
 
     try:
-        lock_fd = _acquire_lock(manifest_path)
-        logger.info(f'[METADATA] [UPDATE] Updating manifest entry {entry_index} status (locked section)...')
+        with lock_and_manage_file(manifest_path):
+            logger.info(f'[METADATA] [UPDATE] Updating manifest entry {entry_index} status (locked section)...')
 
-        metadata_list = _load_metadata(data_dir, metadata_filename) # Safe to read under lock
+            metadata_list = _load_metadata(data_dir, metadata_filename) # Safe to read under lock
 
-        indices = entry_index if isinstance(entry_index, list) else [entry_index]
-        num_indices = len(indices)
+            indices = entry_index if isinstance(entry_index, list) else [entry_index]
+            num_indices = len(indices)
 
-        def get_value_for_index(arg, i):
-            if isinstance(arg, list):
-                if len(arg) != num_indices:
-                    logger.warning(f"[METADATA] [UPDATE] Argument list length mismatch for entry {indices[i]}. Using None.")
-                    return None
-                return arg[i]
-            return arg
-        
-        for i, index_to_update in enumerate(indices):
-            if 0 <= index_to_update < len(metadata_list):
-                entry = metadata_list[index_to_update]
-
-                current_status = get_value_for_index(status, i)
-                if current_status is not None:
-                    entry['processing_status'] = current_status
-                
-                current_ts = get_value_for_index(processing_timestamp_iso, i)
-                if current_ts is not None:
-                    entry['processing_timestamp_iso'] = current_ts
-               
-                current_err = get_value_for_index(processing_error, i)
-                if current_err is not None:
-                    entry['processing_error'] = current_err
-
-                current_err_msg = get_value_for_index(processing_error_msg, i)
-                if current_err_msg is not None:
-                    entry['processing_error_msg'] = current_err_msg
-
-                if compression_attempted:
-                    entry['compression_attempted'] = compression_attempted
-
-                if new_filename:
-                    if 'camera_data' in entry and entry['camera_data']:
-                        entry['camera_data']['filename'] = new_filename
-            else:
-                logger.warning(f'[METADATA] [UPDATE] Attempted to update non-existent manifest entry at index {index_to_update}.')
+            def get_value_for_index(arg, i):
+                if isinstance(arg, list):
+                    if len(arg) != num_indices:
+                        logger.warning(f"[METADATA] [UPDATE] Argument list length mismatch for entry {indices[i]}. Using None.")
+                        return None
+                    return arg[i]
+                return arg
             
-        _save_metadata(data_dir, metadata_filename, metadata_list)
-        logger.info(f'[METADATA] [UPDATE] Batch update successful for {len(indices)} manifest entries.')
+            for i, index_to_update in enumerate(indices):
+                if 0 <= index_to_update < len(metadata_list):
+                    entry = metadata_list[index_to_update]
+
+                    current_status = get_value_for_index(status, i)
+                    if current_status is not None:
+                        entry['processing_status'] = current_status
+                    
+                    current_ts = get_value_for_index(processing_timestamp_iso, i)
+                    if current_ts is not None:
+                        entry['processing_timestamp_iso'] = current_ts
+                
+                    current_err = get_value_for_index(processing_error, i)
+                    if current_err is not None:
+                        entry['processing_error'] = current_err
+
+                    current_err_msg = get_value_for_index(processing_error_msg, i)
+                    if current_err_msg is not None:
+                        entry['processing_error_msg'] = current_err_msg
+
+                    if compression_attempted:
+                        entry['compression_attempted'] = compression_attempted
+
+                    if new_filename:
+                        if 'camera_data' in entry and entry['camera_data']:
+                            entry['camera_data']['filename'] = new_filename
+                else:
+                    logger.warning(
+                        f'[METADATA] [UPDATE] Attempted to update non-existent manifest entry at index {index_to_update}. '
+                        f'This can happen if the manifest was backed up and cleared while an item was being processed. '
+                        f'The results for this entry will be discarded.'
+                    )
+                
+            _save_metadata(data_dir, metadata_filename, metadata_list)
+            logger.info(f'[METADATA] [UPDATE] Batch update successful for {len(indices)} manifest entries.')
 
     except Exception as e:
         logger.error(f"[METADATA] [UPDATE] Error in update_manifest_entry_status: {e}")
         raise # Re-raise to propagate error
-    finally:
-        _release_lock(lock_fd, manifest_path.name) # Ensure lock is always released
 
 
 def load_metadata_with_lock(data_dir: Path, metadata_filename: Path) -> list:
@@ -258,19 +272,13 @@ def load_metadata_with_lock(data_dir: Path, metadata_filename: Path) -> list:
     Returns an empty list if the file does not exist or if there's a decoding error.
     """
     metadata_path = Path(data_dir, metadata_filename)
-    lock_fd = None
-    loaded_data = []
 
     try:
-        lock_fd = _acquire_lock(metadata_path)
-        loaded_data = _load_metadata(data_dir, metadata_filename)  # Safe to read under lock
+        with lock_and_manage_file(metadata_path):
+            return _load_metadata(data_dir, metadata_filename)  # Safe to read under lock
     except Exception as e:
         logger.error(f"[METADATA] [LOAD] Error loading metadata with lock: {e}")
         raise # Re-raise to propagate error
-    finally:
-        _release_lock(lock_fd, metadata_path.name)
-    
-    return loaded_data
 
 
 def save_metadata_with_lock(data_dir: Path, metadata_filename: Path, metadata_list: list):
@@ -278,13 +286,44 @@ def save_metadata_with_lock(data_dir: Path, metadata_filename: Path, metadata_li
     Saves results data to a JSON file using file locking and atomic write for safety.
     """
     metadata_path = Path(data_dir, metadata_filename)
-    lock_fd = None
 
     try:
-        lock_fd = _acquire_lock(metadata_path)
-        _save_metadata(data_dir, metadata_filename, metadata_list)  # Safe to save under lock
+        with lock_and_manage_file(metadata_path):
+            _save_metadata(data_dir, metadata_filename, metadata_list)  # Safe to save under lock
     except Exception as e:
         logger.error(f"[METADATA] [SAVE] Error saving metadata with lock: {e}")
         raise # Re-raise to propagate error
-    finally:
-        _release_lock(lock_fd, metadata_path.name)  # Ensure lock is always released
+
+
+def move_file_with_lock(source_dir: Path, source_filename: Path, destination_path: Path):
+    """
+    Safely moves a file using file locks.  This is an atomic operation
+    that prevents race conditions with other processes.
+    """
+    source_path = Path(source_dir, source_filename)
+
+    try:
+        with lock_and_manage_file(source_path):
+            logger.info(f"[METADATA] [MOVE] Moving {source_path.name} to {destination_path.name} (locked section)...")
+
+            if not source_path.exists():
+                logger.error(f"[METADATA] [MOVE] Cannot back up {source_path.name} as it does not exist. Skipping.")
+                return
+            
+            destination_path.parent.mkdir(parents=True, exist_ok=True)  # Ensure destination directory exists
+
+            shutil.move(str(source_path), str(destination_path))
+            logger.info(f"[METADATA] [MOVE] Successfully moved {source_path.name} to {destination_path.name}.")
+
+            # Clean up any associated .tmp files
+            temp_file_path = source_path.with_suffix(source_path.suffix + '.tmp')
+            if temp_file_path.exists():
+                try:
+                    temp_file_path.unlink()
+                    logger.info(f"[METADATA] [MOVE] Removed temporary file {temp_file_path.name} after move.")
+                except OSError as e:
+                    logger.error(f"[METADATA] [MOVE] Failed to remove temporary file {temp_file_path.name}: {e}")
+
+    except Exception as e:
+        logger.error(f"[METADATA] [MOVE] An unexpect error occured while moving {source_path.name}: {e}")
+        raise

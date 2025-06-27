@@ -17,7 +17,7 @@ from phorest_pipeline.shared.config import (
 )
 from phorest_pipeline.shared.helper_utils import move_existing_files_to_backup
 from phorest_pipeline.shared.logger_config import configure_logger
-from phorest_pipeline.shared.metadata_manager import load_metadata_with_lock, save_metadata_with_lock
+from phorest_pipeline.shared.metadata_manager import load_metadata_with_lock, save_metadata_with_lock, lock_and_manage_file
 from phorest_pipeline.shared.states import CommunicatorState
 
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename="comms.log")
@@ -116,7 +116,12 @@ def save_results_json_as_csv(processed_entries: list[dict], csv_path: Path) -> N
 
     # Create the DataFrame
     df = pd.DataFrame(records)
-    df.to_csv(csv_path, index=False)
+    try:
+        with lock_and_manage_file(csv_path):
+            df.to_csv(csv_path, index=False)
+            logger.info(f"Successfully saved CSV to {csv_path} (under lock).")
+    except Exception as e:
+        logger.error(f"Failed to save CSV file under lock at {csv_path}: {e}", exc_info=True)
 
 
 def save_plot_of_results(csv_path: Path, image_path: Path) -> None:
@@ -219,10 +224,11 @@ def save_plot_of_results(csv_path: Path, image_path: Path) -> None:
 
     fig.tight_layout()
     try:
-        plt.savefig(image_path)
-        logger.info(f"Chart saved to {image_path}")
+        with lock_and_manage_file(image_path):
+            plt.savefig(image_path, dpi=300)
+            logger.info(f"Chart saved to {image_path} (under lock).")
     except Exception as e:
-        logger.error(f"Failed to save plot to {image_path}: {e}", exc_info=True)
+        logger.error(f"Failed to save plot under lock at {image_path}: {e}", exc_info=True)
     finally:
         plt.close(fig)
 

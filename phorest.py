@@ -34,7 +34,7 @@ background_scripts = [
     {"menu": "\t\t( Start Periodic Image Collection Process )", "script": "run_collector.py"},
     {"menu": "\t\t( Start Image Analysis Process )", "script": "run_processor.py"},
     {"menu": "\t\t( Start Data Plotting Process )", "script": "run_communicator.py"},
-    {"menu": "\t\t( Start Data Compression Process )", "script": "run_compressor.py"},
+    {"menu": "\t\t( Start Image Compression Process )", "script": "run_compressor.py"},
     {"menu": "\t\t( Start File Backup Process )", "script": "run_file_backup.py"},
     {"menu": "Start Continuous Image Capture", "script": "run_continuous_capture.py"},
 ]

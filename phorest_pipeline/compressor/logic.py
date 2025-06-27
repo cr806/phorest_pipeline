@@ -28,7 +28,7 @@ def find_entry_to_compress(metadata_list: list) -> tuple[int, dict | None]:
     Finds index/data of first entry that meets criteria:
     - processed is True
     - compression_attempted is False
-    - has camera_data with a .png filename
+    - has camera_data that does not have a .png filename
     """
     for index, entry in enumerate(metadata_list):
         camera_data = entry.get("camera_data")

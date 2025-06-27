@@ -1,4 +1,4 @@
-# phorest_pipeline/compressor/logic.py
+# phorest_pipeline/file_backup/logic.py
 import datetime
 import gzip
 import shutil
@@ -11,6 +11,7 @@ from phorest_pipeline.shared.config import (
     RESULTS_DIR,
     settings,
 )
+from phorest_pipeline.shared.metadata_manager import move_file_with_lock
 from phorest_pipeline.shared.logger_config import configure_logger
 from phorest_pipeline.shared.states import BackupState
 
@@ -19,7 +20,7 @@ logger = configure_logger(name=__name__, rotate_daily=True, log_filename="file_b
 POLL_INTERVAL = FILE_BACKUP_INTERVAL / 20 if FILE_BACKUP_INTERVAL > (5 * 20) else 5
 BACKUP_ROOT_PATH = Path('backup')
 
-FILES_TO_PROCESS = [
+LIVE_FILES_TO_BACKUP = [
     Path(DATA_DIR, "metadata_manifest.json"),
     Path(RESULTS_DIR, "processing_results.json"),
     Path(RESULTS_DIR, "communicating_results.csv"),
@@ -27,92 +28,51 @@ FILES_TO_PROCESS = [
 ]
 
 
-def find_non_gz_files(directory_path):
-    non_gz_files = []
-
-    if not directory_path.is_dir():
-        raise ValueError(f"'{directory_path}' is not a valid directory.")
-
-    for file_path in directory_path.rglob('*'):
-        if file_path.is_file() and file_path.suffix != '.gz':
-            non_gz_files.append(file_path)
-
-    return non_gz_files
-
-
-def compress_files(files_to_process: list[Path]):
-    logger.info("--- Compressing Files ---")
-    for file_path in files_to_process:
-        if not file_path.is_file():
-            logger.warning(f"Skipping compression: '{file_path}' is not a file or does not exist.")
+def archive_live_files():
+    """
+    Archives the live data files by safely moving them to the backup directory
+    using a locked, atomic operation handled by the metadata_manager
+    """
+    logger.info("--- Archiving Live Files ---   ")
+    for original_filepath in LIVE_FILES_TO_BACKUP:
+        try:
+            # 1. Generate the timestamped backup file name
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            backup_filepath = Path(BACKUP_ROOT_PATH, original_filepath.parent.name, f"{original_filepath.stem}_{timestamp}{original_filepath.suffix}")         
+            
+            # 2. Move file
+            move_file_with_lock(original_filepath.parent, original_filepath.name, backup_filepath)
+        except Exception as e:
+            logger.error(f'Failed to archive {original_filepath}: {e}')
             continue
 
+
+def compress_files_in_backup_dir():
+    """
+    Finds all non-gzipped files in the backup directory and compresses them.
+    """
+    logger.info("--- Compressing Backed-up Files ---")
+    if not BACKUP_ROOT_PATH.exists():
+        logger.warning(f"Backup root directory '{BACKUP_ROOT_PATH}' not found. Nothing to compress.")
+        return
+
+    # Find all files that don't end in .gz
+    files_to_compress = [p for p in BACKUP_ROOT_PATH.rglob('*') if p.is_file() and p.suffix != '.gz']
+
+    if not files_to_compress:
+        logger.info("No new files to compress in backup directory.")
+        return
+
+    for file_path in files_to_compress:
+        output_file_path = file_path.with_suffix(file_path.suffix + ".gz")
         try:
-            output_file_path = file_path.with_suffix(file_path.suffix + ".gz")
-
             logger.info(f"Compressing '{file_path}' to '{output_file_path}'...")
-
             with file_path.open("rb") as f_in, gzip.open(output_file_path, "wb") as f_out:
                 shutil.copyfileobj(f_in, f_out)
-
-            # Remove the original file after compression
             file_path.unlink()
-
-            logger.info(f"Successfully compressed: '{file_path}' to '{output_file_path}'")
-
-        except FileNotFoundError:
-            logger.error(f"Error compressing '{file_path}': File not found.")
-        except PermissionError:
-            logger.error(f"Error compressing '{file_path}': Permission denied to read or write.")
+            logger.info(f"Successfully compressed and removed original: '{file_path}'")
         except Exception as e:
             logger.error(f"An unexpected error occurred compressing '{file_path}': {e}")
-
-
-def backup_and_empty_original_file(files_to_process: list[Path]) -> list[Path]:
-    logger.info("--- Backing up and Emptying Files ---")
-    files_to_compress = []
-    for original_file_path in files_to_process:
-        if not original_file_path.exists():
-            logger.warning(f"File {original_file_path} does not exist. Skipping processing.")
-            continue
-
-        if not original_file_path.is_file():
-            logger.warning(f"Path {original_file_path} is not a file. Skipping processing.")
-            continue
-
-        try:
-            # 1. Generate the backup file name with datetime suffix
-            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            backup_file_path = Path(
-                BACKUP_ROOT_PATH,
-                original_file_path.with_name(
-                    f"{original_file_path.stem}_{timestamp}{original_file_path.suffix}"
-                ),
-            )
-
-            # 2. Copy the original file to the backup location
-            shutil.copy2(str(original_file_path), str(backup_file_path))
-            logger.info(f"Copied {original_file_path} to backup {backup_file_path}")
-
-            # 3. Replace the original file with an empty file
-            with original_file_path.open("w") as f:
-                f.write("")  # Write an empty string to ensure it's empty
-            logger.info(f"Emptied original file: {original_file_path}")
-        except PermissionError:
-            logger.error(
-                f"Permission denied: Cannot process file {original_file_path}. Check file permissions."
-            )
-            continue
-        except OSError as e:
-            logger.error(f"OS error processing file {original_file_path}: {e}")
-            continue
-        except Exception as e:
-            logger.error(
-                f"An unexpected error occurred while processing {original_file_path}: {e}"
-            )
-            continue
-        files_to_compress.append(backup_file_path)
-    return files_to_compress
 
 
 def perform_file_backup_cycle(current_state: BackupState) -> BackupState:
@@ -122,7 +82,7 @@ def perform_file_backup_cycle(current_state: BackupState) -> BackupState:
     if settings is None:
         logger.info("Configuration error. Halting.")
         time.sleep(POLL_INTERVAL * 5)
-        return current_state  # Consider a FATAL_ERROR state
+        return current_state  # FATAL_ERROR state ?
 
     match current_state:
         case BackupState.IDLE:
@@ -141,10 +101,10 @@ def perform_file_backup_cycle(current_state: BackupState) -> BackupState:
                 time.sleep(POLL_INTERVAL)
 
         case BackupState.BACKUP_FILES:
-            logger.info("--- Backing up files ---")
-            backup_and_empty_original_file(FILES_TO_PROCESS)
-            files_to_compress = find_non_gz_files(BACKUP_ROOT_PATH)
-            compress_files(files_to_compress)
+            logger.info("--- Starting Full Backup and Compression Cycle ---")
+            archive_live_files()
+            compress_files_in_backup_dir()
+            logger.info("--- Full Backup and Compression Cycle Finished ---")
             logger.info("BACKUP_FILES -> IDLE")
             next_state = BackupState.IDLE
 
@@ -153,7 +113,7 @@ def perform_file_backup_cycle(current_state: BackupState) -> BackupState:
 
 def run_file_backup():
     """Main loop for the file backup process."""
-    logger.info("--- Starting File Renamer ---")
+    logger.info("--- Starting File Backup ---")
     print("--- Starting File Backup ---")
 
     current_state = BackupState.IDLE
