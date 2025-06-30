@@ -6,6 +6,7 @@ import time
 from pathlib import Path
 
 from phorest_pipeline.shared.config import (
+    BACKUP_DIR,
     DATA_DIR,
     FILE_BACKUP_INTERVAL,
     RESULTS_DIR,
@@ -18,7 +19,7 @@ from phorest_pipeline.shared.states import BackupState
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename="file_backup.log")
 
 POLL_INTERVAL = FILE_BACKUP_INTERVAL / 20 if FILE_BACKUP_INTERVAL > (5 * 20) else 5
-BACKUP_ROOT_PATH = Path('backup')
+BACKUP_ROOT_PATH = Path(BACKUP_DIR)
 
 LIVE_FILES_TO_BACKUP = [
     Path(DATA_DIR, "metadata_manifest.json"),

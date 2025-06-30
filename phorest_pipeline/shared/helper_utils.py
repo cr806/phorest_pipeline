@@ -3,6 +3,7 @@ import logging
 from pathlib import Path
 
 from phorest_pipeline.shared.metadata_manager import move_file_with_lock
+from phorest_pipeline.shared.config import BACKUP_DIR
 
 def move_existing_files_to_backup(source_files: list, logger: logging.Logger) -> None:
     """
@@ -12,7 +13,7 @@ def move_existing_files_to_backup(source_files: list, logger: logging.Logger) ->
     if not source_files:
         return
     
-    destination_root = Path("backup")
+    destination_root = Path(BACKUP_DIR)
     logger.info(f"Moving existing files to '{destination_root}'...")
 
     files_moved_count = 0
