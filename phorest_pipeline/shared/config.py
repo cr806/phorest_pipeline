@@ -43,6 +43,19 @@ def get_flag_path(config: dict, flag_name_key: str) -> Path:
     return Path(flag_dir, flag_filename)
 
 
+def check_or_create_dir(path: Path):
+    """Checks if a directory exists, and creates it if not."""
+    if not path.is_dir():
+        try:
+            path.mkdir(parents=True, exist_ok=True)
+            print(f"[CONFIG] Created directory: {path}")
+        except Exception as e:
+            print(f"[CONFIG] Error creating directory {path}: {e}")
+            sys.exit(1)
+    else:
+        print(f"[CONFIG] Directory already exists: {path}")
+
+
 # Load config once on import
 try:
     settings = load_config()  # settings is now a dictionary
@@ -58,10 +71,24 @@ try:
     RESULTS_READY_FLAG = get_flag_path(settings, "results_ready")
 
     # --- Paths ---
+    ROOT_DIR = get_path(settings, "Paths", "root_dir", ".")
     DATA_DIR = get_path(settings, "Paths", "data_dir", "data")
     CONTINUOUS_DIR = get_path(settings, "Paths", "continuous_capture_dir", "continuous_capture")
     RESULTS_DIR = get_path(settings, "Paths", "results_dir", "results")
     LOGS_DIR = get_path(settings, "Paths", "logs_dir", "logs")
+    BACKUP_DIR = get_path(settings, "Paths", "backup_dir", "backup")
+
+    DATA_DIR = Path(ROOT_DIR, DATA_DIR)
+    CONTINUOUS_DIR = Path(ROOT_DIR, CONTINUOUS_DIR)
+    RESULTS_DIR = Path(ROOT_DIR, RESULTS_DIR)
+    LOGS_DIR = Path(ROOT_DIR, LOGS_DIR)
+    BACKUP_DIR = Path(ROOT_DIR, BACKUP_DIR)
+
+    check_or_create_dir(DATA_DIR)
+    check_or_create_dir(CONTINUOUS_DIR)
+    check_or_create_dir(RESULTS_DIR)
+    check_or_create_dir(LOGS_DIR)
+    check_or_create_dir(BACKUP_DIR)
 
     # --- Timing ---
     # No need for getint/getboolean, TOML parses types directly
