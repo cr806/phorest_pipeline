@@ -1,11 +1,13 @@
 # phorest_pipeline/syncer/logic.py
 import time
 import shutil
+import sys
 from pathlib import Path
 
 from phorest_pipeline.shared.config import (
     BACKUP_DIR,
     DATA_DIR,
+    ENABLE_SYNCER,
     REMOTE_ROOT_DIR,
     RESULTS_DIR,
     SYNC_INTERVAL,
@@ -54,17 +56,23 @@ def sync_results_and_manifest():
     """
     logger.info("Copying results and manifest to remote directory...")
 
+    # 1. List of file extensions to ignore
+    ignored_extensions = ['.lock', '.tmp']
+
+    # 2. Sync the results directory
     if RESULTS_DIR.exists():
         REMOTE_RESULTS_DIR.mkdir(parents=True, exist_ok=True)
         for item in RESULTS_DIR.iterdir():
-            if item.is_file():
+            # Compare against `ignored_extension` list
+            if item.is_file() and (item.suffix not in ignored_extensions):
                 try:
                     with lock_and_manage_file(item):
-                        shutil.copy2(str(item). str(Path(REMOTE_RESULTS_DIR)))
+                        shutil.copy2(str(item). str(REMOTE_RESULTS_DIR))
                     logger.info(f"Copied results file: {item.name}")
                 except Exception as e:
                     logger.error(f"Failed to copy {item.name}: {e}")
     
+    # 3. Update manifest
     manifest_path = Path(DATA_DIR, METADATA_FILENAME)
     if manifest_path.exists():
         REMOTE_DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -123,6 +131,7 @@ def sync_processed_images():
             METADATA_FILENAME,
             indices_to_update,
             image_synced=True,
+            new_filepath=REMOTE_BACKUP_DIR.resolve().as_posix()
         )
 
 
@@ -170,6 +179,16 @@ def run_syncer():
     """Main loop for the syncer process."""
     logger.info("--- Starting Syncer Process ---")
     print("--- Starting Syncer Process ---")
+
+    if settings is None:
+        logger.info("Configuration error. Halting.")
+        sys.exit(1)
+    
+    if not ENABLE_SYNCER:
+        logger.info("Syncer not enabled...")
+        logger.info("--- Syncer Stopped ---")
+        print("--- Syncer Stopped ---")
+        sys.exit(0)
     
     current_state = SyncerState.IDLE
     global next_run_time  # Needs to be accessible across state calls

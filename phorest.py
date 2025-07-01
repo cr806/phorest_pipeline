@@ -23,7 +23,7 @@ MIN_WIDTH = 80
 # --- Script Categories ---
 foreground_scripts = [
     {"menu": "Check USB Storage", "script": "run_storage_check.py"},
-    {"menu": "Iniatialise Directories", "script": "run_create_directories.py"},
+    {"menu": "Initialise Directories", "script": "run_create_directories.py"},
     {"menu": "Find Thermocouple Serial Numbers", "script": "run_find_thermocouple_serials.py"},
     {"menu": "Find Camera Index", "script": "run_find_camera_index.py"},
     {"menu": "Locate Gratings in Image", "script": "prepare_files_for_image_analysis.py"},
@@ -36,6 +36,7 @@ background_scripts = [
     {"menu": "\t\t( Start Data Plotting Process )", "script": "run_communicator.py"},
     {"menu": "\t\t( Start Image Compression Process )", "script": "run_compressor.py"},
     {"menu": "\t\t( Start File Backup Process )", "script": "run_file_backup.py"},
+    {"menu": "\t\t( Start Sync to remote direcory Process )", "script": "run_syncer.py"},
     {"menu": "Start Continuous Image Capture", "script": "run_continuous_capture.py"},
 ]
 

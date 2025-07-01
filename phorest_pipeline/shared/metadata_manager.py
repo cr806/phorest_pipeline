@@ -198,9 +198,10 @@ def update_metadata_manifest_entry(
     processing_timestamp_iso: str | list[str] | None = None,
     processing_error: bool | list[bool] | None = None,
     processing_error_msg: str | list[str] | None = None,
-    compression_attempted: bool | None = None,
-    image_synced: bool | None = None,
-    new_filename: str | None = None,
+    compression_attempted: bool | list[str] | None = None,
+    image_synced: bool | list[str] | None = None,
+    new_filename: str | list[str] | None = None,
+    new_filepath: str | list[str] | None = None,
 ):
     """
     Updates status and results for one or more entries in the processing manifest.
@@ -247,15 +248,23 @@ def update_metadata_manifest_entry(
                     if current_err_msg is not None:
                         entry['processing_error_msg'] = current_err_msg
 
-                    if compression_attempted:
-                        entry['compression_attempted'] = compression_attempted
-                    
-                    if image_synced:
-                        entry['image_synced'] = image_synced
+                    current_compression = get_value_for_index(compression_attempted, i)
+                    if current_compression is not None:
+                        entry['compression_attempted'] = current_compression
 
-                    if new_filename:
+                    current_synced = get_value_for_index(image_synced, i)
+                    if current_synced is not None:
+                        entry['image_synced'] = current_synced
+                    
+                    current_filename = get_value_for_index(new_filename, i)
+                    if current_filename is not None:
                         if 'camera_data' in entry and entry['camera_data']:
-                            entry['camera_data']['filename'] = new_filename
+                            entry['camera_data']['filename'] = current_filename
+                    
+                    current_filepath = get_value_for_index(new_filepath, i)
+                    if current_filepath is not None:
+                        if 'camera_data' in entry and entry['camera_data']:
+                            entry['camera_data']['filepath'] = current_filepath
                 else:
                     logger.warning(
                         f'[METADATA] [UPDATE] Attempted to update non-existent manifest entry at index {index_to_update}. '

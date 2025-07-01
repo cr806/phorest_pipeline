@@ -101,7 +101,6 @@ try:
     COMPRESSOR_INTERVAL = settings.get("Timing", {}).get("compress_interval_seconds", 3600)
     POLL_INTERVAL = settings.get("Timing", {}).get("poll_interval_seconds", 2)
     RETRY_DELAY = settings.get("Timing", {}).get("collector_retry_delay_seconds", 2)
-    ENABLE_COMPRESSOR = settings.get("Timing", {}).get("enable_image_compression", False)
     FILE_BACKUP_INTERVAL = settings.get("Timing", {}).get("file_backup_interval_seconds", 3600)
     SYNC_INTERVAL = settings.get("Timing", {}).get("sync_interval_seconds", 3600)
 
@@ -115,6 +114,7 @@ try:
     ENABLE_CAMERA = settings.get("Services", {}).get("enable_camera", False)
     ENABLE_THERMOCOUPLE = settings.get("Services", {}).get("enable_thermocouple", False)
     ENABLE_BRIGHTFIELD = settings.get("Services", {}).get("enable_brightfield", False)
+    ENABLE_COMPRESSOR = settings.get("Services", {}).get("enable_image_compression", False)
     ENABLE_SYNCER = settings.get("Services", {}).get("enable_remote_sync", False)
 
     # --- Camera Settings ---

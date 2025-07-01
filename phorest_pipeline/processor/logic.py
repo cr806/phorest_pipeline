@@ -116,7 +116,8 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
                     logger.info(f"Found batch of {len(pending_batch)} entries to process. Marking as 'processing': {indices_to_mark}")
                     
                     update_metadata_manifest_entry(
-                        DATA_DIR, METADATA_FILENAME,
+                        DATA_DIR,
+                        METADATA_FILENAME,
                         entry_index=indices_to_mark,
                         status='processing',
                         processing_timestamp_iso=datetime.datetime.now().isoformat()
@@ -212,21 +213,21 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
 
                 # Prepare lists for the single manifest update call
                 if all_results_for_manifest_update:
-                    update_indices = [res['index'] for res in all_results_for_manifest_update]
-                    update_statuses = [res['status'] for res in all_results_for_manifest_update]
-                    update_error_msgs = [res['error_msg'] for res in all_results_for_manifest_update]
+                    indices_to_update = [res['index'] for res in all_results_for_manifest_update]
+                    updated_statues = [res['status'] for res in all_results_for_manifest_update]
+                    updated_error_msgs = [res['error_msg'] for res in all_results_for_manifest_update]
                     
                     try:
                         update_metadata_manifest_entry(
-                            data_dir=DATA_DIR,
-                            metadata_filename=METADATA_FILENAME,
-                            entry_index=update_indices,
-                            status=update_statuses,
+                            DATA_DIR,
+                            METADATA_FILENAME,
+                            indices_to_update,
+                            status=updated_statues,
                             processing_timestamp_iso=datetime.datetime.now().isoformat(), # Apply same timestamp to whole batch
-                            processing_error=[s == 'failed' for s in update_statuses],
-                            processing_error_msg=update_error_msgs,
+                            processing_error=[s == 'failed' for s in updated_statues],
+                            processing_error_msg=updated_error_msgs,
                         )
-                        logger.info(f"Successfully performed batch update on manifest for {len(update_indices)} entries.")
+                        logger.info(f"Successfully performed batch update on manifest for {len(indices_to_update)} entries.")
 
                         logger.info(f"Creating results ready flag: {RESULTS_READY_FLAG}")
                         try:
