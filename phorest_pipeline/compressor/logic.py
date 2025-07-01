@@ -8,6 +8,7 @@ from phorest_pipeline.shared.config import (
     COMPRESSOR_INTERVAL,
     DATA_DIR,
     ENABLE_COMPRESSOR,
+    METADATA_FILENAME,
     settings,
 )
 from phorest_pipeline.shared.logger_config import configure_logger
@@ -19,7 +20,6 @@ from phorest_pipeline.shared.states import CompressorState
 
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename="compressor.log")
 
-METADATA_FILENAME = Path("metadata_manifest.json")
 POLL_INTERVAL = COMPRESSOR_INTERVAL / 20 if COMPRESSOR_INTERVAL > (5 * 20) else 5
 
 

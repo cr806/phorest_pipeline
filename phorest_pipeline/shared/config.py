@@ -10,6 +10,8 @@ from phorest_pipeline.shared.cameras import (
 
 CONFIG_FILE = Path("configs", "Phorest_config.toml")
 
+METADATA_FILENAME = Path("metadata_manifest.json")
+RESULTS_FILENAME = Path("processing_results.json")
 
 def load_config():
     if not CONFIG_FILE.is_file():
@@ -71,6 +73,7 @@ try:
     RESULTS_READY_FLAG = get_flag_path(settings, "results_ready")
 
     # --- Paths ---
+    REMOTE_ROOT_DIR = get_path(settings, "Paths", "remote_root_dir", "remote")
     ROOT_DIR = get_path(settings, "Paths", "root_dir", ".")
     DATA_DIR = get_path(settings, "Paths", "data_dir", "data")
     CONTINUOUS_DIR = get_path(settings, "Paths", "continuous_capture_dir", "continuous_capture")
@@ -100,6 +103,7 @@ try:
     RETRY_DELAY = settings.get("Timing", {}).get("collector_retry_delay_seconds", 2)
     ENABLE_COMPRESSOR = settings.get("Timing", {}).get("enable_image_compression", False)
     FILE_BACKUP_INTERVAL = settings.get("Timing", {}).get("file_backup_interval_seconds", 3600)
+    SYNC_INTERVAL = settings.get("Timing", {}).get("sync_interval_seconds", 3600)
 
     # --- Retries ---
     FAILURE_LIMIT = settings.get("Retries", {}).get("collector_failure_limit", 5)
@@ -107,10 +111,11 @@ try:
     # --- Buffer ---
     IMAGE_BUFFER_SIZE = settings.get("Buffer", {}).get("image_buffer_size", 300)
 
-    # --- Component Availability ---
-    ENABLE_CAMERA = settings.get("Camera", {}).get("camera", False)
-    ENABLE_THERMOCOUPLE = settings.get("Temperature", {}).get("thermocouple", False)
-    ENABLE_BRIGHTFIELD = settings.get("Brightfield", {}).get("brightfield", False)
+    # --- Service Availability ---
+    ENABLE_CAMERA = settings.get("Services", {}).get("enable_camera", False)
+    ENABLE_THERMOCOUPLE = settings.get("Services", {}).get("enable_thermocouple", False)
+    ENABLE_BRIGHTFIELD = settings.get("Services", {}).get("enable_brightfield", False)
+    ENABLE_SYNCER = settings.get("Services", {}).get("enable_remote_sync", False)
 
     # --- Camera Settings ---
     camera_type_str = settings.get("Camera", {}).get("camera_type", "DUMMY")

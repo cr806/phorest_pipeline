@@ -149,6 +149,7 @@ def add_entry(
                 'processing_error': False,
                 'processing_error_msg': None,
                 'compression_attempted': False,
+                'image_synced': False,
             }
 
             metadata_list.append(new_manifest_entry)
@@ -197,7 +198,8 @@ def update_metadata_manifest_entry(
     processing_timestamp_iso: str | list[str] | None = None,
     processing_error: bool | list[bool] | None = None,
     processing_error_msg: str | list[str] | None = None,
-    compression_attempted: bool = False,
+    compression_attempted: bool | None = None,
+    image_synced: bool | None = None,
     new_filename: str | None = None,
 ):
     """
@@ -247,6 +249,9 @@ def update_metadata_manifest_entry(
 
                     if compression_attempted:
                         entry['compression_attempted'] = compression_attempted
+                    
+                    if image_synced:
+                        entry['image_synced'] = image_synced
 
                     if new_filename:
                         if 'camera_data' in entry and entry['camera_data']:

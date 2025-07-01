@@ -8,6 +8,7 @@ number_of_subROIs = 0                                     # Use 0 to indicate th
 
 # --- File Paths ---
 [Paths]
+remote_root_dir = "."                            # Remote root directory for the project (all files will be copied here if 'syncer' is ran)
 root_dir = "."                                   # Root directory for the project
 flag_dir = "flags"                               # Directory for flag files
 data_dir = "data"                                # Directory for raw data
@@ -31,6 +32,7 @@ enable_image_compression = false      # Enable or disable image compression
 compress_interval_seconds = 600       # How often to compress images
 log_file_interval_seconds = 43200     # How often to manage log files
 file_backup_interval_seconds = 120    # Interval for rename files task
+sync_interval_seconds = 3600          # Interval for syncing files with remote storage
 
 # --- Retry Mechanism Settings ---
 [Retries]
@@ -41,28 +43,28 @@ collector_retry_delay_seconds = 3   # Delay before retrying collector operations
 [Buffer]
 image_buffer_size = 25              # Maximum number of images to keep in the data directory
 
+[Services]
+enable_camera = true                 # Enable or disable camera usage
+enable_thermocouple = false          # Enable or disable thermocouple usage
+enable_brightfield = false           # Enable or disable brightfield mode
+enable_remote_sync = true            # Enable or disable the syncer service
 
 # --- Camera Settings ---
 [Camera]
-camera = true                       # Enable or disable camera usage
 camera_type = "hawkeye"             # Type of camera: "dummy", "argus", "tis", "logitech", "hawkeye"
 camera_id = 0                       # Camera device ID
-camera_exposure = 50              # Camera exposure setting
+camera_exposure = 50                # Camera exposure setting
 # camera_brightness = 60            # Example: alternate brightness setting
 # camera_contrast = 40              # Example: alternate contrast setting
 camera_transform = "NONE"           # Image transformation: "NONE", "ROTATE_90", "ROTATE_180", "ROTATE_270", "HORIZONTAL_FLIP", "VERTICAL_FLIP"
 
 # --- Temperature Sensor Settings ---
-[Temperature]
-thermocouple = false                 # Enable or disable thermocouple usage
-
 [Temperature.thermocouple_sensors]
 "28-00000ff8fa16" = "Sensor 1"
 "28-00000ff86450" = "Sensor 2"
 
 # --- Brightfield Settings ---
 [Brightfield]
-brightfield = false                 # Enable or disable brightfield mode
 # camera_exposure = 0.01            # Example: brightfield specific exposure
 # camera_gain = 1.0                 # Example: brightfield specific gain
 # camera_brightness = 0.5

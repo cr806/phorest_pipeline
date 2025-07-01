@@ -14,9 +14,10 @@ from phorest_pipeline.shared.config import (
     FAILURE_LIMIT,
     IMAGE_BUFFER_SIZE,
     RETRY_DELAY,
+    METADATA_FILENAME,
     settings,  # Import settings to check if config loaded ok
 )
-from phorest_pipeline.shared.helper_utils import move_existing_files_to_backup
+from phorest_pipeline.shared.helper_utils import move_existing_files_to_backup, ring_buffer_cleanup
 from phorest_pipeline.shared.logger_config import configure_logger
 from phorest_pipeline.shared.metadata_manager import add_entry
 from phorest_pipeline.shared.states import CollectorState
@@ -39,42 +40,7 @@ if ENABLE_CAMERA:
         from phorest_pipeline.collector.dummy_camera_controller import camera_controller
     logger.info(f'Camera type: {CAMERA_TYPE}')
 
-METADATA_FILENAME = Path("metadata_manifest.json")
 POLL_INTERVAL = COLLECTOR_INTERVAL / 5
-
-
-def ring_buffer_cleanup():
-    logger.info("Performing ring buffer cleanup...")
-    try:
-        # 1. Find relevant image files
-        image_files = list(DATA_DIR.glob("*.png"))
-        image_files.extend(DATA_DIR.glob("*.webp"))
-
-        # 2. Sort files by modification time (oldest first)
-        image_files.sort(key=lambda p: p.stat().st_mtime)
-
-        # 3. Check if buffer limit is exceeded
-        num_images = len(image_files)
-        logger.info(f"Found {num_images} images. Buffer limit: {IMAGE_BUFFER_SIZE}.")
-
-        if num_images > IMAGE_BUFFER_SIZE:
-            num_to_delete = num_images - IMAGE_BUFFER_SIZE
-            logger.info(f"Buffer limit exceeded. Deleting {num_to_delete} image(s)...")
-            files_to_delete = image_files[:num_to_delete]
-
-            # 4. Delete the oldest files
-            for file_to_delete in files_to_delete:
-                try:
-                    logger.info(f"Deleting: {file_to_delete.name}")
-                    file_to_delete.unlink()
-                except OSError as delete_err:
-                    logger.error(f"Failed to delete image {file_to_delete.name}: {delete_err}")
-        else:
-            logger.info("Image count within buffer limit.")
-
-    except Exception as buffer_err:
-        # Catch errors during file listing or sorting
-        logger.error(f"Error during ring buffer cleanup: {buffer_err}")
 
 
 def perform_collection(
@@ -201,7 +167,7 @@ def perform_collection(
 
             if current_collection_successful:
                 if IMAGE_BUFFER_SIZE > 0:
-                    ring_buffer_cleanup()
+                    ring_buffer_cleanup(logger=logger)
 
                 logger.info(f"Creating flag: {DATA_READY_FLAG}")
                 try:

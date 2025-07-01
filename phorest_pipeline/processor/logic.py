@@ -14,6 +14,8 @@ from phorest_pipeline.shared.config import (
     PROCESSOR_INTERVAL,
     RESULTS_DIR,
     RESULTS_READY_FLAG,
+    METADATA_FILENAME,
+    RESULTS_FILENAME,
     settings,  # Check if config loaded
 )
 from phorest_pipeline.shared.helper_utils import move_existing_files_to_backup
@@ -28,9 +30,6 @@ from phorest_pipeline.shared.metadata_manager import (
 from phorest_pipeline.shared.states import ProcessorState
 
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename="processor.log")
-
-METADATA_FILENAME = Path("metadata_manifest.json")
-RESULTS_FILENAME = Path("processing_results.json")
 
 POLL_INTERVAL = PROCESSOR_INTERVAL / 20 if PROCESSOR_INTERVAL > (5 * 20) else 5
 

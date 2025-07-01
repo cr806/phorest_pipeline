@@ -35,3 +35,9 @@ class BackupState(Enum):
     BACKUP_FILES = auto()
     CHECKING = auto()
     WAITING_TO_RUN = auto()
+
+
+class SyncerState(Enum):
+    IDLE = auto()
+    SYNCING_FILES = auto()
+    WAITING_TO_RUN = auto()
