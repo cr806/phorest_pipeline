@@ -232,29 +232,17 @@ def update_metadata_manifest_entry(
                 if 0 <= index_to_update < len(metadata_list):
                     entry = metadata_list[index_to_update]
 
-                    current_status = get_value_for_index(status, i)
-                    if current_status is not None:
-                        entry['processing_status'] = current_status
-                    
-                    current_ts = get_value_for_index(processing_timestamp_iso, i)
-                    if current_ts is not None:
-                        entry['processing_timestamp_iso'] = current_ts
-                
-                    current_err = get_value_for_index(processing_error, i)
-                    if current_err is not None:
-                        entry['processing_error'] = current_err
-
-                    current_err_msg = get_value_for_index(processing_error_msg, i)
-                    if current_err_msg is not None:
-                        entry['processing_error_msg'] = current_err_msg
-
-                    current_compression = get_value_for_index(compression_attempted, i)
-                    if current_compression is not None:
-                        entry['compression_attempted'] = current_compression
-
-                    current_synced = get_value_for_index(image_synced, i)
-                    if current_synced is not None:
-                        entry['image_synced'] = current_synced
+                    for key, value in {
+                        'processing_status': status,
+                        'processing_timestamp_iso': processing_timestamp_iso,
+                        'processing_error': processing_error,
+                        'processing_error_msg': processing_error_msg,
+                        'compression_attempted': compression_attempted,
+                        'image_synced': image_synced
+                    }.items():
+                        current_value = get_value_for_index(value, i)
+                        if current_value is not None:
+                            entry[key] = current_value
                     
                     current_filename = get_value_for_index(new_filename, i)
                     if current_filename is not None:
