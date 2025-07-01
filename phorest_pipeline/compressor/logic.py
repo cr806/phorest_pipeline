@@ -1,8 +1,8 @@
 # phorest_pipeline/compressor/logic.py
 import time
+import gzip
+import shutil
 from pathlib import Path
-
-import cv2
 
 from phorest_pipeline.shared.config import (
     COMPRESSOR_INTERVAL,
@@ -23,93 +23,25 @@ logger = configure_logger(name=__name__, rotate_daily=True, log_filename="compre
 POLL_INTERVAL = COMPRESSOR_INTERVAL / 20 if COMPRESSOR_INTERVAL > (5 * 20) else 5
 
 
-def find_entry_to_compress(metadata_list: list) -> tuple[int, dict | None]:
+def find_entries_to_compress(metadata_list: list) -> list[tuple[int, dict]]:
     """
-    Finds index/data of first entry that meets criteria:
-    - processed is True
-    - compression_attempted is False
-    - has camera_data that does not have a .png filename
+    Finds all entries that have been processed but not yet compressed.
+    This is universal for all image types but avoids re-compressing .gz files.
     """
+    entries_to_compress = []
     for index, entry in enumerate(metadata_list):
         camera_data = entry.get("camera_data")
-        # Check criteria: processed, has camera data, type is 'image', filename is not PNG or JPG
         if (
             entry.get("processing_status", 'pending') == "processed"
             and not entry.get("compression_attempted", False)
             and camera_data
-            and camera_data.get("type") == "image"  # Check type
-            and not (camera_data.get("filename", "").lower().endswith(".png") or camera_data.get("filename", "").lower().endswith(".jpg"))
-            and Path(camera_data.get("filepath"), camera_data.get("filename")).exists()
+            and camera_data.get("filename")
+            and not Path(camera_data["filename"]).suffix == '.gx'
         ):
-            return index, entry
-    return -1, None
-
-
-def compress_image() -> None:
-    manifest_data = load_metadata_with_lock(DATA_DIR, METADATA_FILENAME)
-    entry_index, entry_to_compress = find_entry_to_compress(manifest_data)
-
-    if not entry_to_compress:
-        logger.warning("Entry to compress disappeared. -> CHECKING")
-        next_state = CompressorState.CHECKING
-        return next_state
-
-    camera_data = entry_to_compress["camera_data"]
-    original_filename = Path(camera_data["filename"])
-    original_filepath = Path(camera_data["filepath"], original_filename)
-
-    # Generate new filename and path
-    webp_filename = original_filename.with_suffix(".webp")
-    webp_filepath = Path(camera_data["filepath"], webp_filename)
-
-    compression_error_msg = None
-
-    try:
-        if not original_filepath.exists():
-            raise FileNotFoundError(f"Original file {original_filepath} not found!")
-
-        logger.info(f"Loading image: {original_filepath}")
-        image_gray = cv2.imread(str(original_filepath), cv2.IMREAD_GRAYSCALE)
-
-        if image_gray is None:
-            raise ValueError(f"Failed to load image file (may be corrupt): {original_filepath}")
-
-        logger.info(f"Compressing to Lossless WebP: {webp_filepath}...")
-        # Quality 100 triggers lossless mode for cv2.imwrite with webp
-        write_params = [cv2.IMWRITE_WEBP_QUALITY, 100]
-        saved = cv2.imwrite(str(webp_filepath), image_gray, write_params)
-
-        if not saved:
-            raise OSError(f"cv2.imwrite failed to save Lossless WebP {webp_filepath}")
-
-        logger.info("Lossless WebP compression successful.")
-        # --- Update Manifest ---
-        logger.info(f"Updating manifest for entry index {entry_index}...")
-        update_metadata_manifest_entry(
-            DATA_DIR,
-            METADATA_FILENAME,
-            entry_index,
-            compression_attempted=True,
-            new_filename=webp_filename.name,
-        )
-
-        # --- Delete Original File ---
-        logger.info(f"Deleting original file: {original_filepath}")
-        try:
-            original_filepath.unlink()
-            logger.info("Original file deleted.")
-        except OSError as del_err:
-            # Log warning but continue, compression itself succeeded
-            logger.warning(
-                f"Failed to delete original file {original_filepath}: {del_err}. Manifest will still be updated."
-            )
-
-    except Exception as e:
-        logger.info(f"[ERROR] Compression failed for {original_filename}: {e}")
-        compression_error_msg = f"Compression failed: {e}"
-
-    status = "Success" if compression_error_msg is None else "FAILED"
-    logger.info(f"Updated manifest for entry index {entry_index}. Status: {status}")
+            filepath = Path(camera_data["filepath"], camera_data["filename"])
+            if filepath.exists():
+                entries_to_compress.append((index, entry))
+    return entries_to_compress
 
 
 def perform_compression_cycle(current_state: CompressorState) -> CompressorState:
@@ -131,12 +63,13 @@ def perform_compression_cycle(current_state: CompressorState) -> CompressorState
         case CompressorState.CHECKING:
             logger.info("--- Checking Manifest for Compression Work ---")
             manifest_data = load_metadata_with_lock(DATA_DIR, METADATA_FILENAME)
-            entry_index, entry_to_compress = find_entry_to_compress(manifest_data)
 
-            if entry_to_compress:
-                img_filename = entry_to_compress.get("camera_data", {"filename": None}).get("filename")
+            global entries_to_process # Store the batch
+            entries_to_process = find_entries_to_compress(manifest_data)
+
+            if entries_to_process:
                 logger.info(
-                    f"Found entry to compress at index {entry_index} (Image: {img_filename})"
+                    f"Found a batch of {len(entries_to_process)} files to compress."
                 )
                 next_state = CompressorState.COMPRESSING_IMAGES
             else:
@@ -145,11 +78,59 @@ def perform_compression_cycle(current_state: CompressorState) -> CompressorState
                 logger.info(f"Will wait for {COMPRESSOR_INTERVAL} seconds until next check...")
 
         case CompressorState.COMPRESSING_IMAGES:
-            logger.info("--- Starting Image Compression ---")
-            compress_image()
-            logger.info("COMPRESSING -> CHECKING (for more work)")
+            logger.info(f"--- Starting Image Compression for batch of {len(entries_to_process)} files ---")
+
+            updates_for_manifest = []
+            for entry_index, entry_data in entries_to_process:
+                try:
+                    camera_data = entry_data["camera_data"]
+                    original_filepath = Path(camera_data["filepath"], camera_data["filename"])
+
+                    gzipped_filename = original_filepath.name + '.gz'
+                    gzipped_filepath = original_filepath.with_name(gzipped_filename)
+
+                    logger.info(f"gzipping {original_filepath} to {gzipped_filepath}...")
+                    with original_filepath.open("rb") as f_in, gzip.open(gzipped_filepath, "wb") as f_out:
+                        shutil.copyfileobj(f_in, f_out)
+                    
+                    original_filepath.unlink()
+
+                    updates_for_manifest.append({
+                        "index": entry_index,
+                        "new_filename": gzipped_filename,
+                    })
+                    logger.info(f"Successfully gzipped {original_filepath.name}.")
+                except Exception as e:
+                    logger.error(f"Failed to gzip {original_filepath.name}.", exc_info=True)
+                    updates_for_manifest.append({
+                        "index": entry_index,
+                        "new_filename": None,
+                    })
+            
+            # Update manifest
+            if updates_for_manifest:
+                try:
+                    logger.info(f"Updating manifest for {len(updates_for_manifest)} entries...")
+                    indices = [item["index"] for item in updates_for_manifest]
+                    filenames = [item["new_filename"] for item in updates_for_manifest]
+
+                    update_metadata_manifest_entry(
+                        DATA_DIR,
+                        METADATA_FILENAME,
+                        entry_index=indices,
+                        compression_attempted=True,
+                        new_filename=filenames
+                    )
+                    logger.info("Batch manifest update successful.")
+                except Exception as e:
+                    logger.error(f"CRITICAL: Failed to update manifest after compression batch: {e}", exc_info=True)
+                    next_state = CompressorState.WAITING_TO_RUN
+                    return next_state
+            
+            logger.info("COMPRESSING_FILES -> CHECKING (for more work)")
             next_state = CompressorState.CHECKING
-            time.sleep(0.1)  # Small pause before checking again
+            time.sleep(0.1)
+
 
         case CompressorState.WAITING_TO_RUN:
             time.sleep(POLL_INTERVAL)
