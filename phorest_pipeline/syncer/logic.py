@@ -67,7 +67,7 @@ def sync_results_and_manifest():
             if item.is_file() and (item.suffix not in ignored_extensions):
                 try:
                     with lock_and_manage_file(item):
-                        shutil.copy2(str(item). str(REMOTE_RESULTS_DIR))
+                        shutil.copy2(str(item), str(REMOTE_RESULTS_DIR))
                     logger.info(f"Copied results file: {item.name}")
                 except Exception as e:
                     logger.error(f"Failed to copy {item.name}: {e}")
