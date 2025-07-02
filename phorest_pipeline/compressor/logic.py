@@ -36,7 +36,7 @@ def find_entries_to_compress(metadata_list: list) -> list[tuple[int, dict]]:
             and not entry.get("compression_attempted", False)
             and camera_data
             and camera_data.get("filename")
-            and not Path(camera_data["filename"]).suffix == '.gx'
+            and Path(camera_data["filename"]).suffix != '.gz'
         ):
             filepath = Path(camera_data["filepath"], camera_data["filename"])
             if filepath.exists():
