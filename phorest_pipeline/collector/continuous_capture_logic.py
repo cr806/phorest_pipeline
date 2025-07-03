@@ -33,7 +33,7 @@ if ENABLE_CAMERA:
     logger.info(f'Camera type: {CAMERA_TYPE}')
 
 SAVENAME = 'continuous_capture_frame.jpg'
-RESOLUTION = (640, 480)
+# RESOLUTION = (640, 480)
 
 
 def perform_continuous_capture(
@@ -68,7 +68,7 @@ def perform_continuous_capture(
 
             if ENABLE_CAMERA:
                 logger.info('Camera is enabled.')
-                cam_status, cam_msg, _ = camera_controller(CONTINUOUS_DIR, savename=filename, resolution=RESOLUTION)
+                cam_status, cam_msg, _ = camera_controller(CONTINUOUS_DIR, savename=filename)
                 if cam_status != 0:
                     collection_successful = False
                     logger.error(cam_msg)
