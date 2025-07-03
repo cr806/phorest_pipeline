@@ -53,16 +53,17 @@ def camera_controller(data_dir: Path, savename: Path = None, resolution: tuple =
         # --- Build rpicam-jpeg command ---
         rpicam_cmd = [
             'rpicam-jpeg',
-            '-c', str(CAMERA_INDEX),            # Camera 0-based ID (should be 0 for single camera)
-            '--output', str(temp_jpeg_path),    # Output path for the captured JPEG
-            '--width', str(RESOLTION[0]),      # Set image width
-            '--height', str(RESOLTION[1]),     # Set image height
-            '--shutter', str(CAMERA_EXPOSURE),  # Set manual exposure time in microseconds
-            '--gain', str(GAIN_VALUE),          # Set analog gain
+            '-c', str(CAMERA_INDEX),                # Camera 0-based ID (should be 0 for single camera)
+            '--output', str(temp_jpeg_path),        # Output path for the captured JPEG
+            '--nopreview',                          # Don't show preview on capture
+            '--width', str(RESOLTION[0]),           # Set image width
+            '--height', str(RESOLTION[1]),          # Set image height
+            '--shutter', str(CAMERA_EXPOSURE),      # Set manual exposure time in microseconds
+            '--gain', str(GAIN_VALUE),              # Set analog gain
             '--brightness', str(CAMERA_BRIGHTNESS), # Set brightness (-1.0 to 1.0)
-            '--timeout', '1000',                # Time to wait before capture (e.g., for auto-exposure to settle)
-            '--quality', '90',                  # JPEG compression quality (0-100)
-            '--info-text', '%md'               # Include metadata in stderr for diagnostics
+            '--timeout', '1000',                    # Time to wait before capture (e.g., for auto-exposure to settle)
+            '--quality', '90',                      # JPEG compression quality (0-100)
+            '--info-text', '%md'                    # Include metadata in stderr for diagnostics
         ]
 
         logger.info(f"Executing libcamera capture command: {' '.join(rpicam_cmd)}")
