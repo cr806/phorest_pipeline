@@ -92,7 +92,7 @@ generated_files/
 logs/
 results/
 backup/
-
+BIC*/
 test/
 
 # Ignore symlinks of data direcories too
