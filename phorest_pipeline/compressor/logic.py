@@ -2,6 +2,7 @@
 import time
 import gzip
 import shutil
+import sys
 from pathlib import Path
 
 from phorest_pipeline.shared.config import (
@@ -145,15 +146,20 @@ def run_compressor():
     """Main loop for the compressor process."""
     logger.info("--- Starting Compressor ---")
     print("--- Starting Compressor ---")
-    if not ENABLE_COMPRESSOR:
-        logger.info("Compressor is disabled in config. Exiting.")
-        return
+
+    if settings is None:
+        logger.info("Configuration error. Halting.")
+        sys.exit(1)
 
     current_state = CompressorState.IDLE
     global next_run_time  # Needs to be accessible across state calls
     next_run_time = 0
     try:
         while True:
+            if not ENABLE_COMPRESSOR:
+                logger.info("Compressor is disabled in config. Exiting.")
+                break
+
             current_state = perform_compression_cycle(current_state)
             if (
                 current_state == CompressorState.IDLE

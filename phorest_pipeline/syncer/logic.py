@@ -184,17 +184,15 @@ def run_syncer():
         logger.info("Configuration error. Halting.")
         sys.exit(1)
     
-    if not ENABLE_SYNCER:
-        logger.info("Syncer not enabled...")
-        logger.info("--- Syncer Stopped ---")
-        print("--- Syncer Stopped ---")
-        sys.exit(0)
-    
     current_state = SyncerState.IDLE
     global next_run_time  # Needs to be accessible across state calls
     next_run_time = 0
     try:
         while True:
+            if not ENABLE_SYNCER:
+                logger.info("Syncer is disabled in config. Exiting.")
+                break
+
             current_state = perform_sync_cycle(current_state)
             if current_state == SyncerState.IDLE:
                 time.sleep(0.1)  # Sleep to avoid busy waiting

@@ -7,7 +7,7 @@ import numpy as np
 import cv2
 
 from phorest_pipeline.shared.config import (
-    CAMERA_EXPOSURE,
+    CAMERA_GAIN,
     CAMERA_INDEX,
     CAMERA_TRANFORM,
 )
@@ -15,9 +15,8 @@ from phorest_pipeline.shared.logger_config import configure_logger
 
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename='camera.log')
 
-RESOLTION = (4000, 3000)
-GAIN_VALUE = 32
-CAMERA_BRIGHTNESS = 0 # Range: -1.0 (dark) to 1.0 (bright)
+RESOLTION = (9152, 6944)
+# CAMERA_BRIGHTNESS = 0 # Range: -1.0 (dark) to 1.0 (bright)
 
 
 def camera_controller(data_dir: Path, savename: Path = None, resolution: tuple = None) -> tuple[int, str, dict | None]:
@@ -58,9 +57,7 @@ def camera_controller(data_dir: Path, savename: Path = None, resolution: tuple =
             '--nopreview',                          # Don't show preview on capture
             '--width', str(RESOLTION[0]),           # Set image width
             '--height', str(RESOLTION[1]),          # Set image height
-            '--shutter', str(CAMERA_EXPOSURE),      # Set manual exposure time in microseconds
-            '--gain', str(GAIN_VALUE),              # Set analog gain
-            '--brightness', str(CAMERA_BRIGHTNESS), # Set brightness (-1.0 to 1.0)
+            '--gain', str(CAMERA_GAIN),             # Set analog gain
             '--timeout', '1000',                    # Time to wait before capture (e.g., for auto-exposure to settle)
             '--quality', '90',                      # JPEG compression quality (0-100)
             '--info-text', '%md'                    # Include metadata in stderr for diagnostics

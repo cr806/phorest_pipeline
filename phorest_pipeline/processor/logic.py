@@ -261,9 +261,10 @@ def run_processor():
 
     # Initial cleanup: remove data flag if it exists on startup
     if settings:
-        files_to_move = [Path(RESULTS_DIR, RESULTS_FILENAME)]
-        move_existing_files_to_backup(files_to_move, logger=logger)
-        logger.info("Moved existing files to backup directory.")
+        if Path(RESULTS_DIR, RESULTS_FILENAME).exists():
+            files_to_move = [Path(RESULTS_DIR, RESULTS_FILENAME)]
+            move_existing_files_to_backup(files_to_move, logger=logger)
+            logger.info("Moved existing files to backup directory.")
         try:
             DATA_READY_FLAG.unlink(missing_ok=True)
             logger.info(f"Ensured flag {DATA_READY_FLAG} is initially removed.")

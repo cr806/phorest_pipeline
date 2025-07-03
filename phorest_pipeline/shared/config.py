@@ -82,7 +82,6 @@ try:
     BACKUP_DIR = get_path(settings, "Paths", "backup_dir", "backup")
 
     DATA_DIR = Path(ROOT_DIR, DATA_DIR)
-    CONTINUOUS_DIR = Path(ROOT_DIR, CONTINUOUS_DIR)
     RESULTS_DIR = Path(ROOT_DIR, RESULTS_DIR)
     LOGS_DIR = Path(ROOT_DIR, LOGS_DIR)
     BACKUP_DIR = Path(ROOT_DIR, BACKUP_DIR)
@@ -114,6 +113,7 @@ try:
     ENABLE_CAMERA = settings.get("Services", {}).get("enable_camera", False)
     ENABLE_THERMOCOUPLE = settings.get("Services", {}).get("enable_thermocouple", False)
     ENABLE_BRIGHTFIELD = settings.get("Services", {}).get("enable_brightfield", False)
+    ENABLE_BACKUP = settings.get("Services", {}).get("enable_file_backup", False)
     ENABLE_COMPRESSOR = settings.get("Services", {}).get("enable_image_compression", False)
     ENABLE_SYNCER = settings.get("Services", {}).get("enable_remote_sync", False)
 
@@ -128,6 +128,7 @@ try:
         exit(1)
     CAMERA_INDEX = int(settings.get("Camera", {}).get("camera_id", 0))
     CAMERA_EXPOSURE = int(settings.get("Camera", {}).get("camera_exposure", 150))
+    CAMERA_GAIN = int(settings.get("Camera", {}).get("camera_gain", 32))
     CAMERA_BRIGHTNESS = int(settings.get("Camera", {}).get("camera_brightness", 128))
     CAMERA_CONTRAST = int(settings.get("Camera", {}).get("camera_contrast", 32))
 

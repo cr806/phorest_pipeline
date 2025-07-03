@@ -2,12 +2,14 @@
 import datetime
 import gzip
 import shutil
+import sys
 import time
 from pathlib import Path
 
 from phorest_pipeline.shared.config import (
     BACKUP_DIR,
     DATA_DIR,
+    ENABLE_BACKUP,
     FILE_BACKUP_INTERVAL,
     RESULTS_DIR,
     settings,
@@ -117,11 +119,19 @@ def run_file_backup():
     logger.info("--- Starting File Backup ---")
     print("--- Starting File Backup ---")
 
+    if settings is None:
+        logger.info("Configuration error. Halting.")
+        sys.exit(1)
+
     current_state = BackupState.IDLE
     global next_run_time  # Needs to be accessible across state calls
     next_run_time = 0
     try:
         while True:
+            if not ENABLE_BACKUP:
+                logger.info("File backup is disabled in config. Exiting.")
+                break
+
             current_state = perform_file_backup_cycle(current_state)
             if current_state == BackupState.IDLE or current_state == BackupState.CHECKING:
                 time.sleep(0.1)
