@@ -9,7 +9,7 @@ number_of_subROIs = 0                                     # Use 0 to indicate th
 # --- File Paths ---
 [Paths]
 remote_root_dir = "/mnt/storage/CHRIS/TEST"      # Remote root directory for the project (all files will be copied here if 'syncer' is ran)
-root_dir = "/mnt/data"                           # Root directory for the project
+root_dir = "."                                   # Root directory for the project
 flag_dir = "flags"                               # Directory for flag files
 data_dir = "data"                                # Directory for raw data
 results_dir = "results"                          # Directory for processed results
