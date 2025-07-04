@@ -7,7 +7,7 @@ import numpy as np
 from phorest_pipeline.shared.config import CAMERA_TRANFORM
 from phorest_pipeline.shared.logger_config import configure_logger
 
-logger = configure_logger(name=__name__, rotate_daily=True, log_filename='camera.log')
+logger = configure_logger(name=__name__, rotate_daily=True, log_filename='data_source.log')
 
 DUMMY_IMAGE_PATH = Path('phorest_pipeline/collector/dummy_image.tif')
 CAMERA_INDEX = 'DUMMY'
@@ -23,12 +23,12 @@ def camera_controller(data_dir: Path, savename: Path = None, resolution: tuple =
         message: Status message string.
         metadata_dict: Dictionary with capture details on success, None on failure.
     """
-    logger.info('--- Starting Dummy Camera Controller ---')
+    logger.info('[DUMMY CAMERA] --- Starting Dummy Camera Controller ---')
     filepath = None
     metadata_dict = None
 
     try:
-        logger.info('Loading image ...')
+        logger.info('[DUMMY CAMERA] Loading image ...')
         frame_raw = cv2.imread(DUMMY_IMAGE_PATH.as_posix(), cv2.IMREAD_UNCHANGED)
         capture_timestamp = datetime.datetime.now()
 
@@ -36,21 +36,21 @@ def camera_controller(data_dir: Path, savename: Path = None, resolution: tuple =
             return (1, '[CAMERA] [ERROR] Failed to load image.', None)
         else:
             original_dtype = str(frame_raw.dtype)
-            logger.info(f'Raw image loaded. Shape: {frame_raw.shape}, dtype: {original_dtype}')
+            logger.info(f'[DUMMY CAMERA] Raw image loaded. Shape: {frame_raw.shape}, dtype: {original_dtype}')
 
             # --- Convert to Grayscale (if needed) ---
             if (
                 len(frame_raw.shape) == 3 and frame_raw.shape[2] == 3
             ):  # Check if it's a 3-channel image (like BGR)
-                logger.info('Converting color image to grayscale...')
+                logger.info('[DUMMY CAMERA] Converting color image to grayscale...')
                 frame_gray_intermediate = cv2.cvtColor(frame_raw, cv2.COLOR_BGR2GRAY)
             elif len(frame_raw.shape) == 2:  # Already grayscale (or single channel)
-                logger.info('Image is already single channel (assuming grayscale).')
+                logger.info('[DUMMY CAMERA] Image is already single channel (assuming grayscale).')
                 frame_gray_intermediate = frame_raw
             else:
                 # Handle other unexpected formats (e.g., 4 channels, YUV) - basic approach:
                 logger.warning(
-                    f'Unexpected image shape {frame_raw.shape}. Attempting conversion assuming BGR source.'
+                    f'[DUMMY CAMERA] Unexpected image shape {frame_raw.shape}. Attempting conversion assuming BGR source.'
                 )
                 try:
                     frame_gray_intermediate = cv2.cvtColor(frame_raw, cv2.COLOR_BGR2GRAY)
@@ -60,13 +60,13 @@ def camera_controller(data_dir: Path, savename: Path = None, resolution: tuple =
 
             # --- Convert to 8-bit ---
             frame_gray_8bit = None
-            logger.info('Converting to 8-bit grayscale (target dtype: uint8)...')
+            logger.info('[DUMMY CAMERA] Converting to 8-bit grayscale (target dtype: uint8)...')
             if frame_gray_intermediate.dtype == np.uint8:
-                logger.info('Image is already 8-bit.')
+                logger.info('[DUMMY CAMERA] Image is already 8-bit.')
                 frame_gray_8bit = frame_gray_intermediate
             else:
                 source_dtype = frame_gray_intermediate.dtype
-                logger.info(f'Image is {source_dtype}, using cv2.normalize to scale to 8-bit...')
+                logger.info(f'[DUMMY CAMERA] Image is {source_dtype}, using cv2.normalize to scale to 8-bit...')
                 try:
                     frame_gray_8bit = cv2.normalize(
                         frame_gray_intermediate,
@@ -76,13 +76,13 @@ def camera_controller(data_dir: Path, savename: Path = None, resolution: tuple =
                         cv2.NORM_MINMAX,
                         dtype=cv2.CV_8U,
                     )
-                    logger.info('Normalization successful.')
+                    logger.info('[DUMMY CAMERA] Normalization successful.')
                 except cv2.error as norm_err:
-                    error_msg = f'[CAMERA] [ERROR] Failed to normalize image with dtype {source_dtype}: {norm_err}'
+                    error_msg = f'[DUMMY CAMERA]  [ERROR] Failed to normalize image with dtype {source_dtype}: {norm_err}'
                     return (1, error_msg, None)
             # --- End normalization ---
 
-            logger.info('Image loaded.')
+            logger.info('[DUMMY CAMERA] Image loaded.')
             logger.info(f'      Shape: {frame_gray_8bit.shape}')
             logger.info(f'      dtype: {frame_gray_8bit.dtype}')
             logger.info(f'      Min/Max value: {frame_gray_8bit.min()}/{frame_gray_8bit.max()}')
@@ -90,7 +90,7 @@ def camera_controller(data_dir: Path, savename: Path = None, resolution: tuple =
                 logger.warning('Loaded image all black (max pixel value is 0)!')
 
             # --- Apply Image Transform ---
-            logger.info(f'Applying image transform: {CAMERA_TRANFORM}...')
+            logger.info(f'[DUMMY CAMERA] Applying image transform: {CAMERA_TRANFORM}...')
             frame_gray_8bit = CAMERA_TRANFORM.apply_transform(frame_gray_8bit)
 
             # --- Save the 8-bit Grayscale Frame ---
@@ -103,11 +103,11 @@ def camera_controller(data_dir: Path, savename: Path = None, resolution: tuple =
             filepath = Path(data_dir, filename)
             filepath.parent.mkdir(parents=True, exist_ok=True)  # Ensure data_dir exists
 
-            logger.info(f'Saving image to {filepath} ...')
+            logger.info(f'[DUMMY CAMERA] Saving image to {filepath} ...')
             saved = cv2.imwrite(str(filepath), frame_gray_8bit)  # Use original BGR frame
 
             if saved:
-                logger.info('Image saved.')
+                logger.info('[DUMMY CAMERA] Image saved.')
                 metadata_dict = {
                     'type': 'image',
                     'filename': filename,
@@ -119,13 +119,13 @@ def camera_controller(data_dir: Path, savename: Path = None, resolution: tuple =
                 }
                 return (
                     0,
-                    f'[CAMERA] Image captured successfully and saved to {filename}.',
+                    f'[DUMMY CAMERA]  Image captured successfully and saved to {filename}.',
                     metadata_dict,
                 )
             else:
-                return (1, f'[CAMERA] [ERROR] Failed to save image to {filepath}.', None)
+                return (1, f'[DUMMY CAMERA]  [ERROR] Failed to save image to {filepath}.', None)
 
     except Exception as e:
-        return (1, f'[CAMERA] [ERROR] Unexpected error: {e}', None)
+        return (1, f'[DUMMY CAMERA]  [ERROR] Unexpected error: {e}', None)
     finally:
-        logger.info('--- Camera Controller Done ---')
+        logger.info('[DUMMY CAMERA] --- Camera Controller Done ---')
