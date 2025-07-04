@@ -1,25 +1,25 @@
 # phorest_pipeline/syncer/logic.py
-import time
 import shutil
 import sys
+import time
 from pathlib import Path
 
 from phorest_pipeline.shared.config import (
     BACKUP_DIR,
     DATA_DIR,
     ENABLE_SYNCER,
+    METADATA_FILENAME,
     REMOTE_ROOT_DIR,
     RESULTS_DIR,
     SYNC_INTERVAL,
-    METADATA_FILENAME,
     settings,
 )
+from phorest_pipeline.shared.logger_config import configure_logger
 from phorest_pipeline.shared.metadata_manager import (
-    lock_and_manage_file,
     load_metadata_with_lock,
+    lock_and_manage_file,
     update_metadata_manifest_entry,
 )
-from phorest_pipeline.shared.logger_config import configure_logger
 from phorest_pipeline.shared.states import SyncerState
 
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename="syncer.log")
@@ -38,7 +38,7 @@ def sync_archived_backups():
     logger.info("Syncing archived backups...")
     if not BACKUP_DIR.exists():
         return
-    
+
     REMOTE_BACKUP_DIR.mkdir(parents=True, exist_ok=True)
 
     for item in BACKUP_DIR.iterdir():
@@ -57,7 +57,7 @@ def sync_results_and_manifest():
     logger.info("Copying results and manifest to remote directory...")
 
     # 1. List of file extensions to ignore
-    ignored_extensions = ['.lock', '.tmp']
+    ignored_extensions = [".lock", ".tmp"]
 
     # 2. Sync the results directory
     if RESULTS_DIR.exists():
@@ -71,7 +71,7 @@ def sync_results_and_manifest():
                     logger.info(f"Copied results file: {item.name}")
                 except Exception as e:
                     logger.error(f"Failed to copy {item.name}: {e}")
-    
+
     # 3. Update manifest
     manifest_path = Path(DATA_DIR, METADATA_FILENAME)
     if manifest_path.exists():
@@ -104,7 +104,7 @@ def sync_processed_images():
             if filepath.exists():
                 images_to_move.append(filepath)
                 indices_to_update.append(index)
-    
+
     if not images_to_move:
         logger.info("No processed images to sync.")
         return
@@ -122,7 +122,7 @@ def sync_processed_images():
             # If moving failed DO NOT mark as synced
             failed_index = images_to_move.index(image_path)
             indices_to_update.pop(failed_index)
-    
+
     # 3. Update manifest
     if indices_to_update:
         logger.info(f"Updating manifest for {len(indices_to_update)} images.")
@@ -131,7 +131,7 @@ def sync_processed_images():
             METADATA_FILENAME,
             indices_to_update,
             image_synced=True,
-            new_filepath=REMOTE_BACKUP_DIR.resolve().as_posix()
+            new_filepath=REMOTE_BACKUP_DIR.resolve().as_posix(),
         )
 
 
@@ -151,7 +151,7 @@ def perform_sync_cycle(current_state: SyncerState) -> SyncerState:
             global next_run_time
             next_run_time = time.monotonic() + SYNC_INTERVAL
             logger.info(f"Will wait for {SYNC_INTERVAL} seconds until next cycle...")
-        
+
         case SyncerState.WAITING_TO_RUN:
             now = time.monotonic()
             if now >= next_run_time:
@@ -159,7 +159,7 @@ def perform_sync_cycle(current_state: SyncerState) -> SyncerState:
                 next_state = SyncerState.SYNCING_FILES
             else:
                 time.sleep(POLL_INTERVAL)
-        
+
         case SyncerState.SYNCING_FILES:
             logger.info("--- Starting Sync Cycle ---")
             try:
@@ -169,9 +169,9 @@ def perform_sync_cycle(current_state: SyncerState) -> SyncerState:
                 logger.info("--- Sync Cycle Finished ---")
             except Exception as e:
                 logger.error(f"Error during sync cycle: {e}")
-            
+
             next_state = SyncerState.IDLE
-    
+
     return next_state
 
 
@@ -183,7 +183,7 @@ def run_syncer():
     if settings is None:
         logger.info("Configuration error. Halting.")
         sys.exit(1)
-    
+
     current_state = SyncerState.IDLE
     global next_run_time  # Needs to be accessible across state calls
     next_run_time = 0

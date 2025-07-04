@@ -9,7 +9,7 @@ number_of_subROIs = 0                                     # Use 0 to indicate th
 # --- File Paths ---
 [Paths]
 remote_root_dir = "/mnt/storage/Lisa/GMR/Array/SpecialBox/Cuthbert/250703"      # Remote root directory for the project (all files will be copied here if 'syncer' is ran)
-root_dir = "/mnt/data"                                   # Root directory for the project
+root_dir = "/mnt/data"                           # Root directory for the project
 flag_dir = "flags"                               # Directory for flag files
 data_dir = "data"                                # Directory for raw data
 results_dir = "results"                          # Directory for processed results
@@ -25,13 +25,13 @@ results_ready = "results_ready.flag"  # Flag file indicating results are ready
 
 # --- Timing Intervals (in seconds) ---
 [Timing]
-collector_interval_seconds = 5       # Interval for data collection
-processor_interval_seconds = 7       # Interval for data processing
-communicator_interval_seconds = 7    # Interval for communication task
+collector_interval_seconds = 5         # Interval for data collection
+processor_interval_seconds = 7         # Interval for data processing
+communicator_interval_seconds = 7      # Interval for communication task
 compress_interval_seconds =  1800      # How often to compress images
 log_file_interval_seconds = 43200      # How often to manage log files
 file_backup_interval_seconds = 43200   # Interval for rename files task
-sync_interval_seconds = 8            # Interval for syncing files with remote storage
+sync_interval_seconds = 8              # Interval for syncing files with remote storage
 
 # --- Retry Mechanism Settings ---
 [Retries]

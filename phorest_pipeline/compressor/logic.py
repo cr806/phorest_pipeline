@@ -1,8 +1,8 @@
 # phorest_pipeline/compressor/logic.py
-import time
 import gzip
 import shutil
 import sys
+import time
 from pathlib import Path
 
 from phorest_pipeline.shared.config import (
@@ -33,11 +33,11 @@ def find_entries_to_compress(metadata_list: list) -> list[tuple[int, dict]]:
     for index, entry in enumerate(metadata_list):
         camera_data = entry.get("camera_data")
         if (
-            entry.get("processing_status", 'pending') == "processed"
+            entry.get("processing_status", "pending") == "processed"
             and not entry.get("compression_attempted", False)
             and camera_data
             and camera_data.get("filename")
-            and Path(camera_data["filename"]).suffix != '.gz'
+            and Path(camera_data["filename"]).suffix != ".gz"
         ):
             filepath = Path(camera_data["filepath"], camera_data["filename"])
             if filepath.exists():
@@ -65,13 +65,11 @@ def perform_compression_cycle(current_state: CompressorState) -> CompressorState
             logger.info("--- Checking Manifest for Compression Work ---")
             manifest_data = load_metadata_with_lock(DATA_DIR, METADATA_FILENAME)
 
-            global entries_to_process # Store the batch
+            global entries_to_process  # Store the batch
             entries_to_process = find_entries_to_compress(manifest_data)
 
             if entries_to_process:
-                logger.info(
-                    f"Found a batch of {len(entries_to_process)} files to compress."
-                )
+                logger.info(f"Found a batch of {len(entries_to_process)} files to compress.")
                 next_state = CompressorState.COMPRESSING_IMAGES
             else:
                 logger.info("No entries found requiring compression.")
@@ -79,7 +77,9 @@ def perform_compression_cycle(current_state: CompressorState) -> CompressorState
                 logger.info(f"Will wait for {COMPRESSOR_INTERVAL} seconds until next check...")
 
         case CompressorState.COMPRESSING_IMAGES:
-            logger.info(f"--- Starting Image Compression for batch of {len(entries_to_process)} files ---")
+            logger.info(
+                f"--- Starting Image Compression for batch of {len(entries_to_process)} files ---"
+            )
 
             updates_for_manifest = []
             for entry_index, entry_data in entries_to_process:
@@ -87,27 +87,34 @@ def perform_compression_cycle(current_state: CompressorState) -> CompressorState
                     camera_data = entry_data["camera_data"]
                     original_filepath = Path(camera_data["filepath"], camera_data["filename"])
 
-                    gzipped_filename = original_filepath.name + '.gz'
+                    gzipped_filename = original_filepath.name + ".gz"
                     gzipped_filepath = original_filepath.with_name(gzipped_filename)
 
                     logger.info(f"gzipping {original_filepath} to {gzipped_filepath}...")
-                    with original_filepath.open("rb") as f_in, gzip.open(gzipped_filepath, "wb") as f_out:
+                    with (
+                        original_filepath.open("rb") as f_in,
+                        gzip.open(gzipped_filepath, "wb") as f_out,
+                    ):
                         shutil.copyfileobj(f_in, f_out)
-                    
+
                     original_filepath.unlink()
 
-                    updates_for_manifest.append({
-                        "index": entry_index,
-                        "new_filename": gzipped_filename,
-                    })
+                    updates_for_manifest.append(
+                        {
+                            "index": entry_index,
+                            "new_filename": gzipped_filename,
+                        }
+                    )
                     logger.info(f"Successfully gzipped {original_filepath.name}.")
-                except Exception as e:
+                except Exception:
                     logger.error(f"Failed to gzip {original_filepath.name}.", exc_info=True)
-                    updates_for_manifest.append({
-                        "index": entry_index,
-                        "new_filename": None,
-                    })
-            
+                    updates_for_manifest.append(
+                        {
+                            "index": entry_index,
+                            "new_filename": None,
+                        }
+                    )
+
             # Update manifest
             if updates_for_manifest:
                 try:
@@ -120,18 +127,20 @@ def perform_compression_cycle(current_state: CompressorState) -> CompressorState
                         METADATA_FILENAME,
                         entry_index=indices,
                         compression_attempted=True,
-                        new_filename=filenames
+                        new_filename=filenames,
                     )
                     logger.info("Batch manifest update successful.")
                 except Exception as e:
-                    logger.error(f"CRITICAL: Failed to update manifest after compression batch: {e}", exc_info=True)
+                    logger.error(
+                        f"CRITICAL: Failed to update manifest after compression batch: {e}",
+                        exc_info=True,
+                    )
                     next_state = CompressorState.WAITING_TO_RUN
                     return next_state
-            
+
             logger.info("COMPRESSING_FILES -> CHECKING (for more work)")
             next_state = CompressorState.CHECKING
             time.sleep(0.1)
-
 
         case CompressorState.WAITING_TO_RUN:
             time.sleep(POLL_INTERVAL)

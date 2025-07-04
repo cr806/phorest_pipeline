@@ -5,8 +5,8 @@ from pathlib import Path
 from phorest_pipeline.shared.config import (
     BACKUP_DIR,
     DATA_DIR,
-    IMAGE_BUFFER_SIZE,
     ENABLE_SYNCER,
+    IMAGE_BUFFER_SIZE,
     METADATA_FILENAME,
 )
 from phorest_pipeline.shared.metadata_manager import load_metadata_with_lock, move_file_with_lock
@@ -19,7 +19,7 @@ def move_existing_files_to_backup(source_files: list, logger: logging.Logger) ->
     """
     if not source_files:
         return
-    
+
     destination_root = Path(BACKUP_DIR)
     logger.info(f"Moving existing files to '{destination_root}'...")
 
@@ -30,10 +30,14 @@ def move_existing_files_to_backup(source_files: list, logger: logging.Logger) ->
         if not source_file.exists() or source_file.is_dir():
             logger.info(f"Source '{source_file}' does not exist or is a directory. Skipping...")
             continue
-        
+
         try:
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            destination_file = Path(destination_root, source_file.parent.name, f"{source_file.stem}_{timestamp}{source_file.suffix}")
+            destination_file = Path(
+                destination_root,
+                source_file.parent.name,
+                f"{source_file.stem}_{timestamp}{source_file.suffix}",
+            )
 
             move_file_with_lock(source_file, destination_file)
             files_moved_count += 1
@@ -62,7 +66,7 @@ def ring_buffer_cleanup(logger: logging.Logger):
         image_files_on_disk.extend(list(DATA_DIR.glob("*.webp")))
         image_files_on_disk.extend(list(DATA_DIR.glob("*.tif")))
         image_files_on_disk.extend(list(DATA_DIR.glob("*.tiff")))
-        
+
         image_files_on_disk.sort(key=lambda p: p.stat().st_mtime)
 
         num_images = len(image_files_on_disk)
@@ -73,19 +77,20 @@ def ring_buffer_cleanup(logger: logging.Logger):
             return
 
         # 2. Determine which files are eligible for deletion
-        files_to_potentially_delete = image_files_on_disk[:num_images - IMAGE_BUFFER_SIZE]
-        
+        files_to_potentially_delete = image_files_on_disk[: num_images - IMAGE_BUFFER_SIZE]
+
         final_files_to_delete = []
 
         if ENABLE_SYNCER:
             # --- Sync-Aware Mode ---
             logger.info("Syncer is ENABLED. Checking sync status before deleting.")
             manifest_data = load_metadata_with_lock(DATA_DIR, METADATA_FILENAME)
-            
+
             # Create a lookup map for checking
             sync_status_map = {
                 entry.get("camera_data", {}).get("filename"): entry.get("image_synced", False)
-                for entry in manifest_data if entry.get("camera_data")
+                for entry in manifest_data
+                if entry.get("camera_data")
             }
 
             for file_path in files_to_potentially_delete:
@@ -113,4 +118,6 @@ def ring_buffer_cleanup(logger: logging.Logger):
                 logger.error(f"Failed to delete image {file_to_delete.name}: {delete_err}")
 
     except Exception as buffer_err:
-        logger.error(f"An unexpected error occurred during ring buffer cleanup: {buffer_err}", exc_info=True)
+        logger.error(
+            f"An unexpected error occurred during ring buffer cleanup: {buffer_err}", exc_info=True
+        )

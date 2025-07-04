@@ -14,8 +14,8 @@ from phorest_pipeline.shared.config import (
     RESULTS_DIR,
     settings,
 )
-from phorest_pipeline.shared.metadata_manager import move_file_with_lock
 from phorest_pipeline.shared.logger_config import configure_logger
+from phorest_pipeline.shared.metadata_manager import move_file_with_lock
 from phorest_pipeline.shared.states import BackupState
 
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename="file_backup.log")
@@ -41,12 +41,16 @@ def archive_live_files():
         try:
             # 1. Generate the timestamped backup file name
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            backup_filepath = Path(BACKUP_ROOT_PATH, original_filepath.parent.name, f"{original_filepath.stem}_{timestamp}{original_filepath.suffix}")         
-            
+            backup_filepath = Path(
+                BACKUP_ROOT_PATH,
+                original_filepath.parent.name,
+                f"{original_filepath.stem}_{timestamp}{original_filepath.suffix}",
+            )
+
             # 2. Move file
             move_file_with_lock(original_filepath.parent, original_filepath.name, backup_filepath)
         except Exception as e:
-            logger.error(f'Failed to archive {original_filepath}: {e}')
+            logger.error(f"Failed to archive {original_filepath}: {e}")
             continue
 
 
@@ -56,11 +60,15 @@ def compress_files_in_backup_dir():
     """
     logger.info("--- Compressing Backed-up Files ---")
     if not BACKUP_ROOT_PATH.exists():
-        logger.warning(f"Backup root directory '{BACKUP_ROOT_PATH}' not found. Nothing to compress.")
+        logger.warning(
+            f"Backup root directory '{BACKUP_ROOT_PATH}' not found. Nothing to compress."
+        )
         return
 
     # Find all files that don't end in .gz
-    files_to_compress = [p for p in BACKUP_ROOT_PATH.rglob('*') if p.is_file() and p.suffix != '.gz']
+    files_to_compress = [
+        p for p in BACKUP_ROOT_PATH.rglob("*") if p.is_file() and p.suffix != ".gz"
+    ]
 
     if not files_to_compress:
         logger.info("No new files to compress in backup directory.")

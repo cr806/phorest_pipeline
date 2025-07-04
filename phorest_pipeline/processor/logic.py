@@ -1,6 +1,5 @@
 # phorest_pipeline/processor/logic.py
 import datetime
-from email.mime import image
 import sys
 import time
 from pathlib import Path
@@ -11,11 +10,11 @@ from phorest_pipeline.shared.config import (
     DATA_READY_FLAG,
     ENABLE_CAMERA,
     ENABLE_THERMOCOUPLE,
+    METADATA_FILENAME,
     PROCESSOR_INTERVAL,
     RESULTS_DIR,
-    RESULTS_READY_FLAG,
-    METADATA_FILENAME,
     RESULTS_FILENAME,
+    RESULTS_READY_FLAG,
     settings,  # Check if config loaded
 )
 from phorest_pipeline.shared.helper_utils import move_existing_files_to_backup
@@ -201,7 +200,7 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
                         })
 
                 # 3. Collate results and perform a single batch update
-                logger.info(f"--- Collating results for batch update ---")
+                logger.info("--- Collating results for batch update ---")
 
                 # Append collated results to the results.json file
                 try:

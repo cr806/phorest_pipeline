@@ -1,10 +1,10 @@
 # src/process_pipeline/communicator/logic.py
-import time
 import sys
+import time
 from pathlib import Path
 
-import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import matplotlib.pyplot as plt
 import pandas as pd
 
 from phorest_pipeline.shared.config import (
@@ -17,7 +17,11 @@ from phorest_pipeline.shared.config import (
 )
 from phorest_pipeline.shared.helper_utils import move_existing_files_to_backup
 from phorest_pipeline.shared.logger_config import configure_logger
-from phorest_pipeline.shared.metadata_manager import load_metadata_with_lock, save_metadata_with_lock, lock_and_manage_file
+from phorest_pipeline.shared.metadata_manager import (
+    load_metadata_with_lock,
+    lock_and_manage_file,
+    save_metadata_with_lock,
+)
 from phorest_pipeline.shared.states import CommunicatorState
 
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename="comms.log")
@@ -63,7 +67,6 @@ def save_results_json_as_csv(processed_entries: list[dict], csv_path: Path) -> N
             logger.error(f"Failed to create/clear CSV at {csv_path}: {e}")
         return
 
-    
     headers = []
     records = []
     for entry in processed_entries:
@@ -83,12 +86,16 @@ def save_results_json_as_csv(processed_entries: list[dict], csv_path: Path) -> N
             if not headers:
                 try:
                     if len(entry["image_analysis"]) < 2:
-                        logger.warning("Expected at least two items in 'image_analysis'. Using first item.")
+                        logger.warning(
+                            "Expected at least two items in 'image_analysis'. Using first item."
+                        )
                         continue
                     target_dictionary = entry["image_analysis"][1]
                     headers = list(target_dictionary.keys())
                 except (IndexError, KeyError) as e:
-                    logger.error(f"Error accessing data: {e}: {processed_entries = } {target_dictionary = }")
+                    logger.error(
+                        f"Error accessing data: {e}: {processed_entries = } {target_dictionary = }"
+                    )
             # Iterate through each item in the "image_analysis" list
             for analysis_item in entry.get("image_analysis", []):
                 # We are interested in elements that have "ROI-label" as a key
@@ -128,7 +135,9 @@ def save_plot_of_results(csv_path: Path, image_path: Path) -> None:
     logger.info(f"Generating chart of results and saving to {image_path}")
 
     if not csv_path.exists() or csv_path.stat().st_size == 0:
-        logger.warning(f"CSV file for plotting not found or is empty at {csv_path}. Skipping plot generation.")
+        logger.warning(
+            f"CSV file for plotting not found or is empty at {csv_path}. Skipping plot generation."
+        )
         # Ensure previous plot is cleared or not generated
         if image_path.exists():
             try:
@@ -137,7 +146,7 @@ def save_plot_of_results(csv_path: Path, image_path: Path) -> None:
             except OSError as e:
                 logger.error(f"Failed to remove old plot image {image_path.name}: {e}")
         return
-    
+
     # Load the CSV data for plotting
     data = pd.read_csv(csv_path)
 
@@ -157,9 +166,9 @@ def save_plot_of_results(csv_path: Path, image_path: Path) -> None:
     fig, ax = plt.subplots(2, 1, figsize=(14, 8), sharex=True)
 
     # Format x-axis as time
-    formatter = mdates.DateFormatter('%H:%M:%S')
+    formatter = mdates.DateFormatter("%H:%M:%S")
     ax[1].xaxis.set_major_formatter(formatter)
-    plt.setp(ax[1].xaxis.get_majorticklabels(), rotation=45, ha="right") # Rotate for readability
+    plt.setp(ax[1].xaxis.get_majorticklabels(), rotation=45, ha="right")  # Rotate for readability
 
     if ENABLE_CAMERA:
         if "Analysis-method" in data.columns and not data["Analysis-method"].empty:
@@ -190,13 +199,14 @@ def save_plot_of_results(csv_path: Path, image_path: Path) -> None:
                             label=ROI,
                         )
             else:
-                logger.warning(f"Column to plot '{plot_col_name}' not found for analysis method '{analysis_method}'. Skipping camera plot.")
+                logger.warning(
+                    f"Column to plot '{plot_col_name}' not found for analysis method '{analysis_method}'. Skipping camera plot."
+                )
         else:
             logger.warning("No 'Analysis-method' column found in data. Skipping camera plot.")
     else:
         logger.info("Camera not enabled. Skipping image analysis plot.")
 
-    
     if ENABLE_THERMOCOUPLE:
         temp_sensors_to_plot = [t for t in data.columns if "temperature" in t]
         if temp_sensors_to_plot:
@@ -206,10 +216,12 @@ def save_plot_of_results(csv_path: Path, image_path: Path) -> None:
                         # list(range(temp_df["timestamp"].size)),
                         temp_df["timestamp"],
                         temp_df[temp_sensor],
-                        label=temp_sensor
+                        label=temp_sensor,
                     )
                 else:
-                    logger.warning(f"Temperature sensor '{temp_sensor}' not found in data. Skipping plot for this sensor.")
+                    logger.warning(
+                        f"Temperature sensor '{temp_sensor}' not found in data. Skipping plot for this sensor."
+                    )
             ax[1].legend(loc="upper left")
         else:
             logger.warning("No temperature sensors found in data. Skipping temperature plot.")
@@ -239,7 +251,7 @@ def communicate_results(processed_entries: list[dict], results_data: list[dict])
     if not processed_entries:
         logger.info("No processed entries to communicate. Skipping CSV/plot generation.")
         return
-    
+
     csv_path = Path(RESULTS_DIR, CSV_FILENAME)
     image_path = Path(RESULTS_DIR, RESULTS_IMAGE)
 
@@ -254,7 +266,7 @@ def communicate_results(processed_entries: list[dict], results_data: list[dict])
     # Need to load the manifest again under lock *just* before modifying and saving
     # to ensure we have the most up-to-date version and don't overwrite changes
     # from the processor that might have occurred between the initial load and now.
-    
+
     logger.info("Attempting to update processing_results.json to mark entries as transmitted.")
     try:
         indices_to_mark_transmitted = find_not_transmitted_entries_indices(results_data)
@@ -267,14 +279,21 @@ def communicate_results(processed_entries: list[dict], results_data: list[dict])
             if 0 <= idx_in_original_list < len(current_results_data_for_update):
                 current_results_data_for_update[idx_in_original_list]["data_transmitted"] = True
             else:
-                logger.warning(f"Attempted to mark non-existent entry at index {idx_in_original_list} as transmitted. Data inconsistency?")
-                
+                logger.warning(
+                    f"Attempted to mark non-existent entry at index {idx_in_original_list} as transmitted. Data inconsistency?"
+                )
+
         # Save the entire updated manifest back under lock
         save_metadata_with_lock(RESULTS_DIR, RESULTS_FILENAME, current_results_data_for_update)
-        logger.info("Successfully marked processed entries as transmitted in processing_results.json.")
-        
+        logger.info(
+            "Successfully marked processed entries as transmitted in processing_results.json."
+        )
+
     except Exception as e:
-        logger.error(f"CRITICAL ERROR: Failed to update processing_results.json to mark transmitted entries: {e}", exc_info=True)
+        logger.error(
+            f"CRITICAL ERROR: Failed to update processing_results.json to mark transmitted entries: {e}",
+            exc_info=True,
+        )
         # TODO: This is a critical failure. The system will retry but these entries won't be marked.
         #       Consider a FATAL_ERROR state for the communicator if this persists.
 
@@ -335,13 +354,13 @@ def perform_communication(current_state: CommunicatorState) -> CommunicatorState
             except Exception as e:
                 logger.error(f"Error during COMMUNICATING state: {e}", exc_info=True)
                 # If loading fails, or any part of communication, retry after a delay
-                next_state = CommunicatorState.COMMUNICATING # Stay in COMMUNICATING to retry
+                next_state = CommunicatorState.COMMUNICATING  # Stay in COMMUNICATING to retry
                 time.sleep(POLL_INTERVAL * 5)
-        
+
         case CommunicatorState.FATAL_ERROR:
             logger.error("[FATAL ERROR] Shutting down communicator.")
-            time.sleep(10) # Prevent busy-looping in fatal state
-    
+            time.sleep(10)  # Prevent busy-looping in fatal state
+
     return next_state
 
 
@@ -387,6 +406,6 @@ def run_communicator():
         logger.info("--- Communicator Stopped ---")
         print("--- Communicator Stopped ---")
         if current_state == CommunicatorState.FATAL_ERROR:
-            sys.exit(1) # Exit with error code if fatal
+            sys.exit(1)  # Exit with error code if fatal
         else:
-            sys.exit(0) # Exit cleanly
+            sys.exit(0)  # Exit cleanly
