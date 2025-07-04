@@ -14,6 +14,9 @@ CONFIG_FILE = Path("configs", "Phorest_config.toml")
 METADATA_FILENAME = Path("metadata_manifest.json")
 RESULTS_FILENAME = Path("processing_results.json")
 
+CSV_FILENAME = Path("communicating_results.csv")
+IMAGE_FILENAME = Path("processed_data_plot.png")
+
 def load_config():
     if not CONFIG_FILE.is_file():
         raise FileNotFoundError(f"Configuration file not found: {CONFIG_FILE}")

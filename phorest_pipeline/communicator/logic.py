@@ -3,14 +3,15 @@ import sys
 import time
 from pathlib import Path
 
+from phorest_pipeline.shared.communication_methods import CommunicationMethod
 from phorest_pipeline.shared.config import (
-    COMMUNICATOR_INTERVAL,
     COMMUNICATION_METHOD,
-    ENABLE_CAMERA,
-    ENABLE_THERMOCOUPLE,
+    COMMUNICATOR_INTERVAL,
+    CSV_FILENAME,
+    IMAGE_FILENAME,
     RESULTS_DIR,
-    RESULTS_READY_FLAG,
     RESULTS_FILENAME,
+    RESULTS_READY_FLAG,
     settings,
 )
 from phorest_pipeline.shared.helper_utils import move_existing_files_to_backup
@@ -21,9 +22,18 @@ from phorest_pipeline.shared.metadata_manager import (
 )
 from phorest_pipeline.shared.states import CommunicatorState
 
+from .outputs.csv_plot_handler import generate_report
+
+# from .outputs.opc_ua_handler import send_data
+
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename="comms.log")
 
 POLL_INTERVAL = COMMUNICATOR_INTERVAL / 20 if COMMUNICATOR_INTERVAL > (5 * 20) else 5
+
+COMMUNICATION_DISPATCH_MAP = {
+    CommunicationMethod.CVS_PLOT: generate_report,
+    # CommunicationMethod.OPC_UA: send_data,
+}
 
 
 # Helper Function: Find all processed entries
@@ -94,14 +104,21 @@ def perform_communication(current_state: CommunicatorState) -> CommunicatorState
             try:
                 results_data = load_metadata_with_lock(RESULTS_DIR, RESULTS_FILENAME)
                 entries_to_process = find_processed_entries(results_data)
-                
+
                 if not entries_to_process:
                     logger.info("No new entries to communicate.")
                     return CommunicatorState.IDLE
                 logger.info(f"Found {len(entries_to_process)} processed entries to communicate.")
 
-                if COMMUNICATION_METHOD:
-                    pass
+                handler_function = COMMUNICATION_DISPATCH_MAP.get(COMMUNICATION_METHOD)
+                if handler_function:
+                    logger.info(f"Using {COMMUNICATION_METHOD.name} communication handler.")
+                    communication_successful = handler_function(entries_to_process)
+                else:
+                    logger.error(
+                        f"Handler for communication method '{COMMUNICATION_METHOD.name}' not found or not implemented."
+                    )
+                    communication_successful = False
 
                 if communication_successful:
                     logger.info("Communication successful. Marking entries as transmitted.")
@@ -109,6 +126,10 @@ def perform_communication(current_state: CommunicatorState) -> CommunicatorState
                     for index in indices_to_mark:
                         if 0 <= index < len(results_data):
                             results_data[index]["data_transmitted"] = True
+                        else:
+                            logger.warning(
+                                f"Attempted to mark non-existent entry at index {index} as transmitted. Data inconsistency?"
+                            )
                     save_metadata_with_lock(RESULTS_DIR, RESULTS_FILENAME, results_data)
                 else:
                     logger.error("Communication method failed.  Will retry later.")
@@ -138,7 +159,7 @@ def run_communicator():
 
     # Initial cleanup: remove results flag if it exists on startup
     if settings:
-        files_to_move = [Path(RESULTS_DIR, CSV_FILENAME), Path(RESULTS_DIR, RESULTS_IMAGE)]
+        files_to_move = [Path(RESULTS_DIR, CSV_FILENAME), Path(RESULTS_DIR, IMAGE_FILENAME)]
         move_existing_files_to_backup(files_to_move, logger=logger)
         logger.info("Moved existing files to backup directory.")
         try:

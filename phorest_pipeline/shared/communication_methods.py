@@ -1,4 +1,4 @@
-# src/process_pipeline/shared/cameras.py
+# src/process_pipeline/shared/communication_methods.py
 from enum import Enum, auto
 
 
