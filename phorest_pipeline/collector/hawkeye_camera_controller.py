@@ -10,6 +10,8 @@ from phorest_pipeline.shared.config import (
     CAMERA_GAIN,
     CAMERA_INDEX,
     CAMERA_TRANFORM,
+    CAMERA_BRIGHTNESS,
+    CAMERA_CONTRAST,
 )
 from phorest_pipeline.shared.logger_config import configure_logger
 
@@ -58,6 +60,9 @@ def camera_controller(data_dir: Path, savename: Path = None, resolution: tuple =
             '--width', str(RESOLTION[0]),           # Set image width
             '--height', str(RESOLTION[1]),          # Set image height
             '--gain', str(CAMERA_GAIN),             # Set analog gain
+            '--brightness', str(CAMERA_BRIGHTNESS), # Set brightness
+            '--contrast', str(CAMERA_CONTRAST),     # Set contrast
+            '--vflip',                              # In camera vertical flip
             '--timeout', '1000',                    # Time to wait before capture (e.g., for auto-exposure to settle)
             '--quality', '90',                      # JPEG compression quality (0-100)
             '--info-text', '%md'                    # Include metadata in stderr for diagnostics
