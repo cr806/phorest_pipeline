@@ -12,6 +12,7 @@ from phorest_pipeline.shared.config import (
     CAMERA_TRANFORM,
     CAMERA_BRIGHTNESS,
     CAMERA_CONTRAST,
+    CAMERA_EXPOSURE,
 )
 from phorest_pipeline.shared.logger_config import configure_logger
 
@@ -62,10 +63,11 @@ def camera_controller(data_dir: Path, savename: Path = None, resolution: tuple =
             '--gain', str(CAMERA_GAIN),             # Set analog gain
             '--brightness', str(CAMERA_BRIGHTNESS), # Set brightness
             '--contrast', str(CAMERA_CONTRAST),     # Set contrast
-            '--vflip',                              # In camera vertical flip
-            '--timeout', '1000',                    # Time to wait before capture (e.g., for auto-exposure to settle)
-            '--quality', '90',                      # JPEG compression quality (0-100)
-            '--info-text', '%md'                    # Include metadata in stderr for diagnostics
+            '--shutter', str(CAMERA_EXPOSURE * 1_000_000),   # Set exposure time (microseconds)
+            '--vflip',                                       # In camera vertical flip
+            '--timeout', '100',                              # Time to wait before capture (e.g., for auto-exposure to settle)
+            '--quality', '93',                               # JPEG compression quality (0-100)
+            '--info-text', '%md'                             # Include metadata in stderr for diagnostics
         ]
 
         logger.info(f"Executing libcamera capture command: {' '.join(rpicam_cmd)}")
