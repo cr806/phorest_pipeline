@@ -233,7 +233,8 @@ def save_plot_of_results(csv_path: Path, image_path: Path) -> None:
     ax[1].set_xlabel("Time")
 
 
-    ax[0].legend(loc="upper left", ncols=5)
+    if len(ROIs_to_plot) < 50:
+        ax[0].legend(loc="upper left", ncols=5)
 
     fig.tight_layout()
     try:
