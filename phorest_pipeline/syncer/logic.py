@@ -131,7 +131,7 @@ def sync_processed_images():
             METADATA_FILENAME,
             indices_to_update,
             image_synced=True,
-            new_filepath=REMOTE_BACKUP_DIR.resolve().as_posix(),
+            new_filepath=REMOTE_DATA_DIR.resolve().as_posix(),
         )
 
 
