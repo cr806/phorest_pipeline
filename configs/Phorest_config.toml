@@ -8,7 +8,7 @@ number_of_subROIs = 0                                     # Use 0 to indicate th
 
 # --- File Paths ---
 [Paths]
-remote_root_dir = "/mnt/storage/Lisa/GMR/Array/SpecialBox/Cuthbert/250708"      # Remote root directory for the project (all files will be copied here if 'syncer' is ran)
+remote_root_dir = "/mnt/storage/Lisa/GMR/Array/SpecialBox/Cuthbert/250709"      # Remote root directory for the project (all files will be copied here if 'syncer' is ran)
 root_dir = "/mnt/data"                           # Root directory for the project
 flag_dir = "flags"                               # Directory for flag files
 data_dir = "data"                                # Directory for raw data
@@ -56,7 +56,7 @@ camera_type = "hawkeye"               # Type of camera: "dummy", "argus", "tis",
 camera_id = 0                         # Camera device ID
 camera_exposure = 5                   # Camera exposure setting
 camera_gain = 0                       # Camera gain setting
-camera_brightness = 0                 # Example: alternate brightness setting
+camera_brightness = -0.3                 # Example: alternate brightness setting
 camera_contrast = 3                   # Example: alternate contrast setting
 camera_transform = "NONE"             # Image transformation: "NONE", "ROTATE_90", "ROTATE_180", "ROTATE_270", "HORIZONTAL_FLIP", "VERTICAL_FLIP"
 
