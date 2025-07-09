@@ -61,6 +61,42 @@ def find_all_unprocessed_entries(metadata_list: list) -> list[tuple[int, dict]]:
     return entries_to_process
 
 
+def save_results_out(all_results_for_append, all_results_for_manifest_update):
+    # Append collated results to the results.json file
+    try:
+        if all_results_for_append:
+            append_metadata(RESULTS_DIR, RESULTS_FILENAME, all_results_for_append)
+    except Exception as e:
+        logger.error(f"Error appending to results file: {e}", exc_info=True)
+
+
+    # Prepare lists for the single manifest update call
+    if all_results_for_manifest_update:
+        indices_to_update = [res['index'] for res in all_results_for_manifest_update]
+        updated_statues = [res['status'] for res in all_results_for_manifest_update]
+        updated_error_msgs = [res['error_msg'] for res in all_results_for_manifest_update]
+        
+        try:
+            update_metadata_manifest_entry(
+                DATA_DIR,
+                METADATA_FILENAME,
+                indices_to_update,
+                status=updated_statues,
+                processing_timestamp_iso=datetime.datetime.now().isoformat(), # Apply same timestamp to whole batch
+                processing_error=[s == 'failed' for s in updated_statues],
+                processing_error_msg=updated_error_msgs,
+            )
+            logger.info(f"Successfully performed batch update on manifest for {len(indices_to_update)} entries.")
+
+            logger.info(f"Creating results ready flag: {RESULTS_READY_FLAG}")
+            try:
+                RESULTS_READY_FLAG.touch()
+            except OSError as e:
+                logger.error(f"Could not create results ready flag {RESULTS_READY_FLAG}: {e}")
+
+        except Exception as e:
+            logger.error(f"Critical error during final batch update of manifest: {e}", exc_info=True)
+
 # Main State Machine Logic
 def perform_processing(current_state: ProcessorState) -> ProcessorState:
     """State machine logic for the processor."""
@@ -145,7 +181,7 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
                 all_results_for_manifest_update = []
                 all_results_for_append = []
 
-                for entry_index, entry_data in pending_batch:
+                for idx, (entry_index, entry_data) in enumerate(pending_batch):
                     logger.info(f"Processing entry {entry_index} (Image: {entry_data.get('camera_data', {}).get('filename')})...")
                     image_results, img_proc_error_msg, processing_successful = None, None, False
 
@@ -190,6 +226,12 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
                             'error_msg': img_proc_error_msg,
                         })
 
+                        if idx % 10 == 0:
+                            logger.info("--- Batch greater than 10, saving 10 results now ---")
+                            save_results_out(all_results_for_append, all_results_for_manifest_update)
+                            all_results_for_manifest_update = []
+                            all_results_for_append = []
+
                     except Exception as e:
                         logger.error(f"Critical error during image processing for entry {entry_index}: {e}", exc_info=True)
                         # Log failure for this specific entry and continue with the batch
@@ -201,41 +243,7 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
 
                 # 3. Collate results and perform a single batch update
                 logger.info("--- Collating results for batch update ---")
-
-                # Append collated results to the results.json file
-                try:
-                    if all_results_for_append:
-                        append_metadata(RESULTS_DIR, RESULTS_FILENAME, all_results_for_append)
-                except Exception as e:
-                    logger.error(f"Error appending to results file: {e}", exc_info=True)
-
-
-                # Prepare lists for the single manifest update call
-                if all_results_for_manifest_update:
-                    indices_to_update = [res['index'] for res in all_results_for_manifest_update]
-                    updated_statues = [res['status'] for res in all_results_for_manifest_update]
-                    updated_error_msgs = [res['error_msg'] for res in all_results_for_manifest_update]
-                    
-                    try:
-                        update_metadata_manifest_entry(
-                            DATA_DIR,
-                            METADATA_FILENAME,
-                            indices_to_update,
-                            status=updated_statues,
-                            processing_timestamp_iso=datetime.datetime.now().isoformat(), # Apply same timestamp to whole batch
-                            processing_error=[s == 'failed' for s in updated_statues],
-                            processing_error_msg=updated_error_msgs,
-                        )
-                        logger.info(f"Successfully performed batch update on manifest for {len(indices_to_update)} entries.")
-
-                        logger.info(f"Creating results ready flag: {RESULTS_READY_FLAG}")
-                        try:
-                            RESULTS_READY_FLAG.touch()
-                        except OSError as e:
-                            logger.error(f"Could not create results ready flag {RESULTS_READY_FLAG}: {e}")
-
-                    except Exception as e:
-                        logger.error(f"Critical error during final batch update of manifest: {e}", exc_info=True)
+                save_results_out(all_results_for_append, all_results_for_manifest_update)
 
             # Loop back immediately to check for more data
             next_state = ProcessorState.PROCESSING
