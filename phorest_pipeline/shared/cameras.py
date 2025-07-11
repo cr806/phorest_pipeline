@@ -10,6 +10,7 @@ class CameraType(Enum):
     TIS = auto()
     HAWKEYE = auto()
     DUMMY = auto()
+    IMAGE_FILE_IMPORTER = auto()
 
 
 class CameraTransform(Enum):

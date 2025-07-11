@@ -42,6 +42,7 @@ collector_retry_delay_seconds = 3   # Delay before retrying collector operations
 [Buffer]
 image_buffer_size = 1000             # Maximum number of images to keep in the data directory
 
+# --- Service flags ---
 [Services]
 enable_camera = true                 # Enable or disable camera usage
 enable_thermocouple = false          # Enable or disable thermocouple usage
@@ -50,9 +51,13 @@ enable_file_backup = false           # Enable or disable the file backup service
 enable_remote_sync = true            # Enable or disable the syncer service
 enable_image_compression = false     # Enable or disable image compression
 
+# --- Communication Settings ---
+[Communication]
+method = "CSV_PLOT"                  # Methods of communication: "CSV_PLOT", "OPC_UA"
+
 # --- Camera Settings ---
 [Camera]
-camera_type = "hawkeye"               # Type of camera: "dummy", "argus", "tis", "logitech", "hawkeye"
+camera_type = "hawkeye"               # Type of camera: "dummy", "argus", "tis", "logitech", "hawkeye", "image_file_importer"
 camera_id = 0                         # Camera device ID
 camera_exposure = 5                   # Camera exposure setting
 camera_gain = 0                       # Camera gain setting

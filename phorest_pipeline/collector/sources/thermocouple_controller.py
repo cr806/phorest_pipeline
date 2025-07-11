@@ -8,7 +8,7 @@ from phorest_pipeline.shared.config import (
 )
 from phorest_pipeline.shared.logger_config import configure_logger
 
-logger = configure_logger(name=__name__, rotate_daily=True, log_filename='collector.log')
+logger = configure_logger(name=__name__, rotate_daily=True, log_filename='data_source.log')
 
 DEVICE_LOC = Path('/sys/bus/w1/devices/')
 
@@ -23,10 +23,10 @@ def start_w1():
 def check_device_connection(device_dict) -> bool:
     for sensor_id in device_dict:
         if not Path(DEVICE_LOC, sensor_id).exists():
-            logger.error(f'Device {sensor_id} not found at {DEVICE_LOC}.')
+            logger.error(f'[THERMOCOUPLE] Device {sensor_id} not found at {DEVICE_LOC}.')
             return False
         else:
-            logger.info(f'Device {sensor_id} found at {DEVICE_LOC}.')
+            logger.info(f'[THERMOCOUPLE] Device {sensor_id} found at {DEVICE_LOC}.')
     return True
 
 
@@ -59,15 +59,15 @@ def thermocouple_controller() -> tuple[int, str, dict | None]:
     Returns:
         tuple[int, str, dict | None]: (status_code, message, metadata_dict)
     """
-    logger.info(' --- Starting Thermocouple Controller ---')
+    logger.info('[THERMOCOUPLE]  --- Starting Thermocouple Controller ---')
     metadata_dict = None
     temp_data = {}
 
     try:
-        logger.info(' Checking sensor connections ...')
+        logger.info('[THERMOCOUPLE]  Checking sensor connections ...')
         measurement_timestamp = datetime.datetime.now()
         if not check_device_connection(THERMOCOUPLE_IDS):
-            logger.info(' Attempting to connect sensors manually.')
+            logger.info('[THERMOCOUPLE]  Attempting to connect sensors manually.')
             start_w1()
             time.sleep(0.5)
             if not check_device_connection(THERMOCOUPLE_IDS):
@@ -80,7 +80,7 @@ def thermocouple_controller() -> tuple[int, str, dict | None]:
                 }
                 return (1, '[THERMOCOUPLE] [ERROR] Sensor(s) not found.', None)
 
-        logger.info(' Taking temperature measurements ...')
+        logger.info('[THERMOCOUPLE]  Taking temperature measurements ...')
 
         error = False
         error_message = 'Error reading temperature from:'
@@ -89,7 +89,7 @@ def thermocouple_controller() -> tuple[int, str, dict | None]:
             if temperature is None:
                 error = True
                 ''.join(error_message, f'{sensor_name} ({sensor_id})')
-                logger.error(f'Error reading temperature from: {sensor_name} ({sensor_id})')
+                logger.error(f'[THERMOCOUPLE] Error reading temperature from: {sensor_name} ({sensor_id})')
             temp_data[sensor_name] = temperature
 
         if error:
@@ -102,7 +102,7 @@ def thermocouple_controller() -> tuple[int, str, dict | None]:
             }
             return (1, f'[THERMOCOUPLE] [ERROR] {error_message}', None)
 
-        logger.info(f'Measured: {temp_data}')
+        logger.info(f'[THERMOCOUPLE] Measured: {temp_data}')
 
         metadata_dict = {
             'type': 'temperature',
@@ -114,7 +114,7 @@ def thermocouple_controller() -> tuple[int, str, dict | None]:
         return (0, '[THERMOCOUPLE] [INFO] Data captured successfully.', metadata_dict)
 
     except Exception as e:
-        logger.error(f'Unexpected error: {e}')
+        logger.error(f'[THERMOCOUPLE] Unexpected error: {e}')
         metadata = {
             'type': 'temperature',
             'timestamp_iso': measurement_timestamp.isoformat(),
@@ -124,4 +124,4 @@ def thermocouple_controller() -> tuple[int, str, dict | None]:
         }
         return (1, f'[THERMOCOUPLE] [ERROR] Failed during operation: {e}', metadata)
     finally:
-        logger.info(' --- Thermocouple Controller Done ---')
+        logger.info('[THERMOCOUPLE]  --- Thermocouple Controller Done ---')

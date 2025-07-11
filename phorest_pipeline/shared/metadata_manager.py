@@ -123,11 +123,14 @@ def lock_and_manage_file(file_path: Path):
 
 
 def add_entry(
-    data_dir: Path, metadata_filename: Path, camera_meta: dict | None, temps_meta: dict | None
+    data_dir: Path,
+    metadata_filename: Path,
+    camera_meta: dict | list[dict] | None,
+    temps_meta: dict | None
 ):
     """
-    Adds a new combined entry to the processing manifest, protected by a file lock.
-    Used by the Collector.
+    Adds one or more new entries to the processing manifest, protected by a file lock.
+    Used by Collector.
     """
     manifest_path = Path(data_dir, metadata_filename)
 
@@ -137,39 +140,54 @@ def add_entry(
 
             metadata_list = _load_metadata(data_dir, metadata_filename)  # Safe to read under lock
 
-            overall_collection_error = False
-            error_messages = []
-            if camera_meta and camera_meta.get("error_flag", False):
-                overall_collection_error = True
-                error_messages.append(
-                    f"Camera: {camera_meta.get('error_message', 'Unknown error')}"
-                )
-            if temps_meta and temps_meta.get("error_flag", False):
-                overall_collection_error = True
-                error_messages.append(f"Temps: {temps_meta.get('error_message', 'Unknown error')}")
+            # Normalize camera_meta to always be a list for consistent processing
+            cam_entries = []
+            if isinstance(camera_meta, list):
+                cam_entries = camera_meta
+            elif camera_meta is not None:
+                cam_entries = [camera_meta]
+            
+            if not cam_entries and temps_meta is None:
+                logger.warning("[METADATA] [ADD] add_entry called with no data. Nothing to add.")
+                return
+            
+            # If processing a batch of images, one temp reading applies to all
+            if len(cam_entries) > 1 and temps_meta:
+                 logger.warning("[METADATA] [ADD] Applying a single temperature reading to a batch of legacy images.")
 
-            new_manifest_entry = {
-                "entry_timestamp_iso": datetime.datetime.now().isoformat(),
-                "collection_error": overall_collection_error,
-                "collection_error_msg": " | ".join(error_messages) if error_messages else None,
-                "camera_data": camera_meta,
-                "temperature_data": temps_meta,
-                "processing_status": "pending",  # This field will allow the lock to be released while processing happens
-                "processing_timestamp_iso": None,
-                "processing_error": False,
-                "processing_error_msg": None,
-                "compression_attempted": False,
-                "image_synced": False,
-            }
+            if not cam_entries and temps_meta:
+                 cam_entries = [None]
 
-            metadata_list.append(new_manifest_entry)
+            for cam_entry in cam_entries:
+                overall_collection_error = False
+                error_messages = []
+                if cam_entry and cam_entry.get("error_flag", False):
+                    overall_collection_error = True
+                    error_messages.append(
+                        f"Camera: {cam_entry.get('error_message', 'Unknown error')}"
+                    )
+                if temps_meta and temps_meta.get("error_flag", False):
+                    overall_collection_error = True
+                    error_messages.append(f"Temps: {temps_meta.get('error_message', 'Unknown error')}")
+
+                new_manifest_entry = {
+                    "entry_timestamp_iso": datetime.datetime.now().isoformat(),
+                    "collection_error": overall_collection_error,
+                    "collection_error_msg": " | ".join(error_messages) if error_messages else None,
+                    "camera_data": cam_entry,
+                    "temperature_data": temps_meta,
+                    "processing_status": "pending",  # This field will allow the lock to be released while processing happens
+                    "processing_timestamp_iso": None,
+                    "processing_error": False,
+                    "processing_error_msg": None,
+                    "compression_attempted": False,
+                    "image_synced": False,
+                }
+                metadata_list.append(new_manifest_entry)
+
             _save_metadata(data_dir, metadata_filename, metadata_list)  # Safe to save under lock
+            logger.info(f"[METADATA] [ADD] Added {len(cam_entries)} new entries to manifest.")
 
-            img_name = camera_meta.get("filename") if camera_meta else "N/A"
-            status_log = "FAILED" if overall_collection_error else "OK"
-            logger.info(
-                f"[METADATA] [ADD] Added entry to manifest: Status={status_log}, Image={img_name}"
-            )
     except Exception as e:
         logger.error(f"[METADATA] [ADD] Error in add_entry (manifest write): {e}")
         raise  # Re-raise to propagate error to collector

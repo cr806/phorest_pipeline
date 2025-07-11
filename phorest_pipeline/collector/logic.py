@@ -4,7 +4,7 @@ import sys
 import time
 from pathlib import Path
 
-from phorest_pipeline.collector.thermocouple_controller import thermocouple_controller
+from phorest_pipeline.collector.sources.thermocouple_controller import thermocouple_controller
 from phorest_pipeline.shared.config import (
     COLLECTOR_INTERVAL,
     DATA_DIR,
@@ -29,15 +29,17 @@ if ENABLE_CAMERA:
     from phorest_pipeline.shared.config import CAMERA_TYPE
 
     if CAMERA_TYPE == CameraType.LOGITECH:
-        from phorest_pipeline.collector.logi_camera_controller import camera_controller
+        from phorest_pipeline.collector.sources.logi_camera_controller import camera_controller
     elif CAMERA_TYPE == CameraType.ARGUS:
-        from phorest_pipeline.collector.argus_camera_controller import camera_controller
+        from phorest_pipeline.collector.sources.argus_camera_controller import camera_controller
     elif CAMERA_TYPE == CameraType.TIS:
-        from phorest_pipeline.collector.tis_camera_controller import camera_controller
+        from phorest_pipeline.collector.sources.tis_camera_controller import camera_controller
     elif CAMERA_TYPE == CameraType.HAWKEYE:
-        from phorest_pipeline.collector.hawkeye_camera_controller import camera_controller
+        from phorest_pipeline.collector.sources.hawkeye_camera_controller import camera_controller
     elif CAMERA_TYPE == CameraType.DUMMY:
-        from phorest_pipeline.collector.dummy_camera_controller import camera_controller
+        from phorest_pipeline.collector.sources.dummy_camera_controller import camera_controller
+    elif CAMERA_TYPE == CameraType.IMAGE_FILE_IMPORTER:
+        from phorest_pipeline.collector.sources.image_file_importer import camera_controller
     logger.info(f"Camera type: {CAMERA_TYPE}")
 
 POLL_INTERVAL = COLLECTOR_INTERVAL / 5
@@ -182,6 +184,10 @@ def perform_collection(
                 updated_failure_count += 1  # Increment failure count for manifest write failure
 
             if current_collection_successful:
+                if CAMERA_TYPE == CameraType.IMAGE_FILE_IMPORTER:
+                    logger.info("Image File import conplete. Collector will now halt.")
+                    return CollectorState.FATAL_ERROR, 0
+
                 if IMAGE_BUFFER_SIZE > 0:
                     ring_buffer_cleanup(logger=logger)
 
@@ -250,6 +256,8 @@ def run_collector():
 
             # --- Check for FATAL_ERROR state to exit ---
             if current_state == CollectorState.FATAL_ERROR:
+                if CAMERA_TYPE == CameraType.IMAGE_FILE_IMPORTER:
+                    break
                 logger.error("Exiting due to FATAL_ERROR state.")
                 break  # Exit the while loop
 

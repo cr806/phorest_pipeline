@@ -7,11 +7,15 @@ from phorest_pipeline.shared.cameras import (
     CameraTransform,
     CameraType,
 )
+from phorest_pipeline.shared.communication_methods import CommunicationMethod
 
 CONFIG_FILE = Path("configs", "Phorest_config.toml")
 
 METADATA_FILENAME = Path("metadata_manifest.json")
 RESULTS_FILENAME = Path("processing_results.json")
+
+CSV_FILENAME = Path("communicating_results.csv")
+IMAGE_FILENAME = Path("processed_data_plot.png")
 
 def load_config():
     if not CONFIG_FILE.is_file():
@@ -116,6 +120,16 @@ try:
     ENABLE_BACKUP = settings.get("Services", {}).get("enable_file_backup", False)
     ENABLE_COMPRESSOR = settings.get("Services", {}).get("enable_image_compression", False)
     ENABLE_SYNCER = settings.get("Services", {}).get("enable_remote_sync", False)
+
+    # --- Communication method ---
+    communication_method_str = settings.get("Communication", {}).get("method", "CSV_PLOT")
+    communication_method_str = communication_method_str.upper()
+    try:
+        COMMUNICATION_METHOD = CommunicationMethod[communication_method_str]
+    except KeyError:
+        print(f"[CONFIG] Invalid communication method: {communication_method_str}.")
+        print(f"Please use one of {', '.join(CommunicationMethod.__members__.keys())}")
+        exit(1)
 
     # --- Camera Settings ---
     camera_type_str = settings.get("Camera", {}).get("camera_type", "DUMMY")
