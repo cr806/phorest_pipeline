@@ -57,7 +57,7 @@ method = "CSV_PLOT"                  # Methods of communication: "CSV_PLOT", "OP
 
 # --- Camera Settings ---
 [Camera]
-camera_type = "hawkeye"               # Type of camera: "dummy", "argus", "tis", "logitech", "hawkeye", "image_file_importer"
+camera_type = "hawkeye"               # Type of camera: "dummy", "argus", "tis", "logitech", "hawkeye", "file_importer"
 camera_id = 0                         # Camera device ID
 camera_exposure = 5                   # Camera exposure setting
 camera_gain = 0                       # Camera gain setting

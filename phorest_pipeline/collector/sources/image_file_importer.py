@@ -7,7 +7,7 @@ logger = configure_logger(name=__name__, rotate_daily=True, log_filename='data_s
 
 SUPPORTED_EXT = ['.png', '.jpg', '.jpeg', '.tif', '.tiff']
 
-def camera_controller(data_dir: Path) -> tuple[int, str, list[dict] | None]:
+def image_file_importer(data_dir: Path) -> tuple[int, str, list[dict] | None]:
     """
     Scans a directory for existing images and generates a list of metadata entries.
     This controller runs only once and returns all data as a single batch.

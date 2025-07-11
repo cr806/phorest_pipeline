@@ -17,18 +17,18 @@ from phorest_pipeline.shared.states import CollectorState
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename='continuous_capture.log')
 
 if ENABLE_CAMERA:
-    from phorest_pipeline.shared.cameras import CameraType
+    from phorest_pipeline.shared.image_sources import ImageSourceType
     from phorest_pipeline.shared.config import CAMERA_TYPE
 
-    if CAMERA_TYPE == CameraType.LOGITECH:
+    if CAMERA_TYPE == ImageSourceType.LOGITECH:
         from phorest_pipeline.collector.sources.logi_camera_controller import camera_controller
-    elif CAMERA_TYPE == CameraType.ARGUS:
+    elif CAMERA_TYPE == ImageSourceType.ARGUS:
         from phorest_pipeline.collector.sources.argus_camera_controller import camera_controller
-    elif CAMERA_TYPE == CameraType.TIS:
+    elif CAMERA_TYPE == ImageSourceType.TIS:
         from phorest_pipeline.collector.sources.tis_camera_controller import camera_controller
-    elif CAMERA_TYPE == CameraType.HAWKEYE:
+    elif CAMERA_TYPE == ImageSourceType.HAWKEYE:
         from phorest_pipeline.collector.sources.hawkeye_camera_controller import camera_controller
-    elif CAMERA_TYPE == CameraType.DUMMY:
+    elif CAMERA_TYPE == ImageSourceType.DUMMY:
         from phorest_pipeline.collector.sources.dummy_camera_controller import camera_controller
     logger.info(f'Camera type: {CAMERA_TYPE}')
 

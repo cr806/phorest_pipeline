@@ -3,9 +3,9 @@ import sys
 import tomllib
 from pathlib import Path
 
-from phorest_pipeline.shared.cameras import (
-    CameraTransform,
-    CameraType,
+from phorest_pipeline.shared.image_sources import (
+    ImageTransform,
+    ImageSourceType,
 )
 from phorest_pipeline.shared.communication_methods import CommunicationMethod
 
@@ -135,10 +135,10 @@ try:
     camera_type_str = settings.get("Camera", {}).get("camera_type", "DUMMY")
     camera_type_str = camera_type_str.upper()
     try:
-        CAMERA_TYPE = CameraType[camera_type_str]
+        CAMERA_TYPE = ImageSourceType[camera_type_str]
     except KeyError:
         print(f"[CONFIG] Invalid camera type: {camera_type_str}.")
-        print(f"Please use one of {', '.join(CameraType.__members__.keys())}")
+        print(f"Please use one of {', '.join(ImageSourceType.__members__.keys())}")
         exit(1)
     CAMERA_INDEX = int(settings.get("Camera", {}).get("camera_id", 0))
     CAMERA_EXPOSURE = int(settings.get("Camera", {}).get("camera_exposure", 150))
@@ -149,10 +149,10 @@ try:
     camera_transform_str = settings.get("Camera", {}).get("camera_transform", "NONE")
     camera_transform_str = camera_transform_str.upper()
     try:
-        CAMERA_TRANFORM = CameraTransform[camera_transform_str]
+        CAMERA_TRANFORM = ImageTransform[camera_transform_str]
     except KeyError:
         print(f"[CONFIG] Invalid camera image transform: {camera_transform_str}.")
-        print(f"Please use one of {', '.join(CameraTransform.__members__.keys())}")
+        print(f"Please use one of {', '.join(ImageTransform.__members__.keys())}")
         exit(1)
 
     # --- Temperature Settings ---
