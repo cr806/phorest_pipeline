@@ -7,12 +7,12 @@ import cv2
 import numpy as np
 
 from phorest_pipeline.shared.config import (
-    CAMERA_GAIN,
-    CAMERA_INDEX,
-    CAMERA_TRANFORM,
     CAMERA_BRIGHTNESS,
     CAMERA_CONTRAST,
     CAMERA_EXPOSURE,
+    CAMERA_GAIN,
+    CAMERA_INDEX,
+    CAMERA_TRANFORM,
 )
 from phorest_pipeline.shared.logger_config import configure_logger
 
@@ -56,20 +56,31 @@ def camera_controller(
 
         # --- Build rpicam-jpeg command ---
         rpicam_cmd = [
-            'rpicam-jpeg',
-            '-c', str(CAMERA_INDEX),                # Camera 0-based ID (should be 0 for single camera)
-            '--output', str(temp_jpeg_path),        # Output path for the captured JPEG
-            '--nopreview',                          # Don't show preview on capture
-            '--width', str(RESOLTION[0]),           # Set image width
-            '--height', str(RESOLTION[1]),          # Set image height
-            '--gain', str(CAMERA_GAIN),             # Set analog gain
-            '--brightness', str(CAMERA_BRIGHTNESS), # Set brightness
-            '--contrast', str(CAMERA_CONTRAST),     # Set contrast
-            '--shutter', str(CAMERA_EXPOSURE * 1_000_000),   # Set exposure time (microseconds)
-            '--vflip',                                       # In camera vertical flip
-            '--timeout', '100',                              # Time to wait before capture (e.g., for auto-exposure to settle)
-            '--quality', '93',                               # JPEG compression quality (0-100)
-            '--info-text', '%md'                             # Include metadata in stderr for diagnostics
+            "rpicam-jpeg",
+            "-c",
+            str(CAMERA_INDEX),  # Camera 0-based ID (should be 0 for single camera)
+            "--output",
+            str(temp_jpeg_path),  # Output path for the captured JPEG
+            "--nopreview",  # Don't show preview on capture
+            "--width",
+            str(RESOLTION[0]),  # Set image width
+            "--height",
+            str(RESOLTION[1]),  # Set image height
+            "--gain",
+            str(CAMERA_GAIN),  # Set analog gain
+            "--brightness",
+            str(CAMERA_BRIGHTNESS),  # Set brightness
+            "--contrast",
+            str(CAMERA_CONTRAST),  # Set contrast
+            "--shutter",
+            str(CAMERA_EXPOSURE * 1_000_000),  # Set exposure time (microseconds)
+            "--vflip",  # In camera vertical flip
+            "--timeout",
+            "100",  # Time to wait before capture (e.g., for auto-exposure to settle)
+            "--quality",
+            "93",  # JPEG compression quality (0-100)
+            "--info-text",
+            "%md",  # Include metadata in stderr for diagnostics
         ]
 
         logger.info(f"[CAMERA] Executing libcamera capture command: {' '.join(rpicam_cmd)}")
@@ -140,7 +151,9 @@ def camera_controller(
             frame_gray_8bit = frame_gray_intermediate
         else:
             source_dtype = frame_gray_intermediate.dtype
-            logger.info(f"[CAMERA] Frame is {source_dtype}, using cv2.normalize to scale to 8-bit...")
+            logger.info(
+                f"[CAMERA] Frame is {source_dtype}, using cv2.normalize to scale to 8-bit..."
+            )
             try:
                 frame_gray_8bit = cv2.normalize(
                     frame_gray_intermediate,
@@ -223,7 +236,9 @@ if __name__ == "__main__":
 
         class DummyTransform:
             def apply_transform(self, image):
-                logger.info("[CAMERA] Applying dummy CAMERA_TRANFORM (no actual change to image data).")
+                logger.info(
+                    "[CAMERA] Applying dummy CAMERA_TRANFORM (no actual change to image data)."
+                )
                 # Example: You might add a small border or text for testing
                 # cv2.putText(image, "TRANSFORMED", (50,50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255), 2, cv2.LINE_AA)
                 return image
