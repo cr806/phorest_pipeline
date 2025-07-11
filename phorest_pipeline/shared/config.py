@@ -12,7 +12,7 @@ from phorest_pipeline.shared.communication_methods import CommunicationMethod
 CONFIG_FILE = Path("configs", "Phorest_config.toml")
 
 METADATA_FILENAME = Path("metadata_manifest.json")
-RESULTS_FILENAME = Path("processing_results.json")
+RESULTS_FILENAME = Path("processing_results.jsonl")
 
 CSV_FILENAME = Path("communicating_results.csv")
 IMAGE_FILENAME = Path("processed_data_plot.png")

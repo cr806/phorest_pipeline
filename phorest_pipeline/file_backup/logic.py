@@ -25,7 +25,7 @@ BACKUP_ROOT_PATH = Path(BACKUP_DIR)
 
 LIVE_FILES_TO_BACKUP = [
     Path(DATA_DIR, "metadata_manifest.json"),
-    Path(RESULTS_DIR, "processing_results.json"),
+    Path(RESULTS_DIR, "processing_results.jsonl"),
     Path(RESULTS_DIR, "communicating_results.csv"),
     Path(RESULTS_DIR, "processed_data_plot.png"),
 ]

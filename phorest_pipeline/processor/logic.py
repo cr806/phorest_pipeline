@@ -22,7 +22,7 @@ from phorest_pipeline.shared.logger_config import configure_logger
 
 # Assuming metadata_manager handles loading/saving the manifest
 from phorest_pipeline.shared.metadata_manager import (
-    append_metadata,
+    append_metadata_to_results,
     load_metadata_with_lock,
     update_metadata_manifest_entry,
 )
@@ -65,7 +65,7 @@ def save_results_out(all_results_for_append, all_results_for_manifest_update):
     # Append collated results to the results.json file
     try:
         if all_results_for_append:
-            append_metadata(RESULTS_DIR, RESULTS_FILENAME, all_results_for_append)
+            append_metadata_to_results(all_results_for_append)
     except Exception as e:
         logger.error(f"Error appending to results file: {e}", exc_info=True)
 

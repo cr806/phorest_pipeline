@@ -9,6 +9,12 @@ from pathlib import Path
 
 from phorest_pipeline.shared.logger_config import configure_logger
 
+from phorest_pipeline.shared.config import (
+    RESULTS_DIR,
+    RESULTS_FILENAME,
+    settings,  # Check if config loaded
+)
+
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename="shared.log")
 
 LOCK_FILE_SUFFIX = ".lock"
@@ -54,35 +60,52 @@ def _release_lock(lock_file_fd: int | None, lock_path_name: str = "unknown"):
 
 
 def _load_metadata(data_dir: Path, metadata_filename: Path) -> list:
+    """
+    Loads metadata from a file. Handles both standard multi-line JSON (.json)
+    and JSON Lines (.jsonl) formats by checking the file extension.
+    """
     metadata_path = Path(data_dir, metadata_filename)
-    if metadata_path.exists():
-        try:
-            with metadata_path.open("r") as f:
+    if not metadata_path.exists():
+        logger.info(f'[METADATA] {metadata_path.name} does not exist. Returning empty list.')
+        return []
+
+    try:
+        with metadata_path.open('r') as f:
+            if metadata_path.suffix.lower() == '.jsonl':
+                # --- JSON Lines (.jsonl) parsing ---
+                logger.debug(f"Parsing '{metadata_path.name}' as JSON Lines.")
+                entries = []
+                for line in f:
+                    if line.strip():
+                        entries.append(json.loads(line))
+                return entries
+            else:
+                # --- Standard JSON parsing ---
+                logger.debug(f"Parsing '{metadata_path.name}' as standard JSON.")
                 content = f.read()
                 if not content:
-                    logger.warning(
-                        f"[METADATA] {metadata_path.name} is empty. Returning empty list."
-                    )
+                    logger.warning(f'[METADATA] {metadata_path.name} is empty. Returning empty list.')
                     return []
                 return json.loads(content)
-        except json.JSONDecodeError:
-            logger.error(f"[METADATA] Corrupt JSON in {metadata_path}. Returning empty list.")
-            # Archive the corrupt file for debugging
-            corrupt_backup_path = Path(
-                metadata_path.parent,
-                f"{metadata_path.stem}.corrupt_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}{metadata_path.suffix}",
-            )
-            try:
-                metadata_path.rename(corrupt_backup_path)
-                logger.info(f"[METADATA] Moved corrupt file to {corrupt_backup_path.name}")
-            except OSError as e:
-                logger.error(f"[METADATA] Failed to move corrupt file {metadata_path.name}: {e}")
-            return []
+
+    except json.JSONDecodeError:
+        logger.error(f"[METADATA] Corrupt JSON in {metadata_path}. Returning empty list.")
+        # Archive the corrupt file for debugging
+        corrupt_backup_path = Path(
+            metadata_path.parent,
+            f"{metadata_path.stem}.corrupt_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}{metadata_path.suffix}",
+        )
+        try:
+            metadata_path.rename(corrupt_backup_path)
+            logger.info(f"[METADATA] Moved corrupt file to {corrupt_backup_path.name}")
         except OSError as e:
-            logger.error(f"[METADATA] Read error {metadata_path}: {e}. Returning empty list.")
-            return []
-    else:
-        logger.error(f"[METADATA] {metadata_path.name} does not exist. Returning empty list.")
+            logger.error(f"[METADATA] Failed to move corrupt file {metadata_path.name}: {e}")
+        return []
+    except OSError as e:
+        logger.error(f"[METADATA] Read error {metadata_path}: {e}. Returning empty list.")
+        return []
+    except Exception as e:
+        logger.error(f"[METADATA] Unexpecte error reading or parsing file {metadata_path}: {e}", exc_info=True)
         return []
 
 
@@ -193,16 +216,12 @@ def add_entry(
         raise  # Re-raise to propagate error to collector
 
 
-def append_metadata(
-    data_dir: Path, metadata_filename: Path, metadata_to_append: dict | list[dict]
-):
+def append_metadata_to_results(metadata_to_append: dict | list[dict]):
     """
-    Appends a new entry to a specified metadata file (e.g., processing_results.json),
-    protected by a file lock specific to that file.
-    Used by the Processor for its results file.
+    Appends a new entry to the results metadata file (e.g., processing_results.jsonl),
+    protected by a file lock specific to that file. Used by the Processor for its results file.
     """
-    target_file_path = Path(data_dir, metadata_filename)  # Full path to the target file
-
+    target_file_path = Path(RESULTS_DIR, RESULTS_FILENAME)
     try:
         with lock_and_manage_file(target_file_path):
             entries_to_add = (
@@ -212,26 +231,18 @@ def append_metadata(
             )
 
             if not entries_to_add:
-                logger.info(
-                    f"[METADATA] [APPEND] append called with no entries for {metadata_filename.name}. Returning."
-                )
                 return
 
-            logger.info(
-                f"[METADATA] [APPEND] Appending {len(entries_to_add)} entries to {metadata_filename.name} (locked section)..."
-            )
+            with target_file_path.open("a") as f:
+                for entry in entries_to_add:
+                    json.dump(entry, f)
+                    f.write("\n")
+            
+            logger.info(f"Successfully appended {len(entries_to_add)} new entries to {target_file_path.name}.")
 
-            metadata_list = _load_metadata(data_dir, metadata_filename)  # Safe to read under lock
-            metadata_list.extend(entries_to_add)
-            _save_metadata(data_dir, metadata_filename, metadata_list)
-            logger.info(
-                f"[METADATA] [APPEND] Successfully appended {len(entries_to_add)} entries to {metadata_filename.name}."
-            )
     except Exception as e:
-        logger.error(
-            f"[METADATA] [APPEND] Error in append_metadata ({metadata_filename.name} write): {e}"
-        )
-        raise  # Re-raise to propagate error
+        logger.error(f"Error appending to {target_file_path.name}: {e}", exc_info=True)
+        raise
 
 
 def update_metadata_manifest_entry(
