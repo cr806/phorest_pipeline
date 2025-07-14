@@ -74,7 +74,7 @@ class Compressor:
             self.current_state = CompressorState.FATAL_ERROR
             return
 
-        match self.current_statecurrent_state:
+        match self.current_state:
             case CompressorState.IDLE:
                 logger.info("IDLE -> CHECKING")
                 self.next_run_time = time.monotonic() + COMPRESSOR_INTERVAL
