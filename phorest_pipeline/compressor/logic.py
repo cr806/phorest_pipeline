@@ -2,7 +2,6 @@
 import gzip
 import shutil
 import signal
-import sys
 import time
 from pathlib import Path
 
