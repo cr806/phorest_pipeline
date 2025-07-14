@@ -285,7 +285,7 @@ def run_collector():
             if current_state != CollectorState.WAITING_TO_RUN:
                 time.sleep(0.1)
     except Exception as e:
-        logger.error(f"UNEXPECTED ERROR in main loop: {e}")
+        logger.critical(f"UNEXPECTED ERROR in main loop: {e}", exc_info=True)
     finally:
         # Cleanup on exit
         if settings:
