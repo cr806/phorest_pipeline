@@ -12,12 +12,12 @@ from phorest_pipeline.shared.config import (
 from phorest_pipeline.shared.metadata_manager import load_metadata_with_lock, move_file_with_lock
 
 
-def move_existing_files_to_backup(source_files: list, logger: logging.Logger) -> None:
+def move_existing_files_to_backup(source_filepaths: list, logger: logging.Logger) -> None:
     """
     Moves a list of existing files to a backup directory, adding a timestamp
     to each. This process uses a file lock for safety.
     """
-    if not source_files:
+    if not source_filepaths:
         return
 
     destination_root = Path(BACKUP_DIR)
@@ -26,23 +26,23 @@ def move_existing_files_to_backup(source_files: list, logger: logging.Logger) ->
     files_moved_count = 0
     errors_count = 0
 
-    for source_file in source_files:
-        if not source_file.exists() or source_file.is_dir():
-            logger.info(f"Source '{source_file}' does not exist or is a directory. Skipping...")
+    for source_filepath in source_filepaths:
+        if not source_filepath.exists() or source_filepath.is_dir():
+            logger.info(f"Source '{source_filepath}' does not exist or is a directory. Skipping...")
             continue
 
         try:
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             destination_file = Path(
                 destination_root,
-                source_file.parent.name,
-                f"{source_file.stem}_{timestamp}{source_file.suffix}",
+                source_filepath.parent.name,
+                f"{source_filepath.stem}_{timestamp}{source_filepath.suffix}",
             )
 
-            move_file_with_lock(source_file, destination_file)
+            move_file_with_lock(source_filepath, destination_file)
             files_moved_count += 1
         except Exception as e:
-            logger.error(f"Failed to move '{source_file.name}': {e}")
+            logger.error(f"Failed to move '{source_filepath.name}': {e}")
             errors_count += 1
 
     logger.info("Finished moving files.")
@@ -84,7 +84,7 @@ def ring_buffer_cleanup(logger: logging.Logger):
         if ENABLE_SYNCER:
             # --- Sync-Aware Mode ---
             logger.info("Syncer is ENABLED. Checking sync status before deleting.")
-            manifest_data = load_metadata_with_lock(DATA_DIR, METADATA_FILENAME)
+            manifest_data = load_metadata_with_lock(Path(DATA_DIR, METADATA_FILENAME))
 
             # Create a lookup map for checking
             sync_status_map = {

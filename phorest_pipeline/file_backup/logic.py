@@ -48,7 +48,7 @@ def archive_live_files():
             )
 
             # 2. Move file
-            move_file_with_lock(original_filepath.parent, original_filepath.name, backup_filepath)
+            move_file_with_lock(original_filepath, backup_filepath)
         except Exception as e:
             logger.error(f"Failed to archive {original_filepath}: {e}")
             continue

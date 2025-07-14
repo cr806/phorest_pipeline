@@ -9,12 +9,6 @@ from pathlib import Path
 
 from phorest_pipeline.shared.logger_config import configure_logger
 
-from phorest_pipeline.shared.config import (
-    RESULTS_DIR,
-    RESULTS_FILENAME,
-    settings,  # Check if config loaded
-)
-
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename="shared.log")
 
 LOCK_FILE_SUFFIX = ".lock"
@@ -59,19 +53,18 @@ def _release_lock(lock_file_fd: int | None, lock_path_name: str = "unknown"):
             )
 
 
-def _load_metadata(data_dir: Path, metadata_filename: Path) -> list:
+def _load_metadata(metadata_path: Path) -> list:
     """
     Loads metadata from a file. Handles both standard multi-line JSON (.json)
     and JSON Lines (.jsonl) formats by checking the file extension.
     """
-    metadata_path = Path(data_dir, metadata_filename)
     if not metadata_path.exists():
-        logger.info(f'[METADATA] {metadata_path.name} does not exist. Returning empty list.')
+        logger.info(f"[METADATA] {metadata_path.name} does not exist. Returning empty list.")
         return []
 
     try:
-        with metadata_path.open('r') as f:
-            if metadata_path.suffix.lower() == '.jsonl':
+        with metadata_path.open("r") as f:
+            if metadata_path.suffix.lower() == ".jsonl":
                 # --- JSON Lines (.jsonl) parsing ---
                 logger.debug(f"Parsing '{metadata_path.name}' as JSON Lines.")
                 entries = []
@@ -84,7 +77,9 @@ def _load_metadata(data_dir: Path, metadata_filename: Path) -> list:
                 logger.debug(f"Parsing '{metadata_path.name}' as standard JSON.")
                 content = f.read()
                 if not content:
-                    logger.warning(f'[METADATA] {metadata_path.name} is empty. Returning empty list.')
+                    logger.warning(
+                        f"[METADATA] {metadata_path.name} is empty. Returning empty list."
+                    )
                     return []
                 return json.loads(content)
 
@@ -105,12 +100,14 @@ def _load_metadata(data_dir: Path, metadata_filename: Path) -> list:
         logger.error(f"[METADATA] Read error {metadata_path}: {e}. Returning empty list.")
         return []
     except Exception as e:
-        logger.error(f"[METADATA] Unexpecte error reading or parsing file {metadata_path}: {e}", exc_info=True)
+        logger.error(
+            f"[METADATA] Unexpecte error reading or parsing file {metadata_path}: {e}",
+            exc_info=True,
+        )
         return []
 
 
-def _save_metadata(data_dir: Path, metadata_filename: Path, metadata_list: list):
-    metadata_path = Path(data_dir, metadata_filename)
+def _save_metadata(metadata_path: Path, metadata_list: list):
     temp_metadata_path = metadata_path.with_suffix(metadata_path.suffix + ".tmp")
     try:
         with temp_metadata_path.open("w") as f:
@@ -146,22 +143,20 @@ def lock_and_manage_file(file_path: Path):
 
 
 def add_entry(
-    data_dir: Path,
-    metadata_filename: Path,
+    manifest_path: Path,
     camera_meta: dict | list[dict] | None,
-    temps_meta: dict | None
+    temps_meta: dict | None,
 ):
     """
     Adds one or more new entries to the processing manifest, protected by a file lock.
     Used by Collector.
     """
-    manifest_path = Path(data_dir, metadata_filename)
 
     try:
         with lock_and_manage_file(manifest_path):
             logger.info("[METADATA] [ADD] Updating processing manifest (locked section)...")
 
-            metadata_list = _load_metadata(data_dir, metadata_filename)  # Safe to read under lock
+            metadata_list = _load_metadata(manifest_path)  # Safe to read under lock
 
             # Normalize camera_meta to always be a list for consistent processing
             cam_entries = []
@@ -169,17 +164,19 @@ def add_entry(
                 cam_entries = camera_meta
             elif camera_meta is not None:
                 cam_entries = [camera_meta]
-            
+
             if not cam_entries and temps_meta is None:
                 logger.warning("[METADATA] [ADD] add_entry called with no data. Nothing to add.")
                 return
-            
+
             # If processing a batch of images, one temp reading applies to all
             if len(cam_entries) > 1 and temps_meta:
-                 logger.warning("[METADATA] [ADD] Applying a single temperature reading to a batch of legacy images.")
+                logger.warning(
+                    "[METADATA] [ADD] Applying a single temperature reading to a batch of legacy images."
+                )
 
             if not cam_entries and temps_meta:
-                 cam_entries = [None]
+                cam_entries = [None]
 
             for cam_entry in cam_entries:
                 overall_collection_error = False
@@ -191,7 +188,9 @@ def add_entry(
                     )
                 if temps_meta and temps_meta.get("error_flag", False):
                     overall_collection_error = True
-                    error_messages.append(f"Temps: {temps_meta.get('error_message', 'Unknown error')}")
+                    error_messages.append(
+                        f"Temps: {temps_meta.get('error_message', 'Unknown error')}"
+                    )
 
                 new_manifest_entry = {
                     "entry_timestamp_iso": datetime.datetime.now().isoformat(),
@@ -208,7 +207,7 @@ def add_entry(
                 }
                 metadata_list.append(new_manifest_entry)
 
-            _save_metadata(data_dir, metadata_filename, metadata_list)  # Safe to save under lock
+            _save_metadata(manifest_path, metadata_list)  # Safe to save under lock
             logger.info(f"[METADATA] [ADD] Added {len(cam_entries)} new entries to manifest.")
 
     except Exception as e:
@@ -216,38 +215,53 @@ def add_entry(
         raise  # Re-raise to propagate error to collector
 
 
-def append_metadata_to_results(metadata_to_append: dict | list[dict]):
+def append_metadata(
+    manifest_path: Path, metadata_to_append: dict | list[dict]
+):
     """
-    Appends a new entry to the results metadata file (e.g., processing_results.jsonl),
-    protected by a file lock specific to that file. Used by the Processor for its results file.
+    Safely appends one or more entries to a metadata file.
+
+    Handles both standard .json (read/write all) and
+    .jsonl (append line) formats based on the file extension.
     """
-    target_file_path = Path(RESULTS_DIR, RESULTS_FILENAME)
     try:
-        with lock_and_manage_file(target_file_path):
+        with lock_and_manage_file(manifest_path):
             entries_to_add = (
                 metadata_to_append
                 if isinstance(metadata_to_append, list)
                 else [metadata_to_append]
             )
-
             if not entries_to_add:
                 return
 
-            with target_file_path.open("a") as f:
-                for entry in entries_to_add:
-                    json.dump(entry, f)
-                    f.write("\n")
-            
-            logger.info(f"Successfully appended {len(entries_to_add)} new entries to {target_file_path.name}.")
+            # --- Append Logic ---
+            if manifest_path.suffix.lower() == ".jsonl":
+                logger.info(
+                    f"Appending {len(entries_to_add)} entries to JSONL file: {manifest_path.name}"
+                )
+                with manifest_path.open("a") as f:
+                    for entry in entries_to_add:
+                        json.dump(entry, f)
+                        f.write("\n")
+            else:
+                logger.info(
+                    f"Appending {len(entries_to_add)} entries to JSON file: {manifest_path.name}"
+                )
+                existing_data = _load_metadata(manifest_path)
+                existing_data.extend(entries_to_add)
+                _save_metadata(manifest_path, existing_data)
+
+            logger.info(
+                f"Successfully appended {len(entries_to_add)} entries to {manifest_path.name}."
+            )
 
     except Exception as e:
-        logger.error(f"Error appending to {target_file_path.name}: {e}", exc_info=True)
+        logger.error(f"Error in append_metadata for {manifest_path.name}: {e}", exc_info=True)
         raise
 
 
 def update_metadata_manifest_entry(
-    data_dir: Path,
-    metadata_filename: Path,
+    manifest_path: Path,
     entry_index: int | list[int],
     status: str | list[str] | None = None,
     processing_timestamp_iso: str | list[str] | None = None,
@@ -264,7 +278,6 @@ def update_metadata_manifest_entry(
     can also be lists of the same length to apply unique values to each entry.
     If data arguments are single values, they are applied to all specified entries.
     """
-    manifest_path = Path(data_dir, metadata_filename)
 
     try:
         with lock_and_manage_file(manifest_path):
@@ -272,7 +285,7 @@ def update_metadata_manifest_entry(
                 f"[METADATA] [UPDATE] Updating manifest entry {entry_index} status (locked section)..."
             )
 
-            metadata_list = _load_metadata(data_dir, metadata_filename)  # Safe to read under lock
+            metadata_list = _load_metadata(manifest_path)  # Safe to read under lock
 
             indices = entry_index if isinstance(entry_index, list) else [entry_index]
             num_indices = len(indices)
@@ -319,7 +332,7 @@ def update_metadata_manifest_entry(
                         f"The results for this entry will be discarded."
                     )
 
-            _save_metadata(data_dir, metadata_filename, metadata_list)
+            _save_metadata(manifest_path, metadata_list)
             logger.info(
                 f"[METADATA] [UPDATE] Batch update successful for {len(indices)} manifest entries."
             )
@@ -329,41 +342,36 @@ def update_metadata_manifest_entry(
         raise  # Re-raise to propagate error
 
 
-def load_metadata_with_lock(data_dir: Path, metadata_filename: Path) -> list:
+def load_metadata_with_lock(metadata_path: Path) -> list:
     """
     Loads metadata from a JSON file using file locking for safety.
     Returns an empty list if the file does not exist or if there's a decoding error.
     """
-    metadata_path = Path(data_dir, metadata_filename)
-
     try:
         with lock_and_manage_file(metadata_path):
-            return _load_metadata(data_dir, metadata_filename)  # Safe to read under lock
+            return _load_metadata(metadata_path)  # Safe to read under lock
     except Exception as e:
         logger.error(f"[METADATA] [LOAD] Error loading metadata with lock: {e}")
         raise  # Re-raise to propagate error
 
 
-def save_metadata_with_lock(data_dir: Path, metadata_filename: Path, metadata_list: list):
+def save_metadata_with_lock(metadata_path: Path, metadata_list: list):
     """
     Saves results data to a JSON file using file locking and atomic write for safety.
     """
-    metadata_path = Path(data_dir, metadata_filename)
-
     try:
         with lock_and_manage_file(metadata_path):
-            _save_metadata(data_dir, metadata_filename, metadata_list)  # Safe to save under lock
+            _save_metadata(metadata_path, metadata_list)  # Safe to save under lock
     except Exception as e:
         logger.error(f"[METADATA] [SAVE] Error saving metadata with lock: {e}")
         raise  # Re-raise to propagate error
 
 
-def move_file_with_lock(source_dir: Path, source_filename: Path, destination_path: Path):
+def move_file_with_lock(source_path: Path, destination_path: Path):
     """
     Safely moves a file using file locks.  This is an atomic operation
     that prevents race conditions with other processes.
     """
-    source_path = Path(source_dir, source_filename)
 
     try:
         with lock_and_manage_file(source_path):

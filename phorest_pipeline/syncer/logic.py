@@ -91,7 +91,7 @@ def sync_processed_images():
     logger.info("Syncing processed images to remote directory...")
 
     # 1. Find images to move
-    manifest_data = load_metadata_with_lock(DATA_DIR, METADATA_FILENAME)
+    manifest_data = load_metadata_with_lock(Path(DATA_DIR, METADATA_FILENAME))
     images_to_move = []
     indices_to_update = []
     for index, entry in enumerate(manifest_data):
@@ -127,8 +127,7 @@ def sync_processed_images():
     if indices_to_update:
         logger.info(f"Updating manifest for {len(indices_to_update)} images.")
         update_metadata_manifest_entry(
-            DATA_DIR,
-            METADATA_FILENAME,
+            Path(DATA_DIR, METADATA_FILENAME),
             indices_to_update,
             image_synced=True,
             new_filepath=REMOTE_DATA_DIR.resolve().as_posix(),

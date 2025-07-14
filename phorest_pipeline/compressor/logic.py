@@ -82,7 +82,7 @@ class Compressor:
 
             case CompressorState.CHECKING:
                 logger.info("--- Checking Manifest for Compression Work ---")
-                manifest_data = load_metadata_with_lock(DATA_DIR, METADATA_FILENAME)
+                manifest_data = load_metadata_with_lock(Path(DATA_DIR, METADATA_FILENAME))
                 self.entries_to_process = find_entries_to_compress(manifest_data)
 
                 if self.entries_to_process:
@@ -140,8 +140,7 @@ class Compressor:
                         filenames = [item["new_filename"] for item in updates_for_manifest]
 
                         update_metadata_manifest_entry(
-                            DATA_DIR,
-                            METADATA_FILENAME,
+                            Path(DATA_DIR, METADATA_FILENAME),
                             entry_index=indices,
                             compression_attempted=True,
                             new_filename=filenames,

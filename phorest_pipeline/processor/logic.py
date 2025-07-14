@@ -23,7 +23,7 @@ from phorest_pipeline.shared.logger_config import configure_logger
 
 # Assuming metadata_manager handles loading/saving the manifest
 from phorest_pipeline.shared.metadata_manager import (
-    append_metadata_to_results,
+    append_metadata,
     load_metadata_with_lock,
     update_metadata_manifest_entry,
 )
@@ -62,7 +62,7 @@ def save_results_out(all_results_for_append, all_results_for_manifest_update):
     # Append collated results to the results.json file
     try:
         if all_results_for_append:
-            append_metadata_to_results(all_results_for_append)
+            append_metadata(Path(RESULTS_DIR, RESULTS_FILENAME), all_results_for_append)
     except Exception as e:
         logger.error(f"Error appending to results file: {e}", exc_info=True)
 
@@ -75,8 +75,7 @@ def save_results_out(all_results_for_append, all_results_for_manifest_update):
         
         try:
             update_metadata_manifest_entry(
-                DATA_DIR,
-                METADATA_FILENAME,
+                Path(DATA_DIR, METADATA_FILENAME),
                 indices_to_update,
                 status=updated_statues,
                 processing_timestamp_iso=datetime.datetime.now().isoformat(), # Apply same timestamp to whole batch
@@ -156,7 +155,7 @@ class Processor:
                 # 1. Acquire lock ONCE, find all pending entries, and mark them all as 'processing'.
                 logger.info("--- Checking for PENDING Data to Process ---")
                 try:
-                    manifest_data = load_metadata_with_lock(DATA_DIR, METADATA_FILENAME)
+                    manifest_data = load_metadata_with_lock(Path(DATA_DIR, METADATA_FILENAME))
                     pending_batch = find_all_unprocessed_entries(manifest_data)
 
                     if pending_batch:
@@ -164,8 +163,7 @@ class Processor:
                         logger.info(f"Found batch of {len(pending_batch)} entries to process. Marking as 'processing': {indices_to_mark}")
                         
                         update_metadata_manifest_entry(
-                            DATA_DIR,
-                            METADATA_FILENAME,
+                            Path(DATA_DIR, METADATA_FILENAME),
                             entry_index=indices_to_mark,
                             status='processing',
                             processing_timestamp_iso=datetime.datetime.now().isoformat()
@@ -274,8 +272,7 @@ class Processor:
                         logger.info(f"Resetting status of {unprocessed_count} unprocessed entries to 'pending'...")
                         try:
                             update_metadata_manifest_entry(
-                                DATA_DIR,
-                                METADATA_FILENAME,
+                                Path(DATA_DIR, METADATA_FILENAME),
                                 entry_index=indicies_to_reset,
                                 status='pending',
                             )

@@ -188,8 +188,7 @@ class Collector:
 
                 try:
                     add_entry(
-                        data_dir=DATA_DIR,
-                        metadata_filename=METADATA_FILENAME,
+                        manifest_path=Path(DATA_DIR, METADATA_FILENAME),
                         camera_meta=cam_metadata_for_entry,
                         temps_meta=temps_metadata_for_entry,
                     )

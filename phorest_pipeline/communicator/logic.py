@@ -121,7 +121,7 @@ class Communicator:
                 logger.info("--- Running Communication ---")
                 communication_successful = False
                 try:
-                    results_data = load_metadata_with_lock(RESULTS_DIR, RESULTS_FILENAME)
+                    results_data = load_metadata_with_lock(Path(RESULTS_DIR, RESULTS_FILENAME))
                     entries_to_process = find_processed_entries(results_data)
 
                     if not entries_to_process:
@@ -153,7 +153,7 @@ class Communicator:
                                 logger.warning(
                                     f"Attempted to mark non-existent entry at index {index} as transmitted. Data inconsistency?"
                                 )
-                        save_metadata_with_lock(RESULTS_DIR, RESULTS_FILENAME, results_data)
+                        save_metadata_with_lock(Path(RESULTS_DIR, RESULTS_FILENAME), results_data)
                     else:
                         logger.error("Communication method failed.  Will retry later.")
 
