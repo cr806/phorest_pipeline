@@ -196,6 +196,6 @@ class Compressor:
 
 
 def run_compressor():
-    """ Main entry point to create and run a Compressor instnace. """
+    """ Main entry point to create and run a Compressor instanace. """
     compressor = Compressor()
     compressor.run()
