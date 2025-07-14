@@ -3,7 +3,6 @@ import datetime
 import gzip
 import shutil
 import signal
-import sys
 import time
 from pathlib import Path
 
@@ -30,16 +29,6 @@ LIVE_FILES_TO_BACKUP = [
     Path(RESULTS_DIR, "communicating_results.csv"),
     Path(RESULTS_DIR, "processed_data_plot.png"),
 ]
-
-SHUTDOWN_REQUESTED = False
-
-
-def graceful_shutdown(_signum, _frame):
-    """ Signal handler to initiate a graceful shutdown """
-    global SHUTDOWN_REQUESTED
-    if not SHUTDOWN_REQUESTED:
-        logger.info("Shutdown signal received. Finishing current cycle before stopping...")
-        SHUTDOWN_REQUESTED = True
 
 
 def archive_live_files():
@@ -97,69 +86,82 @@ def compress_files_in_backup_dir():
             logger.error(f"An unexpected error occurred compressing '{file_path}': {e}")
 
 
-def perform_file_backup_cycle(current_state: BackupState) -> BackupState:
-    """State machine logic for the file renamer."""
-    next_state = current_state
+class FileBackup:
+    """ Encapsulates the state and logic for the file backup process. """
+    def __init__(self):
+        self.shutdown_requested = False
+        self.current_state = BackupState.IDLE
+        self.next_run_time = 0
 
-    if settings is None:
-        logger.info("Configuration error. Halting.")
-        time.sleep(POLL_INTERVAL * 5)
-        return current_state  # FATAL_ERROR state ?
+        # Register the signal handler
+        signal.signal(signal.SIGINT, self._graceful_shutdown)
+        signal.signal(signal.SIGTERM, self._graceful_shutdown)
+    
+    def _graceful_shutdown(self, _signum, _frame):
+        """ Signal handler to initiate a graceful shutdown """
+        if not self.shutdown_requested:
+            logger.info("Shutdown signal received. Finishing current cycle before stopping...")
+            self.shutdown_requested = True
 
-    match current_state:
-        case BackupState.IDLE:
-            logger.info("IDLE -> WAITING_TO_RUN")
-            next_state = BackupState.WAITING_TO_RUN
-            global next_run_time
-            next_run_time = time.monotonic() + FILE_BACKUP_INTERVAL
-            logger.info(f"Will wait for {FILE_BACKUP_INTERVAL} seconds until next cycle...")
+    def _perform_file_backup_cycle(self):
+        """State machine logic for the file renamer."""
 
-        case BackupState.WAITING_TO_RUN:
-            now = time.monotonic()
-            if now >= next_run_time:
-                logger.info("WAITING_TO_RUN -> BACKUP_FILES")
-                next_state = BackupState.BACKUP_FILES
-            else:
-                time.sleep(POLL_INTERVAL)
+        if settings is None:
+            logger.info("Configuration error. Halting.")
+            time.sleep(POLL_INTERVAL * 5)
+            self.current_state = BackupState.FATAL_ERROR
+            return
 
-        case BackupState.BACKUP_FILES:
-            logger.info("--- Starting Full Backup and Compression Cycle ---")
-            archive_live_files()
-            compress_files_in_backup_dir()
-            logger.info("--- Full Backup and Compression Cycle Finished ---")
-            logger.info("BACKUP_FILES -> IDLE")
-            next_state = BackupState.IDLE
+        match self.current_state:
+            case BackupState.IDLE:
+                logger.info("IDLE -> WAITING_TO_RUN")
+                self.next_run_time = time.monotonic() + FILE_BACKUP_INTERVAL
+                logger.info(f"Will wait for {FILE_BACKUP_INTERVAL} seconds until next cycle...")
+                self.current_state = BackupState.WAITING_TO_RUN
 
-    return next_state
+            case BackupState.WAITING_TO_RUN:
+                now = time.monotonic()
+                if now >= self.next_run_time:
+                    logger.info("WAITING_TO_RUN -> BACKUP_FILES")
+                    self.current_state = BackupState.BACKUP_FILES
+                else:
+                    time.sleep(POLL_INTERVAL)
+
+            case BackupState.BACKUP_FILES:
+                logger.info("--- Starting Full Backup and Compression Cycle ---")
+                archive_live_files()
+                compress_files_in_backup_dir()
+                logger.info("--- Full Backup and Compression Cycle Finished ---")
+                logger.info("BACKUP_FILES -> IDLE")
+                self.current_state = BackupState.IDLE
+
+
+    def run(self):
+        """Main loop for the file backup process."""
+        logger.info("--- Starting File Backup ---")
+        print("--- Starting File Backup ---")
+
+        if settings is None:
+            logger.info("Configuration error. Halting.")
+            return
+
+        if not ENABLE_BACKUP:
+            logger.info("File backup is disabled in config. Exiting.")
+            return
+
+        try:
+            while not self.shutdown_requested:
+                self._perform_file_backup_cycle()
+                if self.current_state == BackupState.IDLE:
+                    time.sleep(0.1)
+        except Exception as e:
+            logger.critical(f"UNEXPECTED ERROR in main loop: {e}", exc_info=True)
+        finally:
+            logger.info("--- File Backup Stopped ---")
+            print("--- File Backup Stopped ---")
 
 
 def run_file_backup():
-    """Main loop for the file backup process."""
-    logger.info("--- Starting File Backup ---")
-    print("--- Starting File Backup ---")
-
-    # Register the signal handler
-    signal.signal(signal.SIGINT, graceful_shutdown)
-    signal.signal(signal.SIGTERM, graceful_shutdown)
-
-    if settings is None:
-        logger.info("Configuration error. Halting.")
-        sys.exit(1)
-
-    if not ENABLE_BACKUP:
-        logger.info("File backup is disabled in config. Exiting.")
-        return
-
-    current_state = BackupState.IDLE
-    global next_run_time  # Needs to be accessible across state calls
-    next_run_time = 0
-    try:
-        while not SHUTDOWN_REQUESTED:
-            current_state = perform_file_backup_cycle(current_state)
-            if current_state == BackupState.IDLE:
-                time.sleep(0.1)
-    except Exception as e:
-        logger.critical(f"UNEXPECTED ERROR in main loop: {e}", exc_info=True)
-    finally:
-        logger.info("--- File Backup Stopped ---")
-        print("--- File Backup Stopped ---")
+    """ Main entry point to create and run a File_backup instanace. """
+    file_backup = FileBackup()
+    file_backup.run()

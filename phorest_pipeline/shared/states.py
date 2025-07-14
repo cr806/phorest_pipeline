@@ -35,6 +35,7 @@ class BackupState(Enum):
     IDLE = auto()
     BACKUP_FILES = auto()
     WAITING_TO_RUN = auto()
+    FATAL_ERROR = auto()
 
 
 class SyncerState(Enum):
