@@ -3,5 +3,5 @@ from enum import Enum, auto
 
 
 class CommunicationMethod(Enum):
-    CVS_PLOT = auto()
+    CSV_PLOT = auto()
     OPC_UA = auto()
