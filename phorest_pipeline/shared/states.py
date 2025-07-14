@@ -28,6 +28,7 @@ class CompressorState(Enum):
     CHECKING = auto()
     COMPRESSING_IMAGES = auto()
     WAITING_TO_RUN = auto()
+    FATAL_ERROR = auto()
 
 
 class BackupState(Enum):

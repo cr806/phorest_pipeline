@@ -24,16 +24,6 @@ logger = configure_logger(name=__name__, rotate_daily=True, log_filename="compre
 
 POLL_INTERVAL = COMPRESSOR_INTERVAL / 20 if COMPRESSOR_INTERVAL > (5 * 20) else 5
 
-SHUTDOWN_REQUESTED = False
-
-
-def graceful_shutdown(_signum, _frame):
-    """ Signal handler to initiate a graceful shutdown """
-    global SHUTDOWN_REQUESTED
-    if not SHUTDOWN_REQUESTED:
-        logger.info("Shutdown signal received. Finishing current cycle before stopping...")
-        SHUTDOWN_REQUESTED = True
-
 
 def find_entries_to_compress(metadata_list: list) -> list[tuple[int, dict]]:
     """
@@ -56,138 +46,157 @@ def find_entries_to_compress(metadata_list: list) -> list[tuple[int, dict]]:
     return entries_to_compress
 
 
-def perform_compression_cycle(current_state: CompressorState) -> CompressorState:
-    """State machine logic for the compressor."""
-    next_state = current_state
+class Compressor:
+    """Encapsulates the state and logic for the file compressor."""
 
-    if settings is None:
-        logger.info("Configuration error. Halting.")
-        time.sleep(POLL_INTERVAL * 5)
-        return current_state  # Consider a FATAL_ERROR state
+    def __init__(self):
+        # All state is now managed by the instance
+        self.shutdown_requested = False
+        self.current_state = CompressorState.IDLE
+        self.next_run_time = 0
+        self.entries_to_process = [] # To hold the batch of work
 
-    match current_state:
-        case CompressorState.IDLE:
-            logger.info("IDLE -> CHECKING")
-            next_state = CompressorState.CHECKING
-            global next_run_time
-            next_run_time = time.monotonic() + COMPRESSOR_INTERVAL
+        # Register signal handlers
+        signal.signal(signal.SIGINT, self._graceful_shutdown)
+        signal.signal(signal.SIGTERM, self._graceful_shutdown)
+    
+    def _graceful_shutdown(self, _signum, _frame):
+        """ Signal handler to initiate a graceful shutdown """
+        if not self.shutdown_requested:
+            logger.info("Shutdown signal received. Finishing current cycle before stopping...")
+            self.shutdown_requested = True
 
-        case CompressorState.CHECKING:
-            logger.info("--- Checking Manifest for Compression Work ---")
-            manifest_data = load_metadata_with_lock(DATA_DIR, METADATA_FILENAME)
+    def _perform_compression_cycle(self):
+        """State machine logic for the compressor."""
 
-            global entries_to_process  # Store the batch
-            entries_to_process = find_entries_to_compress(manifest_data)
+        if settings is None:
+            logger.info("Configuration error. Halting.")
+            time.sleep(POLL_INTERVAL * 5)
+            self.current_state = CompressorState.FATAL_ERROR
+            return
 
-            if entries_to_process:
-                logger.info(f"Found a batch of {len(entries_to_process)} files to compress.")
-                next_state = CompressorState.COMPRESSING_IMAGES
-            else:
-                logger.info("No entries found requiring compression.")
-                next_state = CompressorState.WAITING_TO_RUN
-                logger.info(f"Will wait for {COMPRESSOR_INTERVAL} seconds until next check...")
+        match self.current_statecurrent_state:
+            case CompressorState.IDLE:
+                logger.info("IDLE -> CHECKING")
+                self.next_run_time = time.monotonic() + COMPRESSOR_INTERVAL
+                self.current_state = CompressorState.CHECKING
 
-        case CompressorState.COMPRESSING_IMAGES:
-            logger.info(
-                f"--- Starting Image Compression for batch of {len(entries_to_process)} files ---"
-            )
+            case CompressorState.CHECKING:
+                logger.info("--- Checking Manifest for Compression Work ---")
+                manifest_data = load_metadata_with_lock(DATA_DIR, METADATA_FILENAME)
+                self.entries_to_process = find_entries_to_compress(manifest_data)
 
-            updates_for_manifest = []
-            for entry_index, entry_data in entries_to_process:
-                try:
-                    camera_data = entry_data["camera_data"]
-                    original_filepath = Path(camera_data["filepath"], camera_data["filename"])
+                if self.entries_to_process:
+                    logger.info(f"Found a batch of {len(self.entries_to_process)} files to compress.")
+                    self.current_state = CompressorState.COMPRESSING_IMAGES
+                else:
+                    logger.info("No entries found requiring compression.")
+                    logger.info(f"Will wait for {COMPRESSOR_INTERVAL} seconds until next check...")
+                    self.current_state = CompressorState.WAITING_TO_RUN
 
-                    gzipped_filename = original_filepath.name + ".gz"
-                    gzipped_filepath = original_filepath.with_name(gzipped_filename)
+            case CompressorState.COMPRESSING_IMAGES:
+                logger.info(
+                    f"--- Starting Image Compression for batch of {len(self.entries_to_process)} files ---"
+                )
 
-                    logger.info(f"gzipping {original_filepath} to {gzipped_filepath}...")
-                    with (
-                        original_filepath.open("rb") as f_in,
-                        gzip.open(gzipped_filepath, "wb") as f_out,
-                    ):
-                        shutil.copyfileobj(f_in, f_out)
+                updates_for_manifest = []
+                for entry_index, entry_data in self.entries_to_process:
+                    try:
+                        camera_data = entry_data["camera_data"]
+                        original_filepath = Path(camera_data["filepath"], camera_data["filename"])
 
-                    original_filepath.unlink()
+                        gzipped_filename = original_filepath.name + ".gz"
+                        gzipped_filepath = original_filepath.with_name(gzipped_filename)
 
-                    updates_for_manifest.append(
-                        {
-                            "index": entry_index,
-                            "new_filename": gzipped_filename,
-                        }
-                    )
-                    logger.info(f"Successfully gzipped {original_filepath.name}.")
-                except Exception:
-                    logger.error(f"Failed to gzip {original_filepath.name}.", exc_info=True)
-                    updates_for_manifest.append(
-                        {
-                            "index": entry_index,
-                            "new_filename": None,
-                        }
-                    )
+                        logger.info(f"gzipping {original_filepath} to {gzipped_filepath}...")
+                        with (
+                            original_filepath.open("rb") as f_in,
+                            gzip.open(gzipped_filepath, "wb") as f_out,
+                        ):
+                            shutil.copyfileobj(f_in, f_out)
 
-            # Update manifest
-            if updates_for_manifest:
-                try:
-                    logger.info(f"Updating manifest for {len(updates_for_manifest)} entries...")
-                    indices = [item["index"] for item in updates_for_manifest]
-                    filenames = [item["new_filename"] for item in updates_for_manifest]
+                        original_filepath.unlink()
 
-                    update_metadata_manifest_entry(
-                        DATA_DIR,
-                        METADATA_FILENAME,
-                        entry_index=indices,
-                        compression_attempted=True,
-                        new_filename=filenames,
-                    )
-                    logger.info("Batch manifest update successful.")
-                except Exception as e:
-                    logger.error(
-                        f"CRITICAL: Failed to update manifest after compression batch: {e}",
-                        exc_info=True,
-                    )
-                    next_state = CompressorState.WAITING_TO_RUN
-                    return next_state
+                        updates_for_manifest.append(
+                            {
+                                "index": entry_index,
+                                "new_filename": gzipped_filename,
+                            }
+                        )
+                        logger.info(f"Successfully gzipped {original_filepath.name}.")
+                    except Exception:
+                        logger.error(f"Failed to gzip {original_filepath.name}.", exc_info=True)
+                        updates_for_manifest.append(
+                            {
+                                "index": entry_index,
+                                "new_filename": None,
+                            }
+                        )
 
-            logger.info("COMPRESSING_FILES -> CHECKING (for more work)")
-            next_state = CompressorState.CHECKING
-            time.sleep(0.1)
+                # Update manifest
+                if updates_for_manifest:
+                    try:
+                        logger.info(f"Updating manifest for {len(updates_for_manifest)} entries...")
+                        indices = [item["index"] for item in updates_for_manifest]
+                        filenames = [item["new_filename"] for item in updates_for_manifest]
 
-        case CompressorState.WAITING_TO_RUN:
-            time.sleep(POLL_INTERVAL)
-            now = time.monotonic()
-            if now >= next_run_time:
-                next_state = CompressorState.IDLE
+                        update_metadata_manifest_entry(
+                            DATA_DIR,
+                            METADATA_FILENAME,
+                            entry_index=indices,
+                            compression_attempted=True,
+                            new_filename=filenames,
+                        )
+                        logger.info("Batch manifest update successful.")
+                    except Exception as e:
+                        logger.error(
+                            f"CRITICAL: Failed to update manifest after compression batch: {e}",
+                            exc_info=True,
+                        )
+                        self.current_state = CompressorState.WAITING_TO_RUN
+                        return
 
-    return next_state
+                logger.info("COMPRESSING_FILES -> CHECKING (for more work)")
+                self.current_state = CompressorState.CHECKING
+                time.sleep(0.1)
+
+            case CompressorState.WAITING_TO_RUN:
+                now = time.monotonic()
+                if now >= self.next_run_time:
+                    self.current_state = CompressorState.IDLE
+                else:
+                    time.sleep(POLL_INTERVAL)
+            
+            case CompressorState.FATAL_ERROR:
+                logger.error("[FATAL ERROR] Shutting down compressor.")
+                time.sleep(10)  # Prevent busy-looping in fatal state
+
+
+    def run(self):
+        """Main loop for the compressor process."""
+        logger.info("--- Starting Compressor ---")
+        print("--- Starting Compressor ---")
+
+        if settings is None:
+            logger.info("Configuration error. Exiting.")
+            return
+
+        if not ENABLE_COMPRESSOR:
+            logger.info("Compressor is disabled in config. Exiting.")
+            return
+
+        try:
+            while not self.shutdown_requested:
+                self._perform_compression_cycle()
+                time.sleep(0.1)
+        except Exception as e:
+            logger.critical(f"UNEXPECTED ERROR in main loop: {e}", exc_info=True)
+        finally:
+            logger.info("--- Compressor Stopped ---")
+            print("--- Compressor Stopped ---")
 
 
 def run_compressor():
-    """Main loop for the compressor process."""
-    logger.info("--- Starting Compressor ---")
-    print("--- Starting Compressor ---")
-
-    # Register the signal handler
-    signal.signal(signal.SIGINT, graceful_shutdown)
-    signal.signal(signal.SIGTERM, graceful_shutdown)
-
-    if settings is None:
-        logger.info("Configuration error. Halting.")
-        sys.exit(1)
-
-    if not ENABLE_COMPRESSOR:
-        logger.info("Compressor is disabled in config. Exiting.")
-        return
-
-    current_state = CompressorState.IDLE
-    global next_run_time  # Needs to be accessible across state calls
-    next_run_time = 0
-    try:
-        while not SHUTDOWN_REQUESTED:
-            current_state = perform_compression_cycle(current_state)
-            time.sleep(0.1)
-    except Exception as e:
-        logger.critical(f"UNEXPECTED ERROR in main loop: {e}", exc_info=True)
-    finally:
-        logger.info("--- Compressor Stopped ---")
-        print("--- Compressor Stopped ---")
+    """ Main entry point to create and run a Compressor instnace. """
+    compressor = Compressor()
+    compressor.run()
