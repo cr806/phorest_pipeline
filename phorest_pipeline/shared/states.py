@@ -33,7 +33,6 @@ class CompressorState(Enum):
 class BackupState(Enum):
     IDLE = auto()
     BACKUP_FILES = auto()
-    CHECKING = auto()
     WAITING_TO_RUN = auto()
 
 

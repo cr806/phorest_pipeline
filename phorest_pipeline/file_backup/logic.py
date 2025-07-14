@@ -2,6 +2,7 @@
 import datetime
 import gzip
 import shutil
+import signal
 import sys
 import time
 from pathlib import Path
@@ -29,6 +30,16 @@ LIVE_FILES_TO_BACKUP = [
     Path(RESULTS_DIR, "communicating_results.csv"),
     Path(RESULTS_DIR, "processed_data_plot.png"),
 ]
+
+SHUTDOWN_REQUESTED = False
+
+
+def graceful_shutdown(_signum, _frame):
+    """ Signal handler to initiate a graceful shutdown """
+    global SHUTDOWN_REQUESTED
+    if not SHUTDOWN_REQUESTED:
+        logger.info("Shutdown signal received. Finishing current cycle before stopping...")
+        SHUTDOWN_REQUESTED = True
 
 
 def archive_live_files():
@@ -127,24 +138,28 @@ def run_file_backup():
     logger.info("--- Starting File Backup ---")
     print("--- Starting File Backup ---")
 
+    # Register the signal handler
+    signal.signal(signal.SIGINT, graceful_shutdown)
+    signal.signal(signal.SIGTERM, graceful_shutdown)
+
     if settings is None:
         logger.info("Configuration error. Halting.")
         sys.exit(1)
+
+    if not ENABLE_BACKUP:
+        logger.info("File backup is disabled in config. Exiting.")
+        return
 
     current_state = BackupState.IDLE
     global next_run_time  # Needs to be accessible across state calls
     next_run_time = 0
     try:
-        while True:
-            if not ENABLE_BACKUP:
-                logger.info("File backup is disabled in config. Exiting.")
-                break
-
+        while not SHUTDOWN_REQUESTED:
             current_state = perform_file_backup_cycle(current_state)
-            if current_state == BackupState.IDLE or current_state == BackupState.CHECKING:
+            if current_state == BackupState.IDLE:
                 time.sleep(0.1)
-    except KeyboardInterrupt:
-        logger.info("Shutdown requested.")
+    except Exception as e:
+        logger.critical(f"UNEXPECTED ERROR in main loop: {e}", exc_info=True)
     finally:
         logger.info("--- File Backup Stopped ---")
         print("--- File Backup Stopped ---")
