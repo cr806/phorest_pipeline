@@ -1,5 +1,6 @@
 # process_pipeline/collector/logic.py
 import datetime
+import signal
 import sys
 import time
 from pathlib import Path
@@ -25,8 +26,8 @@ from phorest_pipeline.shared.states import CollectorState
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename="collector.log")
 
 if ENABLE_CAMERA:
-    from phorest_pipeline.shared.image_sources import ImageSourceType
     from phorest_pipeline.shared.config import CAMERA_TYPE
+    from phorest_pipeline.shared.image_sources import ImageSourceType
 
     if CAMERA_TYPE == ImageSourceType.LOGITECH:
         from phorest_pipeline.collector.sources.logi_camera_controller import camera_controller
@@ -39,10 +40,22 @@ if ENABLE_CAMERA:
     elif CAMERA_TYPE == ImageSourceType.DUMMY:
         from phorest_pipeline.collector.sources.dummy_camera_controller import camera_controller
     elif CAMERA_TYPE == ImageSourceType.FILE_IMPORTER:
-        from phorest_pipeline.collector.sources.image_file_importer import image_file_importer as camera_controller
+        from phorest_pipeline.collector.sources.image_file_importer import (
+            image_file_importer as camera_controller,
+        )
     logger.info(f"Camera type: {CAMERA_TYPE}")
 
 POLL_INTERVAL = COLLECTOR_INTERVAL / 5
+
+SHUTDOWN_REQUESTED = False
+
+
+def graceful_shutdown(_signum, _frame):
+    """ Signal handler to initiate a graceful shutdown """
+    global SHUTDOWN_REQUESTED
+    if not SHUTDOWN_REQUESTED:
+        logger.info("Shutdown signal received. Finishing current cycle before stopping...")
+        SHUTDOWN_REQUESTED = True
 
 
 def perform_collection(
@@ -234,6 +247,10 @@ def run_collector():
     logger.info("--- Starting Collector ---")
     print("--- Starting Collector ---")
 
+    # Register the signal handler
+    signal.signal(signal.SIGINT, graceful_shutdown)
+    signal.signal(signal.SIGTERM, graceful_shutdown)
+
     current_state = CollectorState.IDLE
     global next_run_time  # Needs to be accessible across state calls
     next_run_time = 0
@@ -251,21 +268,22 @@ def run_collector():
             logger.warning(f"Could not remove initial flag {DATA_READY_FLAG}: {e}")
 
     try:
-        while True:
+        while not SHUTDOWN_REQUESTED:
             current_state, failure_count = perform_collection(current_state, failure_count)
 
             # --- Check for FATAL_ERROR state to exit ---
             if current_state == CollectorState.FATAL_ERROR:
-                if CAMERA_TYPE == ImageSourceType.FILE_IMPORTER:
-                    break
                 logger.error("Exiting due to FATAL_ERROR state.")
                 break  # Exit the while loop
+            
+            if CAMERA_TYPE == ImageSourceType.FILE_IMPORTER and current_state == CollectorState.IDLE:
+                logger.info("File import finished. Signally shutdown")
+                global SHUTDOWN_REQUESTED
+                SHUTDOWN_REQUESTED = True
 
             # Small sleep even in fast transitions to prevent busy-looping if logic is instant
             if current_state != CollectorState.WAITING_TO_RUN:
                 time.sleep(0.1)
-    except KeyboardInterrupt:
-        logger.info("Shutdown requested via KeyboardInterrupt.")
     except Exception as e:
         logger.error(f"UNEXPECTED ERROR in main loop: {e}")
     finally:
