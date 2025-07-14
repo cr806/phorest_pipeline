@@ -3,11 +3,11 @@ import sys
 import tomllib
 from pathlib import Path
 
-from phorest_pipeline.shared.image_sources import (
-    ImageTransform,
-    ImageSourceType,
-)
 from phorest_pipeline.shared.communication_methods import CommunicationMethod
+from phorest_pipeline.shared.image_sources import (
+    ImageSourceType,
+    ImageTransform,
+)
 
 CONFIG_FILE = Path("configs", "Phorest_config.toml")
 
@@ -16,6 +16,7 @@ RESULTS_FILENAME = Path("processing_results.jsonl")
 
 CSV_FILENAME = Path("communicating_results.csv")
 IMAGE_FILENAME = Path("processed_data_plot.png")
+
 
 def load_config():
     if not CONFIG_FILE.is_file():
