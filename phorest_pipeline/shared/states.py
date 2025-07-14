@@ -42,3 +42,4 @@ class SyncerState(Enum):
     IDLE = auto()
     SYNCING_FILES = auto()
     WAITING_TO_RUN = auto()
+    FATAL_ERROR = auto()

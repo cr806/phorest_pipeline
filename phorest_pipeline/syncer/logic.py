@@ -1,7 +1,6 @@
 # phorest_pipeline/syncer/logic.py
 import shutil
 import signal
-import sys
 import time
 from pathlib import Path
 
@@ -30,17 +29,6 @@ POLL_INTERVAL = SYNC_INTERVAL / 20 if SYNC_INTERVAL > (5 * 20) else 5
 REMOTE_DATA_DIR = Path(REMOTE_ROOT_DIR, DATA_DIR.name)
 REMOTE_RESULTS_DIR = Path(REMOTE_ROOT_DIR, RESULTS_DIR.name)
 REMOTE_BACKUP_DIR = Path(REMOTE_ROOT_DIR, BACKUP_DIR.name)
-
-
-SHUTDOWN_REQUESTED = False
-
-
-def graceful_shutdown(_signum, _frame):
-    """ Signal handler to initiate a graceful shutdown """
-    global SHUTDOWN_REQUESTED
-    if not SHUTDOWN_REQUESTED:
-        logger.info("Shutdown signal received. Finishing current cycle before stopping...")
-        SHUTDOWN_REQUESTED = True
 
 
 def sync_archived_backups():
@@ -147,72 +135,86 @@ def sync_processed_images():
         )
 
 
-def perform_sync_cycle(current_state: SyncerState) -> SyncerState:
-    """State machin logic for the syncer."""
-    next_state = current_state
+class Syncer:
+    """Encapsulates the state and logic for the file synchroniser."""
+    def __init__(self):
+        self.shutdown_requested = False
+        self.current_state = SyncerState.IDLE
+        self.next_run_time = 0
 
-    if settings is None:
-        logger.info("Configuration error. Halting.")
-        time.sleep(POLL_INTERVAL * 5)
-        return current_state  # FATAL_ERROR state ?
+        # Register the signal handler
+        signal.signal(signal.SIGINT, self._graceful_shutdown)
+        signal.signal(signal.SIGTERM, self._graceful_shutdown)
 
-    match current_state:
-        case SyncerState.IDLE:
-            logger.info("IDLE -> WAITING_TO_RUN")
-            next_state = SyncerState.WAITING_TO_RUN
-            global next_run_time
-            next_run_time = time.monotonic() + SYNC_INTERVAL
-            logger.info(f"Will wait for {SYNC_INTERVAL} seconds until next cycle...")
+    def _graceful_shutdown(self, _signum, _frame):
+        """ Signal handler to initiate a graceful shutdown """
+        if not self.shutdown_requested:
+            logger.info("Shutdown signal received. Finishing current cycle before stopping...")
+            self.shutdown_requested = True
 
-        case SyncerState.WAITING_TO_RUN:
-            now = time.monotonic()
-            if now >= next_run_time:
-                logger.info("WAITING_TO_RUN -> SYNCING_FILES")
-                next_state = SyncerState.SYNCING_FILES
-            else:
-                time.sleep(POLL_INTERVAL)
+    def _perform_sync_cycle(self):
+        """State machin logic for the syncer."""
 
-        case SyncerState.SYNCING_FILES:
-            logger.info("--- Starting Sync Cycle ---")
-            try:
-                sync_archived_backups()
-                sync_results_and_manifest()
-                sync_processed_images()
-                logger.info("--- Sync Cycle Finished ---")
-            except Exception as e:
-                logger.error(f"Error during sync cycle: {e}")
+        if settings is None:
+            logger.info("Configuration error. Halting.")
+            time.sleep(POLL_INTERVAL * 5)
+            self.current_state = SyncerState.FATAL_ERROR
 
-            next_state = SyncerState.IDLE
+        match self.current_state:
+            case SyncerState.IDLE:
+                logger.info("IDLE -> WAITING_TO_RUN")
+                self.next_run_time = time.monotonic() + SYNC_INTERVAL
+                logger.info(f"Will wait for {SYNC_INTERVAL} seconds until next cycle...")
+                self.current_state = SyncerState.WAITING_TO_RUN
 
-    return next_state
+            case SyncerState.WAITING_TO_RUN:
+                now = time.monotonic()
+                if now >= self.next_run_time:
+                    logger.info("WAITING_TO_RUN -> SYNCING_FILES")
+                    self.current_state = SyncerState.SYNCING_FILES
+                else:
+                    time.sleep(POLL_INTERVAL)
 
+            case SyncerState.SYNCING_FILES:
+                logger.info("--- Starting Sync Cycle ---")
+                try:
+                    sync_archived_backups()
+                    sync_results_and_manifest()
+                    sync_processed_images()
+                    logger.info("--- Sync Cycle Finished ---")
+                except Exception as e:
+                    logger.error(f"Error during sync cycle: {e}")
+                
+                self.current_state = SyncerState.IDLE
+
+            case SyncerState.FATAL_ERROR:
+                logger.error("[FATAL ERROR] Shutting down syncer.")
+                time.sleep(10)  # Prevent busy-looping in fatal state
+
+    def run(self):
+        """Main loop for the syncer process."""
+        logger.info("--- Starting Syncer Process ---")
+        print("--- Starting Syncer Process ---")
+
+        if settings is None:
+            logger.info("Configuration error. Halting.")
+            return
+        
+        if not ENABLE_SYNCER:
+            logger.info("Syncer is disabled in config. Exiting.")
+            return
+
+        try:
+            while not self.shutdown_requested:
+                self._perform_sync_cycle()
+                time.sleep(0.1)  # Sleep to avoid busy waiting
+        except Exception as e:
+            logger.critical(f"UNEXPECTED ERROR in main loop: {e}", exc_info=True)
+        finally:
+            logger.info("--- Syncer Stopped ---")
+            print("--- Syncer Stopped ---")
 
 def run_syncer():
-    """Main loop for the syncer process."""
-    logger.info("--- Starting Syncer Process ---")
-    print("--- Starting Syncer Process ---")
-
-    # Register the signal handler
-    signal.signal(signal.SIGINT, graceful_shutdown)
-    signal.signal(signal.SIGTERM, graceful_shutdown)
-
-    if settings is None:
-        logger.info("Configuration error. Halting.")
-        sys.exit(1)
-    
-    if not ENABLE_SYNCER:
-        logger.info("Syncer is disabled in config. Exiting.")
-        return
-
-    current_state = SyncerState.IDLE
-    global next_run_time  # Needs to be accessible across state calls
-    next_run_time = 0
-    try:
-        while not SHUTDOWN_REQUESTED:
-            current_state = perform_sync_cycle(current_state)
-            time.sleep(0.1)  # Sleep to avoid busy waiting
-    except Exception as e:
-        logger.critical(f"UNEXPECTED ERROR in main loop: {e}", exc_info=True)
-    finally:
-        logger.info("--- Syncer Stopped ---")
-        print("--- Syncer Stopped ---")
+    """ Main entry point to create and run a Synchroniser instanace. """
+    sync = Syncer()
+    sync.run()
