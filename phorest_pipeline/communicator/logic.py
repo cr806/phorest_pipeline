@@ -1,4 +1,5 @@
 # src/process_pipeline/communicator/logic.py
+import signal
 import sys
 import time
 from pathlib import Path
@@ -35,8 +36,17 @@ COMMUNICATION_DISPATCH_MAP = {
     # CommunicationMethod.OPC_UA: send_data,
 }
 
+SHUTDOWN_REQUESTED = False
 
-# Helper Function: Find all processed entries
+
+def graceful_shutdown(_signum, _frame):
+    """ Signal handler to initiate a graceful shutdown """
+    global SHUTDOWN_REQUESTED
+    if not SHUTDOWN_REQUESTED:
+        logger.info("Shutdown signal received. Finishing current cycle before stopping...")
+        SHUTDOWN_REQUESTED = True
+
+
 def find_processed_entries(metadata_list: list) -> list[dict]:
     """Finds all entry indexes with 'processed': True."""
     processed_entries = []
@@ -153,6 +163,11 @@ def run_communicator():
     """Main loop for the communicator process."""
     logger.info("--- Starting Communicator ---")
     print("--- Starting Communicator ---")
+
+    # Register the signal handler
+    signal.signal(signal.SIGINT, graceful_shutdown)
+    signal.signal(signal.SIGTERM, graceful_shutdown)
+
     current_state = CommunicatorState.COMMUNICATING
     global next_run_time
     next_run_time = 0
@@ -169,17 +184,14 @@ def run_communicator():
             logger.warning(f"Could not remove initial flag {RESULTS_READY_FLAG}: {e}")
 
     try:
-        while True:
+        while not SHUTDOWN_REQUESTED:
             current_state = perform_communication(current_state)
             if current_state == CommunicatorState.FATAL_ERROR:
                 logger.error("Exiting due to FATAL_ERROR state.")
                 break
             time.sleep(0.1)  # Small sleep to prevent busy-looping
-    except KeyboardInterrupt:
-        logger.info("Shutdown requested.")
     except Exception as e:
-        logger.error(f"Unexpected error: {e}")
-        current_state = CommunicatorState.FATAL_ERROR
+        logger.critical(f"UNEXPECTED ERROR in main loop: {e}", exc_info=True)
     finally:
         # Cleanup on exit
         if settings:
