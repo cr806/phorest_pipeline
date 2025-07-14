@@ -1,5 +1,6 @@
 # phorest_pipeline/processor/logic.py
 import datetime
+import signal
 import sys
 import time
 from pathlib import Path
@@ -36,7 +37,17 @@ POLL_INTERVAL = PROCESSOR_INTERVAL / 20 if PROCESSOR_INTERVAL > (5 * 20) else 5
 _current_processing_entry_data: dict | None = None
 _current_processing_entry_index: int = -1
 
-# Helper Function: Find next unprocessed entry
+SHUTDOWN_REQUESTED = False
+
+
+def graceful_shutdown(_signum, _frame):
+    """ Signal handler to initiate a graceful shutdown """
+    global SHUTDOWN_REQUESTED
+    if not SHUTDOWN_REQUESTED:
+        logger.info("Shutdown signal received. Finishing current batch before stopping...")
+        SHUTDOWN_REQUESTED = True
+
+
 def find_all_unprocessed_entries(metadata_list: list) -> list[tuple[int, dict]]:
     """
     Finds the index and data of all entries with 'processing_status': 'pending'.
@@ -181,10 +192,17 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
                 all_results_for_manifest_update = []
                 all_results_for_append = []
 
+                processed_count = 0
+
                 for idx, (entry_index, entry_data) in enumerate(pending_batch):
+                    if SHUTDOWN_REQUESTED:
+                        logger.info("Shutdown requested, breaking out of processing loop")
+                        break
+
                     logger.info(f"Processing entry {entry_index} (Image: {entry_data.get('camera_data', {}).get('filename')})...")
                     image_results, img_proc_error_msg, processing_successful = None, None, False
 
+                    processed_count += 1
                     try:
                         if ENABLE_CAMERA:
                             image_meta = entry_data.get("camera_data")
@@ -245,8 +263,31 @@ def perform_processing(current_state: ProcessorState) -> ProcessorState:
                 logger.info("--- Collating results for batch update ---")
                 save_results_out(all_results_for_append, all_results_for_manifest_update)
 
-            # Loop back immediately to check for more data
-            next_state = ProcessorState.PROCESSING
+                # 4. Check for and clean-up unprocessed entries
+                remaining_entries = pending_batch[processed_count:]
+                if remaining_entries:
+                    unprocessed_count = len(remaining_entries)
+                    logger.warning(f"{unprocessed_count} entries were left unprocessed at shutdown.")
+
+                    indicies_to_reset = [index for index, _ in remaining_entries]
+
+                    logger.info(f"Resetting status of {unprocessed_count} unprocessed entries to 'pending'...")
+                    try:
+                        update_metadata_manifest_entry(
+                            DATA_DIR,
+                            METADATA_FILENAME,
+                            entry_index=indicies_to_reset,
+                            status='pending',
+                        )
+                        logger.info("Successfully reset unprocessed entries.")
+                    except Exception as e:
+                        logger.error(f"Failed to reset status of unprocessed entries: {e}", exc_info=True)
+
+
+            if SHUTDOWN_REQUESTED:
+                next_state = ProcessorState.FATAL_ERROR  # Use FATAL_ERRROR to signal a clean stop
+            else:
+                next_state = ProcessorState.PROCESSING  # Loop back immediately to check for more data
         
         case ProcessorState.FATAL_ERROR:
             # Should not technically be called again once in this state if loop breaks
@@ -261,6 +302,11 @@ def run_processor():
     """Main loop for the processor process."""
     logger.info("--- Starting Processor ---")
     print("--- Starting Processor ---")
+
+    # Register signal handler
+    signal.signal(signal.SIGINT, graceful_shutdown)
+    signal.signal(signal.SIGTERM, graceful_shutdown)
+
     # Start in PROCESSING state to immediately clear any backlog
     current_state = ProcessorState.PROCESSING
     global next_run_time
@@ -279,12 +325,12 @@ def run_processor():
             logger.warning(f"Could not remove initial flag {DATA_READY_FLAG}: {e}")
 
     try:
-        while True:
+        while not SHUTDOWN_REQUESTED:
             current_state = perform_processing(current_state)
 
             # --- Check for FATAL_ERROR state to exit ---
             if current_state == ProcessorState.FATAL_ERROR:
-                logger.info("Exiting due to FATAL_ERROR state.")
+                logger.info("Exiting due to FATAL_ERROR state or shutdown request.")
                 break  # Exit the while loop
 
             # Sleep only when waiting, processing loop handles its own pacing/delays
@@ -293,10 +339,8 @@ def run_processor():
                 or current_state == ProcessorState.IDLE
             ):
                 time.sleep(0.1)  # Prevent busy-looping when idle/waiting
-    except KeyboardInterrupt:
-        logger.info("Shutdown requested.")
     except Exception as e:
-        logger.error(f"UNEXPECTED ERROR in main loop: {e}")
+        logger.critical(f"UNEXPECTED ERROR in main loop: {e}", exc_info=True)
         current_state = ProcessorState.FATAL_ERROR
     finally:
         # No flags need specific cleanup here unless DATA_READY might be left mid-operation
