@@ -23,8 +23,6 @@ from phorest_pipeline.analysis.matching import (
 from phorest_pipeline.analysis.visualise import (
     visualize_features_with_matplotlib,
 )
-
-# Import the new config constants
 from phorest_pipeline.shared.config import (
     FEATURE_LOCATIONS_CONFIG_PATH,
     GENERATED_FILES_DIR,
@@ -46,7 +44,7 @@ def generate_roi_manifest():
     try:
         output_path = Path(GENERATED_FILES_DIR, ROI_MANIFEST_FILENAME)
 
-        chip_location_json = Path("config_file_preparation", "Label_templates", "Chip_map.json")
+        chip_location_json = Path(LABEL_TEMPLATE_DIR, "Chip_map.json")
         calculated_image_feature_path = Path(GENERATED_FILES_DIR, "CalculatedImageFeatures.json")
         grating_locations_image_path = Path(GENERATED_FILES_DIR, "Grating_locations.png")
         label_locations_image_path = Path(GENERATED_FILES_DIR, "Label_locations.png")
