@@ -2,15 +2,15 @@
 import sys
 from pathlib import Path
 
+from phorest_pipeline.analysis.file_utils import create_directory_with_error_handling
 from phorest_pipeline.analysis.geometry import (
     rotate_image,
 )
+from phorest_pipeline.analysis.image_utils import load_image_and_normalise
 from phorest_pipeline.analysis.io import (
-    create_directory_with_error_handling,
     create_ROI_JSON,
     load_and_offset_grating_data,
     load_chip_feature_locations,
-    load_image_and_normalise,
     load_user_feature_locations,
     save_json,
 )
@@ -85,7 +85,7 @@ def generate_roi_manifest():
 
         # 4. Refine feature locations using template matching
         result, error = refine_feature_locations(
-            rotated_image, user_chip_mapping, LABEL_TEMPLATE_DIR
+            rotated_image, user_chip_mapping, GENERATED_FILES_DIR
         )
         if error:
             print(error)
@@ -110,7 +110,7 @@ def generate_roi_manifest():
 
         # 6. Refine feature locations again with new rotation-angle / scale-factor using template matching
         result, error = refine_feature_locations(
-            rotated_image, user_chip_mapping, LABEL_TEMPLATE_DIR
+            rotated_image, user_chip_mapping, GENERATED_FILES_DIR
         )
         if error:
             print(error)

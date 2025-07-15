@@ -5,8 +5,9 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+from phorest_pipeline.analysis.file_utils import create_directory_with_error_handling
 from phorest_pipeline.analysis.geometry import angle_between_points, calculate_distance
-from phorest_pipeline.analysis.io import create_directory_with_error_handling, load_template
+from phorest_pipeline.analysis.image_utils import load_template
 from phorest_pipeline.analysis.visualise import (
     visualize_search_window_preprocessing,
     visualize_template_matching_result,
@@ -246,7 +247,7 @@ def refine_feature_locations(image, user_chip_mapping, result_save_path):
     if not user_features:
         return (None, f"[ERROR] 'features' not found in user chip mapping {message}.")
 
-    result_save_root = Path(result_save_path.parent, "label_locating_results")
+    result_save_root = Path(result_save_path, "label_locating_results")
     result, error = create_directory_with_error_handling(result_save_root)
     if error:
         error = error + f" {message}"

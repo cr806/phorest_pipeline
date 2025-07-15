@@ -9,7 +9,9 @@ from phorest_pipeline.shared.image_sources import (
     ImageTransform,
 )
 
-CONFIG_FILE = Path("configs", "Phorest_config.toml")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+
+CONFIG_FILE = Path(PROJECT_ROOT, "configs", "Phorest_config.toml")
 
 METADATA_FILENAME = Path("metadata_manifest.json")
 RESULTS_FILENAME = Path("processing_results.jsonl")
@@ -163,11 +165,11 @@ try:
     BRIGHTFIELD_CAMERA_INDEX = int(settings.get("Brightfield", {}).get("camera_id", 1))
 
     # --- Paths for ROI Generation ---
-    ROI_GENERATION_IMAGE_PATH = Path(ROOT_DIR, settings.get("Assets", {}).get("roi_generation_image"))
-    LABEL_TEMPLATE_DIR = Path(ROOT_DIR, settings.get("Assets", {}).get("label_template_dir"))
-    FEATURE_LOCATIONS_CONFIG_PATH = Path(ROOT_DIR, settings.get("Assets", {}).get("feature_locations_config"))
-    ROI_MANIFEST_FILENAME = settings.get("Assets", {}).get("roi_manifest_filename", "ROI_manifest.json")
-    GENERATED_FILES_DIR = settings.get("Assets", {}).get("generated_files_dir")
+    ROI_GENERATION_IMAGE_PATH = Path(PROJECT_ROOT, settings.get("Assets", {}).get("roi_generation_image"))
+    LABEL_TEMPLATE_DIR = Path(PROJECT_ROOT, settings.get("Assets", {}).get("label_template_dir"))
+    FEATURE_LOCATIONS_CONFIG_PATH = Path(PROJECT_ROOT, settings.get("Assets", {}).get("feature_locations_config"))
+    ROI_MANIFEST_FILENAME = Path(settings.get("Assets", {}).get("roi_manifest_filename", "ROI_manifest.json"))
+    GENERATED_FILES_DIR = Path(PROJECT_ROOT, settings.get("Assets", {}).get("generated_files_dir"))
 
 except (FileNotFoundError, ValueError, IOError) as e:
     print(f"FATAL ERROR loading/parsing configuration: {e}")
