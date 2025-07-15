@@ -43,7 +43,6 @@ def generate_roi_manifest():
     """
     try:
         output_path = Path(GENERATED_FILES_DIR, ROI_MANIFEST_FILENAME)
-
         chip_location_json = Path(LABEL_TEMPLATE_DIR, "Chip_map.json")
         calculated_image_feature_path = Path(GENERATED_FILES_DIR, "CalculatedImageFeatures.json")
         grating_locations_image_path = Path(GENERATED_FILES_DIR, "Grating_locations.png")

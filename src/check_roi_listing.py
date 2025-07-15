@@ -1,16 +1,18 @@
 import json
 from pathlib import Path
 
-from config_file_preparation.Locator_functions import (
-    load_image_and_normalise,
-    rotate_image,
-    visualize_features_with_matplotlib,
+from phorest_pipeline.analysis.image_utils import load_image_and_normalise
+from phorest_pipeline.analysis.geometry import rotate_image
+from phorest_pipeline.analysis.visualise import visualize_features_with_matplotlib
+
+from phorest_pipeline.shared.config import (
+    GENERATED_FILES_DIR,
+    ROI_MANIFEST_FILENAME,
+    ROI_GENERATION_IMAGE_PATH
 )
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-PATH_TO_IMAGE = Path(PROJECT_ROOT, "continuous_capture", "continuous_capture_frame.jpg")
-ROI_METADATA_PATH = Path(PROJECT_ROOT, "generated_files", "ROI_manifest.json")
-GRATING_LOCATION_IMAGE_PATH = Path(PROJECT_ROOT, "generated_files", "Grating_locations.png")
+ROI_METADATA_PATH = Path(GENERATED_FILES_DIR, ROI_MANIFEST_FILENAME)
+GRATING_LOCATION_IMAGE_PATH = Path(GENERATED_FILES_DIR, "Grating_locations.png")
 
 with ROI_METADATA_PATH.open("r") as f:
     roi_dict = json.load(f)
@@ -27,7 +29,7 @@ for k, v in roi_dict.items():
     roi_dict[k]["y-size"] = v.get("size", [None, None])[0]
     grating_list.append(roi_dict[k])
 
-image, error = load_image_and_normalise(PATH_TO_IMAGE)
+image, error = load_image_and_normalise(ROI_GENERATION_IMAGE_PATH)
 if error:
     print(error)
 
