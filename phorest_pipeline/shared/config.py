@@ -162,6 +162,13 @@ try:
     # --- Brightfield Settings ---
     BRIGHTFIELD_CAMERA_INDEX = int(settings.get("Brightfield", {}).get("camera_id", 1))
 
+    # --- Paths for ROI Generation ---
+    ROI_GENERATION_IMAGE_PATH = Path(ROOT_DIR, settings.get("Assets", {}).get("roi_generation_image"))
+    LABEL_TEMPLATE_DIR = Path(ROOT_DIR, settings.get("Assets", {}).get("label_template_dir"))
+    FEATURE_LOCATIONS_CONFIG_PATH = Path(ROOT_DIR, settings.get("Assets", {}).get("feature_locations_config"))
+    ROI_MANIFEST_FILENAME = settings.get("Assets", {}).get("roi_manifest_filename", "ROI_manifest.json")
+    GENERATED_FILES_DIR = settings.get("Assets", {}).get("generated_files_dir")
+
 except (FileNotFoundError, ValueError, IOError) as e:
     print(f"FATAL ERROR loading/parsing configuration: {e}")
     sys.exit(1)

@@ -76,3 +76,11 @@ camera_transform = "NONE"             # Image transformation: "NONE", "ROTATE_90
 # camera_gain = 1.0                 # Example: brightfield specific gain
 # camera_brightness = 0.5
 # camera_contrast = 0.5
+
+# --- Static Asset Paths (Advanced - Do not change unless you know what you are doing) ---
+[Assets]
+roi_generation_image = "continuous_capture/continuous_capture_frame.jpg"  # Image used as the reference for generating the ROI map.
+label_template_dir = "assets/Label_templates"                             # Directory containing templates for finding features.
+feature_locations_config = "configs/Feature_locations.toml"               # Configuration file defining which features to locate.
+roi_manifest_filename = "ROI_manifest.json"                               # Output filename for the generated ROI manifest.
+generated_files_dir = "generated_files"                                   # Directory for output from generate ROI scripts.
