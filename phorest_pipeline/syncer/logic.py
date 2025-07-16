@@ -72,7 +72,7 @@ def sync_results_and_manifest():
                 except Exception as e:
                     logger.error(f"Failed to copy {item.name}: {e}")
 
-    # 3. Update manifest
+    # 3. Sync data manifest
     manifest_path = Path(DATA_DIR, METADATA_FILENAME)
     if manifest_path.exists():
         REMOTE_DATA_DIR.mkdir(parents=True, exist_ok=True)
