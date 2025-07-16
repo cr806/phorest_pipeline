@@ -66,7 +66,7 @@ def _load_metadata(metadata_path: Path) -> list:
         with metadata_path.open("r") as f:
             if metadata_path.suffix.lower() == ".jsonl":
                 # --- JSON Lines (.jsonl) parsing ---
-                logger.debug(f"Parsing '{metadata_path.name}' as JSON Lines.")
+                logger.info(f"[METADATA] [LOAD] Parsing '{metadata_path.name}' as JSON Lines.")
                 entries = []
                 for line in f:
                     if line.strip():
@@ -74,7 +74,7 @@ def _load_metadata(metadata_path: Path) -> list:
                 return entries
             else:
                 # --- Standard JSON parsing ---
-                logger.debug(f"Parsing '{metadata_path.name}' as standard JSON.")
+                logger.info(f"[METADATA] [LOAD] Parsing '{metadata_path.name}' as standard JSON.")
                 content = f.read()
                 if not content:
                     logger.warning(
@@ -267,8 +267,9 @@ def update_metadata_manifest_entry(
     processing_timestamp_iso: str | list[str] | None = None,
     processing_error: bool | list[bool] | None = None,
     processing_error_msg: str | list[str] | None = None,
-    compression_attempted: bool | list[str] | None = None,
-    image_synced: bool | list[str] | None = None,
+    data_transmitted: bool | list[bool] | None = None,
+    compression_attempted: bool | list[bool] | None = None,
+    image_synced: bool | list[bool] | None = None,
     new_filename: str | list[str] | None = None,
     new_filepath: str | list[str] | None = None,
 ):
@@ -310,6 +311,7 @@ def update_metadata_manifest_entry(
                         "processing_error": processing_error,
                         "processing_error_msg": processing_error_msg,
                         "compression_attempted": compression_attempted,
+                        "data_transmitted": data_transmitted,
                         "image_synced": image_synced,
                     }.items():
                         current_value = get_value_for_index(value, i)

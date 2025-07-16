@@ -8,9 +8,10 @@ from phorest_pipeline.shared.config import (
     ENABLE_CAMERA,
     ENABLE_THERMOCOUPLE,
     RESULTS_DIR,
+    RESULTS_FILENAME,
 )
 from phorest_pipeline.shared.logger_config import configure_logger
-from phorest_pipeline.shared.metadata_manager import lock_and_manage_file
+from phorest_pipeline.shared.metadata_manager import load_metadata_with_lock, lock_and_manage_file
 
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename="comms_csv_plot.log")
 
@@ -19,78 +20,75 @@ RESULTS_IMAGE = Path("processed_data_plot.png")
 
 
 def save_results_json_as_csv(processed_entries: list[dict], csv_path: Path) -> None:
-    logger.info(f"Parsing results JSON to CSV and saving to {csv_path}")
+    """
+    Combines data from the data manifest and the results manifest to create a CSV.
+    """
+    logger.info("Loading results manifest to correlate with processed entries...")
+    try:
+        results_data = load_metadata_with_lock(Path(RESULTS_DIR, RESULTS_FILENAME))
 
-    if not processed_entries:
-        logger.info("No processed entries provided for CSV conversion. Skipping.")
-        # Ensure an empty CSV is created or old one is cleared if no data
-        try:
-            pd.DataFrame().to_csv(csv_path, index=False)
-            logger.info(f"Created/cleared empty CSV at {csv_path}")
-        except Exception as e:
-            logger.error(f"Failed to create/clear CSV at {csv_path}: {e}")
+        results_map = {
+            entry.get("image_filename"): entry 
+            for entry in results_data if entry.get("image_filename")
+        }
+    except Exception as e:
+        logger.error(f"Could not load or parse results manifest: {e}", exc_info=True)
         return
-
-    headers = []
+    
+    logger.info(f"Parsing {len(processed_entries)} entries to create CSV...")
     records = []
+
     for entry in processed_entries:
-        # Extract the image_timestamp once per entry
-        timestamp = entry.get("image_timestamp", None)
+        if not entry.get("camera_data"):
+            continue
 
-        if ENABLE_THERMOCOUPLE:
-            # Extract the temperature sensor data once per entry
-            temp_sensors = entry.get("temperature_readings", {}).keys()
-            temp_dict = {}
-            for sensor in temp_sensors:
-                temp_dict[f"temperature_{sensor.lower().replace(' ', '_')}"] = entry.get(
-                    "temperature_readings", {}
-                ).get(sensor, None)
+        filename = entry["camera_data"].get("filename")
+        result_entry = results_map.get(filename)
 
-        if ENABLE_CAMERA:
-            if not headers:
-                try:
-                    if len(entry["image_analysis"]) < 2:
-                        logger.warning(
-                            "Expected at least two items in 'image_analysis'. Using first item."
-                        )
-                        continue
-                    target_dictionary = entry["image_analysis"][1]
-                    headers = list(target_dictionary.keys())
-                except (IndexError, KeyError) as e:
-                    logger.error(
-                        f"Error accessing data: {e}: {processed_entries = } {target_dictionary = }"
-                    )
-            # Iterate through each item in the "image_analysis" list
-            for analysis_item in entry.get("image_analysis", []):
-                # We are interested in elements that have "ROI-label" as a key
+        if not result_entry:
+            logger.warning(f"No matching result found for processed image: {filename}. Skipping entry.")
+            continue
+
+        timestamp = result_entry.get("image_timestamp")
+        temp_readings = result_entry.get("temperature_readings")
+        image_analysis = result_entry.get("image_analysis")
+
+        headers = []
+        if not headers and ENABLE_CAMERA and image_analysis:
+            for item in image_analysis:
+                if "ROI-label" in item:
+                    headers = list(item.keys())
+                    break
+        
+        if ENABLE_CAMERA and image_analysis:
+            for analysis_item in image_analysis:
                 if "ROI-label" in analysis_item:
-                    image_dict = {}
-
-                    image_dict["timestamp"] = timestamp
-
+                    record = {"timestamp": timestamp}
                     for field in headers:
                         value = analysis_item.get(field)
                         if isinstance(value, dict):
-                            # It's a dictionary so pull out "Mean"
-                            value = value.get("Mean")
-                        image_dict[field] = value
+                            value = value.get("Median")
+                        record[field] = value
+                    
+                    # Add temperature data to the same record
+                    if ENABLE_THERMOCOUPLE and temp_readings:
+                        for sensor, value in temp_readings.items():
+                            record[f"temperature_{sensor.lower().replace(' ', '_')}"] = value
+                    
+                    records.append(record)
 
-                    if ENABLE_THERMOCOUPLE:
-                        image_dict.update(temp_dict)
-
-                    records.append(image_dict)
-        else:
-            if ENABLE_THERMOCOUPLE:
-                if not timestamp:
-                    temp_dict["timestamp"] = entry.get("temperature_timestamp", None)
-                records.append(temp_dict)
+        elif ENABLE_THERMOCOUPLE and temp_readings:
+            record = {"timestamp": result_entry.get("temperature_timestamp")}
+            for sensor, value in temp_readings.items():
+                record[f"temperature_{sensor.lower().replace(' ', '_')}"] = value
+            records.append(record)
 
     # Create the DataFrame
     df = pd.DataFrame(records)
     try:
         with lock_and_manage_file(csv_path):
             df.to_csv(csv_path, index=False)
-            logger.info(f"Successfully saved CSV to {csv_path} (under lock).")
+        logger.info(f"Successfully saved CSV to {csv_path} (under lock).")
     except Exception as e:
         logger.error(f"Failed to save CSV file under lock at {csv_path}: {e}", exc_info=True)
 
@@ -186,7 +184,7 @@ def save_plot_of_results(csv_path: Path, image_path: Path) -> None:
                     logger.warning(
                         f"Temperature sensor '{temp_sensor}' not found in data. Skipping plot for this sensor."
                     )
-            ax[1].legend(loc="upper left")
+            ax[1].legend(loc="upper left", ncols=5)
         else:
             logger.warning("No temperature sensors found in data. Skipping temperature plot.")
     else:
@@ -196,7 +194,7 @@ def save_plot_of_results(csv_path: Path, image_path: Path) -> None:
     ax[1].set_ylabel("Temperature (°C)")
     ax[1].set_xlabel("Time")
 
-    ax[0].legend(loc="upper left")
+    ax[0].legend(loc="upper left", ncols=5)
 
     fig.tight_layout()
     try:

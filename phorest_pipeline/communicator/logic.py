@@ -9,7 +9,9 @@ from phorest_pipeline.shared.config import (
     COMMUNICATION_METHOD,
     COMMUNICATOR_INTERVAL,
     CSV_FILENAME,
+    DATA_DIR,
     IMAGE_FILENAME,
+    METADATA_FILENAME,
     RESULTS_DIR,
     RESULTS_FILENAME,
     RESULTS_READY_FLAG,
@@ -19,7 +21,7 @@ from phorest_pipeline.shared.helper_utils import move_existing_files_to_backup
 from phorest_pipeline.shared.logger_config import configure_logger
 from phorest_pipeline.shared.metadata_manager import (
     load_metadata_with_lock,
-    save_metadata_with_lock,
+    update_metadata_manifest_entry,
 )
 from phorest_pipeline.shared.states import CommunicatorState
 
@@ -42,7 +44,7 @@ def find_processed_entries(metadata_list: list) -> list[dict]:
     processed_entries = []
     for entry in metadata_list:
         # Find entry marked as processed
-        if entry.get("processing_successful", False):
+        if entry.get("processing_status", "pending") == "processed":
             processed_entries.append(entry)
     return processed_entries
 
@@ -52,7 +54,7 @@ def find_not_transmitted_entries_indices(metadata_list: list) -> list[int]:
     not_transmitted_indices = []
     for index, entry in enumerate(metadata_list):
         # Find entry marked as processed and not yet transmitted
-        if entry.get("processing_successful", False) and not entry.get("data_transmitted", False):
+        if entry.get("processing_status", "pending") == "processed" and not entry.get("data_transmitted", False):
             not_transmitted_indices.append(index)
     return not_transmitted_indices
 
@@ -121,41 +123,50 @@ class Communicator:
                 logger.info("--- Running Communication ---")
                 communication_successful = False
                 try:
-                    results_data = load_metadata_with_lock(Path(RESULTS_DIR, RESULTS_FILENAME))
-                    entries_to_process = find_processed_entries(results_data)
+                    # 1. Load single source of truth
+                    manifest_data = load_metadata_with_lock(Path(DATA_DIR, METADATA_FILENAME))
 
-                    if not entries_to_process:
-                        logger.info("No new entries to communicate.")
+                    # 2. Filter out all processed entries
+                    all_processed_entries = find_processed_entries(manifest_data)
+
+                    if not all_processed_entries:
+                        logger.info("No processed entries found to generate a report")
                         self.current_state = CommunicatorState.IDLE
                         return
 
                     logger.info(
-                        f"Found {len(entries_to_process)} processed entries to communicate."
+                        f"Found {len(all_processed_entries)} processed entries to communicate."
                     )
 
+                    # 3. Filter out entries that have been processed but not transmitted
+                    indices_to_mark_as_transmitted = find_not_transmitted_entries_indices(manifest_data)
+
+                    if not indices_to_mark_as_transmitted:
+                        logger.info("All processed entries have already been transmitted. Generating report without updating manifest.")
+                        self.current_state = CommunicatorState.IDLE
+                        return
+                    
+                    # 4. Run the communication handler with all processed data
                     handler_function = COMMUNICATION_DISPATCH_MAP.get(COMMUNICATION_METHOD)
                     if handler_function:
                         logger.info(f"Using {COMMUNICATION_METHOD.name} communication handler.")
-                        communication_successful = handler_function(entries_to_process)
+                        communication_successful = handler_function(all_processed_entries)
                     else:
-                        logger.error(
-                            f"Handler for communication method '{COMMUNICATION_METHOD.name}' not found or not implemented."
-                        )
+                        logger.error(f"Handler for '{COMMUNICATION_METHOD.name}' not found.")
                         communication_successful = False
-
-                    if communication_successful:
-                        logger.info("Communication successful. Marking entries as transmitted.")
-                        indices_to_mark = find_not_transmitted_entries_indices(results_data)
-                        for index in indices_to_mark:
-                            if 0 <= index < len(results_data):
-                                results_data[index]["data_transmitted"] = True
-                            else:
-                                logger.warning(
-                                    f"Attempted to mark non-existent entry at index {index} as transmitted. Data inconsistency?"
-                                )
-                        save_metadata_with_lock(Path(RESULTS_DIR, RESULTS_FILENAME), results_data)
+                    
+                    # 5. If successful, update the manifest for only the new entries
+                    if communication_successful and indices_to_mark_as_transmitted:
+                        logger.info(f"Communication successful. Marking {len(indices_to_mark_as_transmitted)} entries as transmitted.")
+                        update_metadata_manifest_entry(
+                            manifest_path=Path(DATA_DIR, METADATA_FILENAME),
+                            entry_index=indices_to_mark_as_transmitted,
+                            data_transmitted=True
+                        )
+                    elif communication_successful:
+                        logger.info("Communication successful, no new entries to mark.")
                     else:
-                        logger.error("Communication method failed.  Will retry later.")
+                        logger.error("Communication method failed. Will retry later.")
 
                 except Exception as e:
                     logger.error(f"Error during COMMUNICATING state: {e}", exc_info=True)
