@@ -75,7 +75,7 @@ class Communicator:
             logger.info("Shutdown signal received. Finishing current cycle before stopping...")
             self.shutdown_requested = True
 
-    def perform_communication(self):
+    def _perform_communication(self):
         """State machine logic for the communicator."""
 
         if settings is None:
