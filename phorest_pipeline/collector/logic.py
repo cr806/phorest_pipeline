@@ -70,7 +70,7 @@ class Collector:
 
 
     def _perform_collection(self):
-        """State machine logic for the collector. Returns (next_state, updated_failure_count)."""
+        """State machine logic for the collector."""
 
         if settings is None:
             logger.info("Configuration error. Halting.")
@@ -95,7 +95,7 @@ class Collector:
 
             case CollectorState.COLLECTING:
                 logger.info("--- Running Collection ---")
-                logger.info(f"Collection Attempt {self.updated_failure_count + 1}/{FAILURE_LIMIT}")
+                logger.info(f"Collection Attempt {self.failure_count + 1}/{FAILURE_LIMIT}")
 
                 cam_metadata_for_entry = None
                 temps_metadata_for_entry = None
