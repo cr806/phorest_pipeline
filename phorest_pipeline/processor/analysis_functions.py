@@ -172,7 +172,6 @@ def analyse_roi_data(data: np.ndarray, analysis_method: str) -> Dict:
     for idx, d in enumerate(data):
         d_std = np.std(d)
         if d_std < 0.1:
-            logger.warning(f'Row {idx}, peak contrast too low')
             error_count += 1
             continue
         result_dict = analysis[analysis_method](d)
