@@ -13,7 +13,11 @@ from phorest_pipeline.shared.config import (
     METADATA_FILENAME,
     ROI_MANIFEST_FILENAME,
 )
-from phorest_pipeline.shared.metadata_manager import load_metadata_with_lock, lock_and_manage_file, move_file_with_lock
+from phorest_pipeline.shared.metadata_manager import (
+    load_metadata_with_lock,
+    lock_and_manage_file,
+    move_file_with_lock,
+)
 
 
 def move_existing_files_to_backup(source_filepaths: list, logger: logging.Logger) -> None:
@@ -32,7 +36,9 @@ def move_existing_files_to_backup(source_filepaths: list, logger: logging.Logger
 
     for source_filepath in source_filepaths:
         if not source_filepath.exists() or source_filepath.is_dir():
-            logger.info(f"Source '{source_filepath}' does not exist or is a directory. Skipping...")
+            logger.info(
+                f"Source '{source_filepath}' does not exist or is a directory. Skipping..."
+            )
             continue
 
         try:
@@ -147,7 +153,7 @@ def snapshot_configs(logger: logging.Logger):
     except Exception as e:
         logger.error(f"Could not create directory {DATA_DIR}: {e}")
         return
-    
+
     for name, source_path in files_to_snapshot.items():
         if source_path.is_file():
             try:
@@ -155,6 +161,10 @@ def snapshot_configs(logger: logging.Logger):
                     shutil.copy2(str(source_path), str(DATA_DIR))
                 logger.info(f"Copied {name} file '{source_path.name}' to data directory")
             except Exception as e:
-                logger.error(f"Failed to copy {name} file '{source_path.name}': {e}", exc_info=True)
+                logger.error(
+                    f"Failed to copy {name} file '{source_path.name}': {e}", exc_info=True
+                )
         else:
-            logger.warning(f"Source file for {name} not found at '{source_path}', cannot create snapshot.")
+            logger.warning(
+                f"Source file for {name} not found at '{source_path}', cannot create snapshot."
+            )
