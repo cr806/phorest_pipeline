@@ -1,15 +1,19 @@
 import datetime
 import logging
+import shutil
 from pathlib import Path
 
 from phorest_pipeline.shared.config import (
     BACKUP_DIR,
+    CONFIG_FILEPATH,
     DATA_DIR,
     ENABLE_SYNCER,
+    GENERATED_FILES_DIR,
     IMAGE_BUFFER_SIZE,
     METADATA_FILENAME,
+    ROI_MANIFEST_FILENAME,
 )
-from phorest_pipeline.shared.metadata_manager import load_metadata_with_lock, move_file_with_lock
+from phorest_pipeline.shared.metadata_manager import load_metadata_with_lock, lock_and_manage_file, move_file_with_lock
 
 
 def move_existing_files_to_backup(source_filepaths: list, logger: logging.Logger) -> None:
@@ -121,3 +125,36 @@ def ring_buffer_cleanup(logger: logging.Logger):
         logger.error(
             f"An unexpected error occurred during ring buffer cleanup: {buffer_err}", exc_info=True
         )
+
+
+def snapshot_configs(logger: logging.Logger):
+    """
+    Creates a snapshot of the config files (Phorest_config and ROI_manifest) into
+    the data directory for reproducibility.
+    """
+    logger.info("Snapshotting config files to data directory for this run...")
+
+    source_roi_path = Path(GENERATED_FILES_DIR, ROI_MANIFEST_FILENAME)
+    source_config_path = CONFIG_FILEPATH
+
+    files_to_snapshot = {
+        "ROI_manifest": source_roi_path,
+        "Phorest_config": source_config_path,
+    }
+
+    try:
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+    except Exception as e:
+        logger.error(f"Could not create directory {DATA_DIR}: {e}")
+        return
+    
+    for name, source_path in files_to_snapshot.items():
+        if source_path.is_file():
+            try:
+                with lock_and_manage_file(source_path):
+                    shutil.copy2(str(source_path), str(DATA_DIR))
+                logger.info(f"Copied {name} file '{source_path.name}' to data directory")
+            except Exception as e:
+                logger.error(f"Failed to copy {name} file '{source_path.name}': {e}", exc_info=True)
+        else:
+            logger.warning(f"Source file for {name} not found at '{source_path}', cannot create snapshot.")

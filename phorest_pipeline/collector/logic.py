@@ -18,7 +18,11 @@ from phorest_pipeline.shared.config import (
     RETRY_DELAY,
     settings,  # Import settings to check if config loaded ok
 )
-from phorest_pipeline.shared.helper_utils import move_existing_files_to_backup, ring_buffer_cleanup
+from phorest_pipeline.shared.helper_utils import (
+    move_existing_files_to_backup,
+    ring_buffer_cleanup,
+    snapshot_configs,
+)
 from phorest_pipeline.shared.logger_config import configure_logger
 from phorest_pipeline.shared.metadata_manager import add_entry
 from phorest_pipeline.shared.states import CollectorState
@@ -49,7 +53,7 @@ POLL_INTERVAL = COLLECTOR_INTERVAL / 5
 
 
 class Collector:
-    """ Encapsulates the state and logic for the data collector. """
+    """Encapsulates the state and logic for the data collector."""
 
     def __init__(self):
         self.shutdown_requested = False
@@ -61,13 +65,11 @@ class Collector:
         signal.signal(signal.SIGINT, self._graceful_shutdown)
         signal.signal(signal.SIGTERM, self._graceful_shutdown)
 
-    
     def _graceful_shutdown(self, _signum, _frame):
-        """ Signal handler to initiate a graceful shutdown """
+        """Signal handler to initiate a graceful shutdown"""
         if not self.shutdown_requested:
             logger.info("Shutdown signal received. Finishing current cycle before stopping...")
             self.shutdown_requested = True
-
 
     def _perform_collection(self):
         """State machine logic for the collector."""
@@ -177,7 +179,8 @@ class Collector:
                 current_collection_successful = True
 
                 if ENABLE_CAMERA and (
-                    cam_metadata_for_entry is None or cam_metadata_for_entry.get("error_flag", True)
+                    cam_metadata_for_entry is None
+                    or cam_metadata_for_entry.get("error_flag", True)
                 ):
                     current_collection_successful = False
                 if ENABLE_THERMOCOUPLE and (
@@ -246,7 +249,6 @@ class Collector:
                 logger.error("[FATAL ERROR] Shutting down collector.")
                 time.sleep(10)  # Sleep long if it somehow gets called
 
-
     def run(self):
         """Main loop for the collector process."""
         logger.info("--- Starting Collector ---")
@@ -254,6 +256,8 @@ class Collector:
 
         # Initial cleanup: remove data ready flag if it exists on startup
         if settings:
+            snapshot_configs(logger=logger)
+            
             files_to_move = [Path(DATA_DIR, METADATA_FILENAME)]
             move_existing_files_to_backup(files_to_move, logger=logger)
             logger.info("Moved existing files to backup directory.")
@@ -295,6 +299,6 @@ class Collector:
 
 
 def run_collector():
-    """ Main entry point to create and run a Collector instance """
+    """Main entry point to create and run a Collector instance"""
     collector = Collector()
     collector.run()
