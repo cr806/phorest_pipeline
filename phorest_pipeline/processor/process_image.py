@@ -26,15 +26,17 @@ from phorest_pipeline.processor.analysis_functions import (
     preprocess_roi_data,
 )
 from phorest_pipeline.shared.config import (
+    GENERATED_FILES_DIR,
     METHOD,
     NUMBER_SUB_ROIS,
-    ROI_MANIFEST_PATH,
+    ROI_MANIFEST_FILENAME,
 )
 from phorest_pipeline.shared.logger_config import configure_logger
 
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename='processor.log')
 
 IMAGE_SIZE_THRESHOLD = 15_000  # Bits
+ROI_MANIFEST_PATH = Path(GENERATED_FILES_DIR, ROI_MANIFEST_FILENAME)
 
 
 def process_image(image_meta: dict | None) -> tuple[list | None, str | None]:

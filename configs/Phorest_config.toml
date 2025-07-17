@@ -2,7 +2,6 @@
 
 # --- Data Analysis Settings ---
 [Data_Analysis]
-roi_manifest_path = "generated_files/ROI_manifest.json"   # Path to the ROI manifest file
 method = "gaussian"                                       # Analysis method: "max_intensity", "centre", "gaussian", or "fano"
 number_of_subROIs = 0                                     # Use 0 to indicate the use of all rows for subROIs
 

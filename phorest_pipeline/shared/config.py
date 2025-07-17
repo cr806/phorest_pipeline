@@ -11,7 +11,7 @@ from phorest_pipeline.shared.image_sources import (
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
-CONFIG_FILE = Path(PROJECT_ROOT, "configs", "Phorest_config.toml")
+CONFIG_FILEPATH = Path(PROJECT_ROOT, "configs", "Phorest_config.toml")
 
 METADATA_FILENAME = Path("metadata_manifest.json")
 RESULTS_FILENAME = Path("processing_results.jsonl")
@@ -21,18 +21,18 @@ IMAGE_FILENAME = Path("processed_data_plot.png")
 
 
 def load_config():
-    if not CONFIG_FILE.is_file():
-        raise FileNotFoundError(f"Configuration file not found: {CONFIG_FILE}")
+    if not CONFIG_FILEPATH.is_file():
+        raise FileNotFoundError(f"Configuration file not found: {CONFIG_FILEPATH}")
 
     try:
-        with CONFIG_FILE.open("rb") as f:
+        with CONFIG_FILEPATH.open("rb") as f:
             config = tomllib.load(f)
         return config
     except tomllib.TomlDecodeError as e:
-        raise ValueError(f"Error decoding TOML config file '{CONFIG_FILE}': {e}") from e
+        raise ValueError(f"Error decoding TOML config file '{CONFIG_FILEPATH}': {e}") from e
     except Exception as e:
         raise IOError(
-            f"An unexpected error occurred reading config file '{CONFIG_FILE}': {e}"
+            f"An unexpected error occurred reading config file '{CONFIG_FILEPATH}': {e}"
         ) from e
 
 
@@ -70,8 +70,6 @@ try:
     settings = load_config()  # settings is now a dictionary
 
     # --- Data analysis ---
-    # Accessing values directly from the dictionary. TOML parsing handles types.
-    ROI_MANIFEST_PATH = Path(settings.get("Data_Analysis", {}).get("roi_manifest_path", None))
     METHOD = settings.get("Data_Analysis", {}).get("method", "gaussian")
     NUMBER_SUB_ROIS = int(settings.get("Data_Analysis", {}).get("number_of_subROIs", 1))
 
@@ -165,10 +163,16 @@ try:
     BRIGHTFIELD_CAMERA_INDEX = int(settings.get("Brightfield", {}).get("camera_id", 1))
 
     # --- Paths for ROI Generation ---
-    ROI_GENERATION_IMAGE_PATH = Path(PROJECT_ROOT, settings.get("Assets", {}).get("roi_generation_image"))
+    ROI_GENERATION_IMAGE_PATH = Path(
+        PROJECT_ROOT, settings.get("Assets", {}).get("roi_generation_image")
+    )
     LABEL_TEMPLATE_DIR = Path(PROJECT_ROOT, settings.get("Assets", {}).get("label_template_dir"))
-    FEATURE_LOCATIONS_CONFIG_PATH = Path(PROJECT_ROOT, settings.get("Assets", {}).get("feature_locations_config"))
-    ROI_MANIFEST_FILENAME = Path(settings.get("Assets", {}).get("roi_manifest_filename", "ROI_manifest.json"))
+    FEATURE_LOCATIONS_CONFIG_PATH = Path(
+        PROJECT_ROOT, settings.get("Assets", {}).get("feature_locations_config")
+    )
+    ROI_MANIFEST_FILENAME = Path(
+        settings.get("Assets", {}).get("roi_manifest_filename", "ROI_manifest.json")
+    )
     GENERATED_FILES_DIR = Path(PROJECT_ROOT, settings.get("Assets", {}).get("generated_files_dir"))
 
 except (FileNotFoundError, ValueError, IOError) as e:
