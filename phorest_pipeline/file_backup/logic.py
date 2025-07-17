@@ -8,10 +8,16 @@ from pathlib import Path
 
 from phorest_pipeline.shared.config import (
     BACKUP_DIR,
+    CONFIG_FILEPATH,
+    CSV_FILENAME,
     DATA_DIR,
     ENABLE_BACKUP,
     FILE_BACKUP_INTERVAL,
+    IMAGE_FILENAME,
+    METADATA_FILENAME,
     RESULTS_DIR,
+    RESULTS_FILENAME,
+    ROI_MANIFEST_FILENAME,
     settings,
 )
 from phorest_pipeline.shared.logger_config import configure_logger
@@ -21,13 +27,14 @@ from phorest_pipeline.shared.states import BackupState
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename="file_backup.log")
 
 POLL_INTERVAL = FILE_BACKUP_INTERVAL / 20 if FILE_BACKUP_INTERVAL > (5 * 20) else 5
-BACKUP_ROOT_PATH = Path(BACKUP_DIR)
 
 LIVE_FILES_TO_BACKUP = [
-    Path(DATA_DIR, "metadata_manifest.json"),
-    Path(RESULTS_DIR, "processing_results.jsonl"),
-    Path(RESULTS_DIR, "communicating_results.csv"),
-    Path(RESULTS_DIR, "processed_data_plot.png"),
+    Path(DATA_DIR, CONFIG_FILEPATH.name),
+    Path(DATA_DIR, ROI_MANIFEST_FILENAME),
+    Path(DATA_DIR, METADATA_FILENAME),
+    Path(RESULTS_DIR, RESULTS_FILENAME),
+    Path(RESULTS_DIR, CSV_FILENAME),
+    Path(RESULTS_DIR, IMAGE_FILENAME),
 ]
 
 
@@ -38,11 +45,14 @@ def archive_live_files():
     """
     logger.info("--- Archiving Live Files ---   ")
     for original_filepath in LIVE_FILES_TO_BACKUP:
+        if not original_filepath.exists():
+            logger.warning(f"'{original_filepath.name}', does not exist. Skipping...")
+            continue
         try:
             # 1. Generate the timestamped backup file name
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             backup_filepath = Path(
-                BACKUP_ROOT_PATH,
+                BACKUP_DIR,
                 original_filepath.parent.name,
                 f"{original_filepath.stem}_{timestamp}{original_filepath.suffix}",
             )
@@ -59,15 +69,15 @@ def compress_files_in_backup_dir():
     Finds all non-gzipped files in the backup directory and compresses them.
     """
     logger.info("--- Compressing Backed-up Files ---")
-    if not BACKUP_ROOT_PATH.exists():
+    if not BACKUP_DIR.exists():
         logger.warning(
-            f"Backup root directory '{BACKUP_ROOT_PATH}' not found. Nothing to compress."
+            f"Backup root directory '{BACKUP_DIR}' not found. Nothing to compress."
         )
         return
 
     # Find all files that don't end in .gz
     files_to_compress = [
-        p for p in BACKUP_ROOT_PATH.rglob("*") if p.is_file() and p.suffix != ".gz"
+        p for p in BACKUP_DIR.rglob("*") if p.is_file() and p.suffix != ".gz"
     ]
 
     if not files_to_compress:
@@ -87,7 +97,8 @@ def compress_files_in_backup_dir():
 
 
 class FileBackup:
-    """ Encapsulates the state and logic for the file backup process. """
+    """Encapsulates the state and logic for the file backup process."""
+
     def __init__(self):
         self.shutdown_requested = False
         self.current_state = BackupState.IDLE
@@ -96,9 +107,9 @@ class FileBackup:
         # Register the signal handler
         signal.signal(signal.SIGINT, self._graceful_shutdown)
         signal.signal(signal.SIGTERM, self._graceful_shutdown)
-    
+
     def _graceful_shutdown(self, _signum, _frame):
-        """ Signal handler to initiate a graceful shutdown """
+        """Signal handler to initiate a graceful shutdown"""
         if not self.shutdown_requested:
             logger.info("Shutdown signal received. Finishing current cycle before stopping...")
             self.shutdown_requested = True
@@ -135,7 +146,6 @@ class FileBackup:
                 logger.info("BACKUP_FILES -> IDLE")
                 self.current_state = BackupState.IDLE
 
-
     def run(self):
         """Main loop for the file backup process."""
         logger.info("--- Starting File Backup ---")
@@ -162,6 +172,6 @@ class FileBackup:
 
 
 def run_file_backup():
-    """ Main entry point to create and run a File_backup instanace. """
+    """Main entry point to create and run a File_backup instanace."""
     file_backup = FileBackup()
     file_backup.run()
