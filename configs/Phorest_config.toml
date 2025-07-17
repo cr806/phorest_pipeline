@@ -2,67 +2,63 @@
 
 # --- Data Analysis Settings ---
 [Data_Analysis]
-method = "gaussian"                                       # Analysis method: "max_intensity", "centre", "gaussian", or "fano"
-number_of_subROIs = 0                                     # Use 0 to indicate the use of all rows for subROIs
+method = "gaussian"                                                             # Analysis method: "max_intensity", "centre", "gaussian", or "fano"
+number_of_subROIs = 0                                                           # Use 0 to indicate the use of all rows for subROIs
 
 # --- File Paths ---
 [Paths]
 remote_root_dir = "/mnt/storage/Lisa/GMR/Array/SpecialBox/Cuthbert/250716"      # Remote root directory for the project (all files will be copied here if 'syncer' is ran)
-root_dir = "/mnt/data"                           # Root directory for the project
-flag_dir = "flags"                               # Directory for flag files
-data_dir = "data"                                # Directory for raw data
-results_dir = "results_FULL"                     # Directory for processed results
-continuous_capture_dir = "continuous_capture"    # Directory for continuous capture data
-logs_dir = "logs"                                # Directory for log files
-backup_dir = "backup"                            # Directory for backup files
-# brightfield_dir = "bright"                     # Example of a commented-out path
-
-# --- Flag File Names ---
-[Flags]
-data_ready = "data_ready.flag"        # Flag file indicating data is ready
-results_ready = "results_ready.flag"  # Flag file indicating results are ready
-
-# --- Timing Intervals (in seconds) ---
-[Timing]
-collector_interval_seconds = 5         # Interval for data collection
-processor_interval_seconds = 7         # Interval for data processing
-communicator_interval_seconds = 8      # Interval for communication task
-compress_interval_seconds =  1800      # How often to compress images
-log_file_interval_seconds = 43200      # How often to manage log files
-file_backup_interval_seconds = 43200   # Interval for rename files task
-sync_interval_seconds = 11             # Interval for syncing files with remote storage
-
-# --- Retry Mechanism Settings ---
-[Retries]
-collector_failure_limit = 5         # Maximum number of collector failures before stopping
-collector_retry_delay_seconds = 3   # Delay before retrying collector operations
-
-# --- Data Buffer Settings ---
-[Buffer]
-image_buffer_size = 1000             # Maximum number of images to keep in the data directory
+root_dir = "/mnt/data"                                                          # Root directory for the project
+flag_dir = "flags"                                                              # Directory for flag files
+data_dir = "data"                                                               # Directory for raw data
+results_dir = "results_FULL"                                                    # Directory for processed results
+continuous_capture_dir = "continuous_capture"                                   # Directory for continuous capture data
+logs_dir = "logs"                                                               # Directory for log files
+backup_dir = "backup"                                                           # Directory for backup files
+brightfield_dir = "bright"                                                      # Example of a commented-out path
 
 # --- Service flags ---
 [Services]
-enable_camera = true                 # Enable or disable camera usage
-enable_thermocouple = false          # Enable or disable thermocouple usage
-enable_brightfield = false           # Enable or disable brightfield mode
-enable_file_backup = false           # Enable or disable the file backup service
-enable_remote_sync = true            # Enable or disable the syncer service
-enable_image_compression = false     # Enable or disable image compression
+enable_camera = true                                                            # Enable or disable camera usage
+enable_thermocouple = false                                                     # Enable or disable thermocouple usage
+enable_brightfield = false                                                      # Enable or disable brightfield mode
+
+enable_file_backup = false                                                      # Enable or disable the file backup service
+enable_remote_sync = true                                                       # Enable or disable the syncer service
+enable_image_compression = false                                                # Enable or disable image compression (Compressing PNG images is not worth it)
+
+# --- Timing Intervals (in seconds) ---
+[Timing]
+collector_interval_seconds = 5                                                  # Interval for data collection
+processor_interval_seconds = 7                                                  # Interval for data processing
+communicator_interval_seconds = 8                                               # Interval for communication task
+compress_interval_seconds =  1800                                               # How often to compress images
+log_file_interval_seconds = 43200                                               # How often to manage log files
+file_backup_interval_seconds = 10                                               # Interval for rename files task
+sync_interval_seconds = 11                                                      # Interval for syncing files with remote storage
+
+# --- Retry Mechanism Settings ---
+[Retries]
+collector_failure_limit = 5                                                     # Maximum number of collector failures before stopping
+collector_retry_delay_seconds = 3                                               # Delay before retrying collector operations
+
+# --- Data Buffer Settings ---
+[Buffer]
+image_buffer_size = 1000                                                        # Maximum number of images to keep in the data directory
 
 # --- Communication Settings ---
 [Communication]
-method = "CSV_PLOT"                  # Methods of communication: "CSV_PLOT", "OPC_UA"
+method = "CSV_PLOT"                                                             # Methods of communication: "CSV_PLOT", "OPC_UA"
 
 # --- Camera Settings ---
 [Camera]
-camera_type = "hawkeye"               # Type of camera: "dummy", "argus", "tis", "logitech", "hawkeye", "file_importer"
-camera_id = 0                         # Camera device ID
-camera_exposure = 5                   # Camera exposure setting
-camera_gain = 0                       # Camera gain setting
-camera_brightness = -0.3                 # Example: alternate brightness setting
-camera_contrast = 3                   # Example: alternate contrast setting
-camera_transform = "NONE"             # Image transformation: "NONE", "ROTATE_90", "ROTATE_180", "ROTATE_270", "HORIZONTAL_FLIP", "VERTICAL_FLIP"
+camera_type = "hawkeye"                                                         # Type of camera: "dummy", "argus", "tis", "logitech", "hawkeye", "file_importer"
+camera_id = 0                                                                   # Camera device ID
+camera_exposure = 5                                                             # Camera exposure setting
+camera_gain = 0                                                                 # Camera gain setting
+camera_brightness = -0.3                                                        # Example: alternate brightness setting
+camera_contrast = 3                                                             # Example: alternate contrast setting
+camera_transform = "NONE"                                                       # Image transformation: "NONE", "ROTATE_90", "ROTATE_180", "ROTATE_270", "HORIZONTAL_FLIP", "VERTICAL_FLIP"
 
 # --- Temperature Sensor Settings ---
 [Temperature.thermocouple_sensors]
@@ -71,15 +67,22 @@ camera_transform = "NONE"             # Image transformation: "NONE", "ROTATE_90
 
 # --- Brightfield Settings ---
 [Brightfield]
-# camera_exposure = 0.01            # Example: brightfield specific exposure
-# camera_gain = 1.0                 # Example: brightfield specific gain
-# camera_brightness = 0.5
-# camera_contrast = 0.5
+camera_exposure = 0.01                                                          # Brightfield specific exposure
+camera_gain = 1.0                                                               # Brightfield specific gain
+camera_brightness = 0.5
+camera_contrast = 0.5
 
-# --- Static Asset Paths (Advanced - Do not change unless you know what you are doing) ---
+
+# --- Advanced - DO NOT change unless you know what you are doing ---
+# --- Flag File Names ---
+[Flags]
+data_ready = "data_ready.flag"                                                  # Flag file indicating data is ready
+results_ready = "results_ready.flag"                                            # Flag file indicating results are ready
+
+# --- Static Asset Paths ---
 [Assets]
-roi_generation_image = "continuous_capture/continuous_capture_frame.jpg"                     # Image used as the reference for generating the ROI map.
-label_template_dir = "assets/Label_templates"                             # Directory containing templates for finding features.
-feature_locations_config = "configs/Feature_locations.toml"               # Configuration file defining which features to locate.
-roi_manifest_filename = "ROI_manifest.json"                               # Output filename for the generated ROI manifest.
-generated_files_dir = "generated_files"                                   # Directory for output from generate ROI scripts.
+roi_generation_image = "continuous_capture/continuous_capture_frame.jpg"        # Image used as the reference for generating the ROI map.
+label_template_dir = "assets/Label_templates"                                   # Directory containing templates for finding features.
+feature_locations_config = "configs/Feature_locations.toml"                     # Configuration file defining which features to locate.
+roi_manifest_filename = "ROI_manifest.json"                                     # Output filename for the generated ROI manifest.
+generated_files_dir = "generated_files"                                         # Directory for output from generate ROI scripts.
