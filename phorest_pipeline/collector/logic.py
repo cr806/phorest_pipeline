@@ -75,21 +75,21 @@ class Collector:
         """State machine logic for the collector."""
 
         if settings is None:
-            logger.info("Configuration error. Halting.")
+            logger.error("Configuration error. Halting.")
             time.sleep(POLL_INTERVAL * 5)
             self.current_state = CollectorState.FATAL_ERROR  # Exit on config error
             return
 
         match self.current_state:
             case CollectorState.IDLE:
-                logger.info("IDLE -> WAITING_TO_RUN")
+                logger.debug("IDLE -> WAITING_TO_RUN")
                 self.next_run_time = time.monotonic() + COLLECTOR_INTERVAL
                 self.current_state = CollectorState.WAITING_TO_RUN
 
             case CollectorState.WAITING_TO_RUN:
                 now = time.monotonic()
                 if now >= self.next_run_time:
-                    logger.info("WAITING_TO_RUN -> COLLECTING")
+                    logger.debug("WAITING_TO_RUN -> COLLECTING")
                     self.failure_count = 0  # Reset failure count when *entering* COLLECTING state
                     self.current_state = CollectorState.COLLECTING
                 else:
@@ -103,7 +103,7 @@ class Collector:
                 temps_metadata_for_entry = None
 
                 if ENABLE_CAMERA:
-                    logger.info("Camera is enabled.")
+                    logger.debug("Camera is enabled.")
                     try:
                         cam_status, cam_msg, cam_data_from_controller = camera_controller(DATA_DIR)
                         if cam_status == 0:
@@ -137,7 +137,7 @@ class Collector:
                     logger.info("Camera not enabled. Skipping image capture.")
 
                 if ENABLE_THERMOCOUPLE:
-                    logger.info("Thermocouple is enabled.")
+                    logger.debug("Thermocouple is enabled.")
                     try:
                         tc_status, tc_msg, tc_data_from_controller = thermocouple_controller()
                         if tc_status == 0:
@@ -195,7 +195,7 @@ class Collector:
                         camera_meta=cam_metadata_for_entry,
                         temps_meta=temps_metadata_for_entry,
                     )
-                    logger.info("Entry added to processing manifest.")
+                    logger.debug("Entry added to processing manifest.")
                     self.failure_count = 0  # Reset failure count on successful manifest write
                 except Exception as e:
                     logger.critical(
@@ -214,11 +214,11 @@ class Collector:
                     if IMAGE_BUFFER_SIZE > 0:
                         ring_buffer_cleanup(logger=logger)
 
-                    logger.info(f"Creating flag: {DATA_READY_FLAG}")
+                    logger.debug(f"Creating flag: {DATA_READY_FLAG}")
                     try:
                         DATA_READY_FLAG.touch()
                         logger.info("--- Collection Cycle Done ---")
-                        logger.info("COLLECTING -> IDLE")
+                        logger.debug("COLLECTING -> IDLE")
                         self.current_state = CollectorState.IDLE
                     except OSError as e:
                         logger.critical(
@@ -232,16 +232,16 @@ class Collector:
                         "Data collection cycle finished with errors or manifest write failed."
                     )
                     self.failure_count += 1  # Increment failure count
-                    logger.info(f"Failure count: {self.failure_count}/{FAILURE_LIMIT}")
+                    logger.debug(f"Failure count: {self.failure_count}/{FAILURE_LIMIT}")
 
                     if self.failure_count >= FAILURE_LIMIT:
                         logger.critical(f"[FATAL ERROR] Reached failure limit ({FAILURE_LIMIT}).")
                         self.current_state = CollectorState.FATAL_ERROR
                     else:
                         # Stay in COLLECTING state to retry immediately
-                        logger.info("Retrying collection...")
+                        logger.debug("Retrying collection...")
                         self.current_state = CollectorState.COLLECTING
-                        logger.info(f"Waiting {RETRY_DELAY}s before retrying...")
+                        logger.debug(f"Waiting {RETRY_DELAY}s before retrying...")
                         time.sleep(RETRY_DELAY)
 
             case CollectorState.FATAL_ERROR:
@@ -263,7 +263,7 @@ class Collector:
             logger.info("Moved existing files to backup directory.")
             try:
                 DATA_READY_FLAG.unlink(missing_ok=True)
-                logger.info(f"Ensured flag {DATA_READY_FLAG} is initially removed.")
+                logger.debug(f"Ensured flag {DATA_READY_FLAG} is initially removed.")
             except OSError as e:
                 logger.warning(f"Could not remove initial flag {DATA_READY_FLAG}: {e}")
 

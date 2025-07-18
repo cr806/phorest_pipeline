@@ -100,7 +100,7 @@ def process_image(image_meta: dict | None) -> tuple[list | None, str | None]:
         for ROI_ID in ROI_dictionary:
             if 'ROI' not in ROI_ID:
                 continue
-            logger.info(f'[ANALYSER] Processing ROI "{ROI_ID}"')
+            logger.debug(f'[ANALYSER] Processing ROI "{ROI_ID}"')
 
             # Add ROI label to results dictionary
             results = {'ROI-label': ROI_dictionary[ROI_ID]['label']}

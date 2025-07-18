@@ -87,7 +87,7 @@ def save_results_out(all_results_for_append, all_results_for_manifest_update):
                 f"Successfully performed batch update on manifest for {len(indices_to_update)} entries."
             )
 
-            logger.info(f"Creating results ready flag: {RESULTS_READY_FLAG}")
+            logger.debug(f"Creating results ready flag: {RESULTS_READY_FLAG}")
             try:
                 RESULTS_READY_FLAG.touch()
             except OSError as e:
@@ -122,29 +122,29 @@ class Processor:
         """State machine logic for the processor."""
 
         if settings is None:
-            logger.info("Configuration error. Halting.")
+            logger.debug("Configuration error. Halting.")
             time.sleep(POLL_INTERVAL * 5)
             self.current_state = ProcessorState.FATAL_ERROR
 
         match self.current_state:
             case ProcessorState.IDLE:
-                logger.info("IDLE -> WAITING_FOR_DATA")
+                logger.debug("IDLE -> WAITING_FOR_DATA")
                 self.next_run_time = time.monotonic() + PROCESSOR_INTERVAL
-                logger.info(
+                logger.debug(
                     f"Next run time set to {self.next_run_time} (in {PROCESSOR_INTERVAL} seconds)."
                 )
                 self.current_state = ProcessorState.WAITING_FOR_DATA
 
             case ProcessorState.WAITING_FOR_DATA:
-                logger.info(f"Waiting for {PROCESSOR_INTERVAL} seconds until next cycle...")
+                logger.debug(f"Waiting for {PROCESSOR_INTERVAL} seconds until next cycle...")
                 now = time.monotonic()
                 if now >= self.next_run_time:
                     if DATA_READY_FLAG.exists():
-                        logger.info(f"Found flag {DATA_READY_FLAG}. Consuming.")
+                        logger.debug(f"Found flag {DATA_READY_FLAG}. Consuming.")
                         try:
                             DATA_READY_FLAG.unlink()
-                            logger.info(f"Deleted flag {DATA_READY_FLAG}.")
-                            logger.info("WAITING_FOR_DATA -> PROCESSING")
+                            logger.debug(f"Deleted flag {DATA_READY_FLAG}.")
+                            logger.debug("WAITING_FOR_DATA -> PROCESSING")
                             self.current_state = ProcessorState.PROCESSING
                         except (FileNotFoundError, OSError) as e:
                             logger.error(f"Could not delete flag {DATA_READY_FLAG}: {e}")
@@ -152,7 +152,7 @@ class Processor:
                             time.sleep(5)
                     else:
                         self.current_state = ProcessorState.IDLE
-                        logger.info("WAITING_FOR_DATA -> IDLE")
+                        logger.debug("WAITING_FOR_DATA -> IDLE")
                 else:
                     time.sleep(POLL_INTERVAL)
 
@@ -165,7 +165,7 @@ class Processor:
 
                 if not work_queue:
                     logger.info("No more PENDING entries found in manifest.")
-                    logger.info("PROCESSING -> IDLE")
+                    logger.debug("PROCESSING -> IDLE")
                     self.current_state = ProcessorState.IDLE
                     # Ensure flag is present
                     try:
@@ -212,7 +212,7 @@ class Processor:
                         self.current_state = ProcessorState.FATAL_ERROR
                         break
 
-                    logger.info(
+                    logger.debug(
                         f"Processing entry {entry_index} (Image: {entry_data.get('camera_data', {}).get('filename')})..."
                     )
 
@@ -247,7 +247,7 @@ class Processor:
                         if not processing_successful and not img_proc_error_msg:
                             img_proc_error_msg = "Processing failed for an unknown reason."
 
-                        logger.info(
+                        logger.debug(
                             f"Finished processing entry {entry_index}. Success: {processing_successful}"
                         )
 
@@ -322,7 +322,7 @@ class Processor:
 
             try:
                 DATA_READY_FLAG.unlink(missing_ok=True)
-                logger.info(f"Ensured flag {DATA_READY_FLAG} is initially removed.")
+                logger.debug(f"Ensured flag {DATA_READY_FLAG} is initially removed.")
             except OSError as e:
                 logger.warning(f"Could not remove initial flag {DATA_READY_FLAG}: {e}")
 
@@ -354,13 +354,13 @@ class Processor:
                 if results_temp_path.exists():
                     try:
                         results_temp_path.unlink()
-                        logger.info(f"Cleaned up {results_temp_path.name} on shutdown.")
+                        logger.debug(f"Cleaned up {results_temp_path.name} on shutdown.")
                     except OSError as e:
                         logger.error(
                             f"Could not clean up {results_temp_path.name} on shutdown: {e}"
                         )
 
-                logger.info("Cleaning up flags...")
+                logger.debug("Cleaning up flags...")
                 try:
                     DATA_READY_FLAG.unlink(missing_ok=True)
                 except OSError as e:

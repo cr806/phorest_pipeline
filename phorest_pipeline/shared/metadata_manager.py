@@ -59,14 +59,14 @@ def _load_metadata(metadata_path: Path) -> list:
     and JSON Lines (.jsonl) formats by checking the file extension.
     """
     if not metadata_path.exists():
-        logger.info(f"[METADATA] {metadata_path.name} does not exist. Returning empty list.")
+        logger.debug(f"[METADATA] {metadata_path.name} does not exist. Returning empty list.")
         return []
 
     try:
         with metadata_path.open("r") as f:
             if metadata_path.suffix.lower() == ".jsonl":
                 # --- JSON Lines (.jsonl) parsing ---
-                logger.info(f"[METADATA] [LOAD] Parsing '{metadata_path.name}' as JSON Lines.")
+                logger.debug(f"[METADATA] [LOAD] Parsing '{metadata_path.name}' as JSON Lines.")
                 entries = []
                 for line in f:
                     if line.strip():
@@ -74,7 +74,7 @@ def _load_metadata(metadata_path: Path) -> list:
                 return entries
             else:
                 # --- Standard JSON parsing ---
-                logger.info(f"[METADATA] [LOAD] Parsing '{metadata_path.name}' as standard JSON.")
+                logger.debug(f"[METADATA] [LOAD] Parsing '{metadata_path.name}' as standard JSON.")
                 content = f.read()
                 if not content:
                     logger.warning(
@@ -92,7 +92,7 @@ def _load_metadata(metadata_path: Path) -> list:
         )
         try:
             metadata_path.rename(corrupt_backup_path)
-            logger.info(f"[METADATA] Moved corrupt file to {corrupt_backup_path.name}")
+            logger.debug(f"[METADATA] Moved corrupt file to {corrupt_backup_path.name}")
         except OSError as e:
             logger.error(f"[METADATA] Failed to move corrupt file {metadata_path.name}: {e}")
         return []
@@ -154,7 +154,7 @@ def add_entry(
 
     try:
         with lock_and_manage_file(manifest_path):
-            logger.info("[METADATA] [ADD] Updating processing manifest (locked section)...")
+            logger.debug("[METADATA] [ADD] Updating processing manifest (locked section)...")
 
             metadata_list = _load_metadata(manifest_path)  # Safe to read under lock
 
@@ -236,7 +236,7 @@ def append_metadata(
 
             # --- Append Logic ---
             if manifest_path.suffix.lower() == ".jsonl":
-                logger.info(
+                logger.debug(
                     f"Appending {len(entries_to_add)} entries to JSONL file: {manifest_path.name}"
                 )
                 with manifest_path.open("a") as f:
@@ -244,7 +244,7 @@ def append_metadata(
                         json.dump(entry, f)
                         f.write("\n")
             else:
-                logger.info(
+                logger.debug(
                     f"Appending {len(entries_to_add)} entries to JSON file: {manifest_path.name}"
                 )
                 existing_data = _load_metadata(manifest_path)
@@ -252,7 +252,7 @@ def append_metadata(
                 _save_metadata(manifest_path, existing_data)
 
             logger.info(
-                f"Successfully appended {len(entries_to_add)} entries to {manifest_path.name}."
+                f"[METADATA] [APPEND] Successfully appended {len(entries_to_add)} entries to {manifest_path.name}."
             )
 
     except Exception as e:
@@ -282,7 +282,7 @@ def update_metadata_manifest_entry(
 
     try:
         with lock_and_manage_file(manifest_path):
-            logger.info(
+            logger.debug(
                 f"[METADATA] [UPDATE] Updating manifest entry {entry_index} status (locked section)..."
             )
 
@@ -351,6 +351,7 @@ def load_metadata_with_lock(metadata_path: Path) -> list:
     """
     try:
         with lock_and_manage_file(metadata_path):
+            logger.info("[METADATA] [LOAD] Successfully loaded metadata with lock.")
             return _load_metadata(metadata_path)  # Safe to read under lock
     except Exception as e:
         logger.error(f"[METADATA] [LOAD] Error loading metadata with lock: {e}")
@@ -363,6 +364,7 @@ def save_metadata_with_lock(metadata_path: Path, metadata_list: list):
     """
     try:
         with lock_and_manage_file(metadata_path):
+            logger.info("[METADATA] [SAVE] Successfully saved metadata with lock.")
             _save_metadata(metadata_path, metadata_list)  # Safe to save under lock
     except Exception as e:
         logger.error(f"[METADATA] [SAVE] Error saving metadata with lock: {e}")
@@ -377,7 +379,7 @@ def move_file_with_lock(source_path: Path, destination_path: Path):
 
     try:
         with lock_and_manage_file(source_path):
-            logger.info(
+            logger.debug(
                 f"[METADATA] [MOVE] Moving {source_path.name} to {destination_path.name} (locked section)..."
             )
 
@@ -401,7 +403,7 @@ def move_file_with_lock(source_path: Path, destination_path: Path):
             if temp_file_path.exists():
                 try:
                     temp_file_path.unlink()
-                    logger.info(
+                    logger.debug(
                         f"[METADATA] [MOVE] Removed temporary file {temp_file_path.name} after move."
                     )
                 except OSError as e:

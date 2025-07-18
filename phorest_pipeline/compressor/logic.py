@@ -69,14 +69,14 @@ class Compressor:
         """State machine logic for the compressor."""
 
         if settings is None:
-            logger.info("Configuration error. Halting.")
+            logger.debug("Configuration error. Halting.")
             time.sleep(POLL_INTERVAL * 5)
             self.current_state = CompressorState.FATAL_ERROR
             return
 
         match self.current_state:
             case CompressorState.IDLE:
-                logger.info("IDLE -> CHECKING")
+                logger.debug("IDLE -> CHECKING")
                 self.next_run_time = time.monotonic() + COMPRESSOR_INTERVAL
                 self.current_state = CompressorState.CHECKING
 
@@ -90,7 +90,7 @@ class Compressor:
                     self.current_state = CompressorState.COMPRESSING_IMAGES
                 else:
                     logger.info("No entries found requiring compression.")
-                    logger.info(f"Will wait for {COMPRESSOR_INTERVAL} seconds until next check...")
+                    logger.debug(f"Will wait for {COMPRESSOR_INTERVAL} seconds until next check...")
                     self.current_state = CompressorState.WAITING_TO_RUN
 
             case CompressorState.COMPRESSING_IMAGES:
@@ -107,7 +107,7 @@ class Compressor:
                         gzipped_filename = original_filepath.name + ".gz"
                         gzipped_filepath = original_filepath.with_name(gzipped_filename)
 
-                        logger.info(f"gzipping {original_filepath} to {gzipped_filepath}...")
+                        logger.debug(f"gzipping {original_filepath} to {gzipped_filepath}...")
                         with (
                             original_filepath.open("rb") as f_in,
                             gzip.open(gzipped_filepath, "wb") as f_out,
@@ -135,7 +135,7 @@ class Compressor:
                 # Update manifest
                 if updates_for_manifest:
                     try:
-                        logger.info(f"Updating manifest for {len(updates_for_manifest)} entries...")
+                        logger.debug(f"Updating manifest for {len(updates_for_manifest)} entries...")
                         indices = [item["index"] for item in updates_for_manifest]
                         filenames = [item["new_filename"] for item in updates_for_manifest]
 
@@ -154,7 +154,7 @@ class Compressor:
                         self.current_state = CompressorState.WAITING_TO_RUN
                         return
 
-                logger.info("COMPRESSING_FILES -> CHECKING (for more work)")
+                logger.debug("COMPRESSING_FILES -> CHECKING (for more work)")
                 self.current_state = CompressorState.CHECKING
                 time.sleep(0.1)
 
@@ -176,7 +176,7 @@ class Compressor:
         print("--- Starting Compressor ---")
 
         if settings is None:
-            logger.info("Configuration error. Exiting.")
+            logger.debug("Configuration error. Exiting.")
             return
 
         if not ENABLE_COMPRESSOR:

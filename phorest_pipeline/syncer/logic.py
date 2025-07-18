@@ -45,7 +45,7 @@ def sync_archived_backups():
         if item.is_file():
             try:
                 shutil.move(str(item), str(REMOTE_BACKUP_DIR))
-                logger.info(f"Moved {item.name} to remote directory.")
+                logger.debug(f"Moved {item.name} to remote directory.")
             except Exception as e:
                 logger.error(f"Failed to move {item.name}: {e}")
 
@@ -68,7 +68,7 @@ def sync_results_and_manifest():
                 try:
                     with lock_and_manage_file(item):
                         shutil.copy2(str(item), str(REMOTE_RESULTS_DIR))
-                    logger.info(f"Copied results file: {item.name}")
+                    logger.debug(f"Copied results file: {item.name}")
                 except Exception as e:
                     logger.error(f"Failed to copy {item.name}: {e}")
 
@@ -79,7 +79,7 @@ def sync_results_and_manifest():
         try:
             with lock_and_manage_file(manifest_path):
                 shutil.copy2(str(manifest_path), str(REMOTE_DATA_DIR))
-            logger.info(f"Copied manifest file: {manifest_path.name}")
+            logger.debug(f"Copied manifest file: {manifest_path.name}")
         except Exception as e:
             logger.error(f"Failed to copy manifest file: {manifest_path.name}: {e}")
 
@@ -115,7 +115,7 @@ def sync_processed_images():
     for image_path in images_to_move:
         try:
             shutil.move(str(image_path), str(REMOTE_DATA_DIR))
-            logger.info(f"Moved image: {image_path.name}")
+            logger.debug(f"Moved image: {image_path.name}")
             moved_count += 1
         except Exception as e:
             logger.error(f"Failed to move image {image_path.name}: {e}")
@@ -155,21 +155,21 @@ class Syncer:
         """State machin logic for the syncer."""
 
         if settings is None:
-            logger.info("Configuration error. Halting.")
+            logger.debug("Configuration error. Halting.")
             time.sleep(POLL_INTERVAL * 5)
             self.current_state = SyncerState.FATAL_ERROR
 
         match self.current_state:
             case SyncerState.IDLE:
-                logger.info("IDLE -> WAITING_TO_RUN")
+                logger.debug("IDLE -> WAITING_TO_RUN")
                 self.next_run_time = time.monotonic() + SYNC_INTERVAL
-                logger.info(f"Will wait for {SYNC_INTERVAL} seconds until next cycle...")
+                logger.debug(f"Will wait for {SYNC_INTERVAL} seconds until next cycle...")
                 self.current_state = SyncerState.WAITING_TO_RUN
 
             case SyncerState.WAITING_TO_RUN:
                 now = time.monotonic()
                 if now >= self.next_run_time:
-                    logger.info("WAITING_TO_RUN -> SYNCING_FILES")
+                    logger.debug("WAITING_TO_RUN -> SYNCING_FILES")
                     self.current_state = SyncerState.SYNCING_FILES
                 else:
                     time.sleep(POLL_INTERVAL)
@@ -196,7 +196,7 @@ class Syncer:
         print("--- Starting Syncer Process ---")
 
         if settings is None:
-            logger.info("Configuration error. Halting.")
+            logger.debug("Configuration error. Halting.")
             return
         
         if not ENABLE_SYNCER:

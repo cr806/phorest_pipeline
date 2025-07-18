@@ -87,7 +87,7 @@ def compress_files_in_backup_dir():
     for file_path in files_to_compress:
         output_file_path = file_path.with_suffix(file_path.suffix + ".gz")
         try:
-            logger.info(f"Compressing '{file_path}' to '{output_file_path}'...")
+            logger.debug(f"Compressing '{file_path}' to '{output_file_path}'...")
             with file_path.open("rb") as f_in, gzip.open(output_file_path, "wb") as f_out:
                 shutil.copyfileobj(f_in, f_out)
             file_path.unlink()
@@ -118,22 +118,22 @@ class FileBackup:
         """State machine logic for the file renamer."""
 
         if settings is None:
-            logger.info("Configuration error. Halting.")
+            logger.debug("Configuration error. Halting.")
             time.sleep(POLL_INTERVAL * 5)
             self.current_state = BackupState.FATAL_ERROR
             return
 
         match self.current_state:
             case BackupState.IDLE:
-                logger.info("IDLE -> WAITING_TO_RUN")
+                logger.debug("IDLE -> WAITING_TO_RUN")
                 self.next_run_time = time.monotonic() + FILE_BACKUP_INTERVAL
-                logger.info(f"Will wait for {FILE_BACKUP_INTERVAL} seconds until next cycle...")
+                logger.debug(f"Will wait for {FILE_BACKUP_INTERVAL} seconds until next cycle...")
                 self.current_state = BackupState.WAITING_TO_RUN
 
             case BackupState.WAITING_TO_RUN:
                 now = time.monotonic()
                 if now >= self.next_run_time:
-                    logger.info("WAITING_TO_RUN -> BACKUP_FILES")
+                    logger.debug("WAITING_TO_RUN -> BACKUP_FILES")
                     self.current_state = BackupState.BACKUP_FILES
                 else:
                     time.sleep(POLL_INTERVAL)
@@ -143,7 +143,7 @@ class FileBackup:
                 archive_live_files()
                 compress_files_in_backup_dir()
                 logger.info("--- Full Backup and Compression Cycle Finished ---")
-                logger.info("BACKUP_FILES -> IDLE")
+                logger.debug("BACKUP_FILES -> IDLE")
                 self.current_state = BackupState.IDLE
 
     def run(self):
@@ -152,7 +152,7 @@ class FileBackup:
         print("--- Starting File Backup ---")
 
         if settings is None:
-            logger.info("Configuration error. Halting.")
+            logger.debug("Configuration error. Halting.")
             return
 
         if not ENABLE_BACKUP:

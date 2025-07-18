@@ -81,16 +81,16 @@ class Communicator:
         """State machine logic for the communicator."""
 
         if settings is None:
-            logger.info("Configuration error. Halting.")
+            logger.debug("Configuration error. Halting.")
             time.sleep(POLL_INTERVAL * 5)
             self.current_state = CommunicatorState.FATAL_ERROR
             return
 
         match self.current_state:
             case CommunicatorState.IDLE:
-                logger.info("IDLE -> WAITING_FOR_RESULTS")
+                logger.debug("IDLE -> WAITING_FOR_RESULTS")
                 self.next_run_time = time.monotonic() + COMMUNICATOR_INTERVAL
-                logger.info(
+                logger.debug(
                     f"Will now wait for {COMMUNICATOR_INTERVAL} seconds until next cycle..."
                 )
                 self.current_state = CommunicatorState.WAITING_FOR_RESULTS
@@ -99,15 +99,15 @@ class Communicator:
                 now = time.monotonic()
                 if now >= self.next_run_time:
                     if RESULTS_READY_FLAG.exists():
-                        logger.info(f"Found flag {RESULTS_READY_FLAG}.")
+                        logger.debug(f"Found flag {RESULTS_READY_FLAG}.")
                         # Consume the flag
                         try:
                             RESULTS_READY_FLAG.unlink()
-                            logger.info(f"Deleted flag {RESULTS_READY_FLAG}.")
-                            logger.info("WAITING_FOR_RESULTS -> COMMUNICATING")
+                            logger.debug(f"Deleted flag {RESULTS_READY_FLAG}.")
+                            logger.debug("WAITING_FOR_RESULTS -> COMMUNICATING")
                             self.current_state = CommunicatorState.COMMUNICATING
                         except FileNotFoundError:
-                            logger.info("Flag disappeared before deletion. Re-checking...")
+                            logger.debug("Flag disappeared before deletion. Re-checking...")
                             self.current_state = CommunicatorState.WAITING_FOR_RESULTS
                         except OSError as e:
                             logger.error(f"Could not delete flag {RESULTS_READY_FLAG}: {e}")
@@ -115,7 +115,7 @@ class Communicator:
                             time.sleep(POLL_INTERVAL)
                     else:
                         self.current_state = CommunicatorState.IDLE
-                        logger.info("WAITING_FOR_RESULTS -> IDLE")
+                        logger.debug("WAITING_FOR_RESULTS -> IDLE")
                 else:
                     time.sleep(POLL_INTERVAL)
 
@@ -149,7 +149,7 @@ class Communicator:
                     # 4. Run the communication handler with all processed data
                     handler_function = COMMUNICATION_DISPATCH_MAP.get(COMMUNICATION_METHOD)
                     if handler_function:
-                        logger.info(f"Using {COMMUNICATION_METHOD.name} communication handler.")
+                        logger.debug(f"Using {COMMUNICATION_METHOD.name} communication handler.")
                         communication_successful = handler_function(all_processed_entries)
                     else:
                         logger.error(f"Handler for '{COMMUNICATION_METHOD.name}' not found.")
@@ -157,14 +157,14 @@ class Communicator:
                     
                     # 5. If successful, update the manifest for only the new entries
                     if communication_successful and indices_to_mark_as_transmitted:
-                        logger.info(f"Communication successful. Marking {len(indices_to_mark_as_transmitted)} entries as transmitted.")
+                        logger.debug(f"Communication successful. Marking {len(indices_to_mark_as_transmitted)} entries as transmitted.")
                         update_metadata_manifest_entry(
                             manifest_path=Path(DATA_DIR, METADATA_FILENAME),
                             entry_index=indices_to_mark_as_transmitted,
                             data_transmitted=True
                         )
                     elif communication_successful:
-                        logger.info("Communication successful, no new entries to mark.")
+                        logger.debug("Communication successful, no new entries to mark.")
                     else:
                         logger.error("Communication method failed. Will retry later.")
 
@@ -177,7 +177,7 @@ class Communicator:
                     time.sleep(POLL_INTERVAL * 5)
                     return
 
-                logger.info("COMMUNICATING -> IDLE")
+                logger.debug("COMMUNICATING -> IDLE")
                 self.current_state = CommunicatorState.IDLE
 
             case CommunicatorState.FATAL_ERROR:
@@ -196,7 +196,7 @@ class Communicator:
             logger.info("Moved existing files to backup directory.")
             try:
                 RESULTS_READY_FLAG.unlink(missing_ok=True)
-                logger.info(f"Ensured flag {RESULTS_READY_FLAG} is initially removed.")
+                logger.debug(f"Ensured flag {RESULTS_READY_FLAG} is initially removed.")
             except OSError as e:
                 logger.warning(f"Could not remove initial flag {RESULTS_READY_FLAG}: {e}")
 

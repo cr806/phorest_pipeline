@@ -4,12 +4,12 @@ import logging.handlers
 import sys
 from pathlib import Path
 
-from phorest_pipeline.shared.config import LOGS_DIR
+from phorest_pipeline.shared.config import DEBUG_MODE, LOGS_DIR
 
 
 def configure_logger(
     name=None,
-    level=logging.INFO,
+    level=None,
     log_filename="app.log",
     rotate_daily=False,
     log_to_terminal=False,
@@ -25,6 +25,10 @@ def configure_logger(
     Returns:
         logging.Logger: The configured logger instance.
     """
+
+    if not level:
+        level = logging.DEBUG if DEBUG_MODE else logging.INFO
+
     logger = logging.getLogger(name)
     logger.setLevel(level)
 

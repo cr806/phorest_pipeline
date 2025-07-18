@@ -36,7 +36,7 @@ def move_existing_files_to_backup(source_filepaths: list, logger: logging.Logger
 
     for source_filepath in source_filepaths:
         if not source_filepath.exists() or source_filepath.is_dir():
-            logger.info(
+            logger.debug(
                 f"Source '{source_filepath}' does not exist or is a directory. Skipping..."
             )
             continue
@@ -80,7 +80,7 @@ def ring_buffer_cleanup(logger: logging.Logger):
         image_files_on_disk.sort(key=lambda p: p.stat().st_mtime)
 
         num_images = len(image_files_on_disk)
-        logger.info(f"Found {num_images} local images. Buffer limit: {IMAGE_BUFFER_SIZE}.")
+        logger.debug(f"Found {num_images} local images. Buffer limit: {IMAGE_BUFFER_SIZE}.")
 
         if num_images <= IMAGE_BUFFER_SIZE:
             logger.info("Image count is within buffer limit. No cleanup needed.")
@@ -119,10 +119,10 @@ def ring_buffer_cleanup(logger: logging.Logger):
             logger.info("No files to delete after checking sync status.")
             return
 
-        logger.info(f"Buffer limit exceeded. Deleting {len(final_files_to_delete)} image(s)...")
+        logger.info(f"Buffer limit exceeded. Removing {len(final_files_to_delete)} image(s)...")
         for file_to_delete in final_files_to_delete:
             try:
-                logger.info(f"Deleting: {file_to_delete.name}")
+                logger.debug(f"Deleting: {file_to_delete.name}")
                 file_to_delete.unlink()
             except OSError as delete_err:
                 logger.error(f"Failed to delete image {file_to_delete.name}: {delete_err}")
@@ -159,7 +159,7 @@ def snapshot_configs(logger: logging.Logger):
             try:
                 with lock_and_manage_file(source_path):
                     shutil.copy2(str(source_path), str(DATA_DIR))
-                logger.info(f"Copied {name} file '{source_path.name}' to data directory")
+                logger.debug(f"Copied {name} file '{source_path.name}' to data directory")
             except Exception as e:
                 logger.error(
                     f"Failed to copy {name} file '{source_path.name}': {e}", exc_info=True

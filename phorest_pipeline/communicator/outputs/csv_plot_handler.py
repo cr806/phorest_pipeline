@@ -23,7 +23,7 @@ def save_results_json_as_csv(processed_entries: list[dict], csv_path: Path) -> N
     """
     Combines data from the data manifest and the results manifest to create a CSV.
     """
-    logger.info("Loading results manifest to correlate with processed entries...")
+    logger.debug("Loading results manifest to correlate with processed entries...")
     try:
         results_data = load_metadata_with_lock(Path(RESULTS_DIR, RESULTS_FILENAME))
 
@@ -104,7 +104,7 @@ def save_plot_of_results(csv_path: Path, image_path: Path) -> None:
         if image_path.exists():
             try:
                 image_path.unlink()
-                logger.info(f"Removed old plot image: {image_path.name}")
+                logger.debug(f"Removed old plot image: {image_path.name}")
             except OSError as e:
                 logger.error(f"Failed to remove old plot image {image_path.name}: {e}")
         return
@@ -117,7 +117,7 @@ def save_plot_of_results(csv_path: Path, image_path: Path) -> None:
         if image_path.exists():
             try:
                 image_path.unlink()
-                logger.info(f"Removed old plot image: {image_path.name}")
+                logger.debug(f"Removed old plot image: {image_path.name}")
             except OSError as e:
                 logger.error(f"Failed to remove old plot image {image_path.name}: {e}")
         return
