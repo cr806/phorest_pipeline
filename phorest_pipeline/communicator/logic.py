@@ -13,7 +13,6 @@ from phorest_pipeline.shared.config import (
     IMAGE_FILENAME,
     METADATA_FILENAME,
     RESULTS_DIR,
-    RESULTS_FILENAME,
     RESULTS_READY_FLAG,
     settings,
 )
@@ -54,7 +53,9 @@ def find_not_transmitted_entries_indices(metadata_list: list) -> list[int]:
     not_transmitted_indices = []
     for index, entry in enumerate(metadata_list):
         # Find entry marked as processed and not yet transmitted
-        if entry.get("processing_status", "pending") == "processed" and not entry.get("data_transmitted", False):
+        if entry.get("processing_status", "pending") == "processed" and not entry.get(
+            "data_transmitted", False
+        ):
             not_transmitted_indices.append(index)
     return not_transmitted_indices
 
@@ -139,13 +140,17 @@ class Communicator:
                     )
 
                     # 3. Filter out entries that have been processed but not transmitted
-                    indices_to_mark_as_transmitted = find_not_transmitted_entries_indices(manifest_data)
+                    indices_to_mark_as_transmitted = find_not_transmitted_entries_indices(
+                        manifest_data
+                    )
 
                     if not indices_to_mark_as_transmitted:
-                        logger.info("All processed entries have already been transmitted. Generating report without updating manifest.")
+                        logger.info(
+                            "All processed entries have already been transmitted. Generating report without updating manifest."
+                        )
                         self.current_state = CommunicatorState.IDLE
                         return
-                    
+
                     # 4. Run the communication handler with all processed data
                     handler_function = COMMUNICATION_DISPATCH_MAP.get(COMMUNICATION_METHOD)
                     if handler_function:
@@ -154,14 +159,16 @@ class Communicator:
                     else:
                         logger.error(f"Handler for '{COMMUNICATION_METHOD.name}' not found.")
                         communication_successful = False
-                    
+
                     # 5. If successful, update the manifest for only the new entries
                     if communication_successful and indices_to_mark_as_transmitted:
-                        logger.debug(f"Communication successful. Marking {len(indices_to_mark_as_transmitted)} entries as transmitted.")
+                        logger.debug(
+                            f"Communication successful. Marking {len(indices_to_mark_as_transmitted)} entries as transmitted."
+                        )
                         update_metadata_manifest_entry(
                             manifest_path=Path(DATA_DIR, METADATA_FILENAME),
                             entry_index=indices_to_mark_as_transmitted,
-                            data_transmitted=True
+                            data_transmitted=True,
                         )
                     elif communication_successful:
                         logger.debug("Communication successful, no new entries to mark.")
@@ -226,6 +233,6 @@ class Communicator:
 
 
 def run_communicator():
-    """ Main entry point to create and run a Communicator instance """
+    """Main entry point to create and run a Communicator instance"""
     communicator = Communicator()
     communicator.run()
