@@ -12,7 +12,7 @@ fi
 
 read -p "Enter your University username: " user_name
 
-if [ -z "user_name" ]; then
+if [ -z "$user_name" ]; then
     echo "ERROR: No username entered. Aborting."
     exit 1
 fi
