@@ -73,10 +73,6 @@ try:
     METHOD = settings.get("Data_Analysis", {}).get("method", "gaussian")
     NUMBER_SUB_ROIS = int(settings.get("Data_Analysis", {}).get("number_of_subROIs", 1))
 
-    # --- Flags ---
-    DATA_READY_FLAG = get_flag_path(settings, "data_ready")
-    RESULTS_READY_FLAG = get_flag_path(settings, "results_ready")
-
     # --- Paths ---
     REMOTE_ROOT_DIR = get_path(settings, "Paths", "remote_root_dir", "remote")
     ROOT_DIR = get_path(settings, "Paths", "root_dir", ".")
@@ -97,6 +93,15 @@ try:
     check_or_create_dir(LOGS_DIR)
     check_or_create_dir(BACKUP_DIR)
 
+    # --- Service Availability ---
+    ENABLE_CAMERA = settings.get("Services", {}).get("enable_camera", False)
+    ENABLE_THERMOCOUPLE = settings.get("Services", {}).get("enable_thermocouple", False)
+    ENABLE_BRIGHTFIELD = settings.get("Services", {}).get("enable_brightfield", False)
+    ENABLE_BACKUP = settings.get("Services", {}).get("enable_file_backup", False)
+    ENABLE_COMPRESSOR = settings.get("Services", {}).get("enable_image_compression", False)
+    ENABLE_SYNCER = settings.get("Services", {}).get("enable_remote_sync", False)
+
+
     # --- Timing ---
     # No need for getint/getboolean, TOML parses types directly
     COLLECTOR_INTERVAL = settings.get("Timing", {}).get("collector_interval_seconds", 300)
@@ -114,15 +119,7 @@ try:
     # --- Buffer ---
     IMAGE_BUFFER_SIZE = settings.get("Buffer", {}).get("image_buffer_size", 300)
 
-    # --- Service Availability ---
-    ENABLE_CAMERA = settings.get("Services", {}).get("enable_camera", False)
-    ENABLE_THERMOCOUPLE = settings.get("Services", {}).get("enable_thermocouple", False)
-    ENABLE_BRIGHTFIELD = settings.get("Services", {}).get("enable_brightfield", False)
-    ENABLE_BACKUP = settings.get("Services", {}).get("enable_file_backup", False)
-    ENABLE_COMPRESSOR = settings.get("Services", {}).get("enable_image_compression", False)
-    ENABLE_SYNCER = settings.get("Services", {}).get("enable_remote_sync", False)
-
-    # --- Communication method ---
+    # --- Communication Settings ---
     communication_method_str = settings.get("Communication", {}).get("method", "CSV_PLOT")
     communication_method_str = communication_method_str.upper()
     try:
@@ -162,7 +159,13 @@ try:
     # --- Brightfield Settings ---
     BRIGHTFIELD_CAMERA_INDEX = int(settings.get("Brightfield", {}).get("camera_id", 1))
 
-    # --- Paths for ROI Generation ---
+
+    # --- Advanced config entries ---
+    # --- Flags ---
+    DATA_READY_FLAG = get_flag_path(settings, "data_ready")
+    RESULTS_READY_FLAG = get_flag_path(settings, "results_ready")
+
+    # --- Static Asset Paths ---
     ROI_GENERATION_IMAGE_PATH = Path(
         PROJECT_ROOT, settings.get("Assets", {}).get("roi_generation_image")
     )
@@ -174,6 +177,9 @@ try:
         settings.get("Assets", {}).get("roi_manifest_filename", "ROI_manifest.json")
     )
     GENERATED_FILES_DIR = Path(PROJECT_ROOT, settings.get("Assets", {}).get("generated_files_dir"))
+
+    # --- Development Settings ---
+    DEBUG_MODE = settings.get("Development", {}).get("debug_mode", False)
 
 except (FileNotFoundError, ValueError, IOError) as e:
     print(f"FATAL ERROR loading/parsing configuration: {e}")

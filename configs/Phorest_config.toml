@@ -86,3 +86,7 @@ label_template_dir = "assets/Label_templates"                                   
 feature_locations_config = "configs/Feature_locations.toml"                     # Configuration file defining which features to locate.
 roi_manifest_filename = "ROI_manifest.json"                                     # Output filename for the generated ROI manifest.
 generated_files_dir = "generated_files"                                         # Directory for output from generate ROI scripts.
+
+# --- Development Settings ---
+[Development]
+debug_mode = false                                                              # Set to true to keep detailed 'Values' lists in results

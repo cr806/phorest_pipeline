@@ -9,6 +9,7 @@ from phorest_pipeline.processor.analysis_methods import (
     gaussian,
     max_intensity,
 )
+from phorest_pipeline.shared.config import DEBUG_MODE
 from phorest_pipeline.shared.logger_config import configure_logger
 
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename='processor.log')
@@ -243,4 +244,6 @@ def postprocess_roi_results(data: Dict) -> Dict:
             data[key]['Smoothness'] = np.round(
                 np.std(np.diff(temp)) / data_range, decimals=dp
             )  # Smoothness i.e. Variation
+        if not DEBUG_MODE:
+            del value["Values"]
     return data
