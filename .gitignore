@@ -95,6 +95,7 @@ backup/
 BIC*/
 test/
 code_development/
+INTERNAL_FILES/
 
 # Ignore symlinks of data direcories too
 continuous_capture
