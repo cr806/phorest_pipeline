@@ -22,7 +22,7 @@ phorest = "phorest:main"
 
 [tool.setuptools]
 # Tell setuptools exactly which top-level directories are packages
-packages = ["phorest_pipeline"]
+packages = { find = { where = ["src"] } }
 
 [tool.ruff]
 lint.ignore = [

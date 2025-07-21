@@ -9,6 +9,7 @@ from pathlib import Path
 # --- Configuration for PID File ---
 PROJECT_ROOT = Path(__file__).resolve().parent
 PID_FILE = Path(PROJECT_ROOT, "flags", "background_pids.txt")  # File to store script_name,pid
+PID_FILE.parent.mkdir(parents=True, exist_ok=True)
 if not PID_FILE.exists():
     PID_FILE.touch()
 
@@ -417,7 +418,7 @@ def run_background_script_detached(stdscr, script_name, ask_for_enter=True):
     curses.napms(500)
 
     # Construct the full path to the script
-    full_script_path = Path(PROJECT_ROOT, 'src', script_name)
+    full_script_path = Path(PROJECT_ROOT, 'launchers', script_name)
 
     # Prepare environment variables for the subprocess
     env = os.environ.copy()
@@ -487,7 +488,7 @@ def run_foreground_script(stdscr, script_name):
     curses.napms(500)
 
     # Construct the full path to the script
-    full_script_path = Path(PROJECT_ROOT, 'src', script_name)
+    full_script_path = Path(PROJECT_ROOT, 'launchers', script_name)
 
     # Prepare environment variables for the subprocess
     env = os.environ.copy()
