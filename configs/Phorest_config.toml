@@ -8,7 +8,7 @@ number_of_subROIs = 0                                                           
 # --- File Paths ---
 [Paths]
 # remote_root_dir = "/mnt/storage/Lisa/GMR/Array/SpecialBox/Cuthbert/250716"      # Remote root directory for the project (all files will be copied here if 'syncer' is ran)
-# root_dir = "/mnt/data"                                                          # Root directory for the project
+# root_dir = "/mnt/ARGUS_data"                                                          # Root directory for the project (typically a mounted USB drive)
 remote_root_dir = "/mnt/storage/Lisa/GMR/Array/SpecialBox/Cuthbert/250716"      # Remote root directory for the project (all files will be copied here if 'syncer' is ran)
 root_dir = "."                                                                  # Root directory for the project
 flag_dir = "flags"                                                              # Directory for flag files
@@ -88,6 +88,9 @@ label_template_dir = "assets/Label_templates"                                   
 feature_locations_config = "configs/Feature_locations.toml"                     # Configuration file defining which features to locate.
 roi_manifest_filename = "ROI_manifest.json"                                     # Output filename for the generated ROI manifest.
 generated_files_dir = "generated_files"                                         # Directory for output from generate ROI scripts.
+
+[Storage]
+usb_uuid = "BB92-0AA4"                                                          # The unique UUID of the external drive where data is stored -  Run 'sudo blkid' to find this value for your drive.
 
 # --- Development Settings ---
 [Development]

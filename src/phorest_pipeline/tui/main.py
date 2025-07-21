@@ -7,15 +7,11 @@ import sys
 from pathlib import Path
 
 # --- Configuration for PID File ---
-PROJECT_ROOT = Path(__file__).resolve().parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 PID_FILE = Path(PROJECT_ROOT, "flags", "background_pids.txt")  # File to store script_name,pid
 PID_FILE.parent.mkdir(parents=True, exist_ok=True)
 if not PID_FILE.exists():
     PID_FILE.touch()
-
-# Determine the project root dynamically using pathlib
-# This gets the directory where phorest.py resides
-PROJECT_ROOT = Path(__file__).resolve().parent
 
 # Define minimum dimensions for the TUI window
 MIN_HEIGHT = 23
@@ -23,22 +19,21 @@ MIN_WIDTH = 80
 
 # --- Script Categories ---
 foreground_scripts = [
-    {"menu": "Check USB Storage", "script": "run_storage_check.py"},
-    {"menu": "Initialise Directories", "script": "run_create_directories.py"},
-    {"menu": "Find Thermocouple Serial Numbers", "script": "run_find_thermocouple_serials.py"},
-    {"menu": "Find Camera Index", "script": "run_find_camera_index.py"},
-    {"menu": "Locate Gratings in Image", "script": "prepare_files_for_image_analysis.py"},
-    {"menu": "\t\t( Check ROI listing )", "script": "check_roi_listing.py"},
+    {"menu": "Check USB Storage", "script": "phorest-check-storage"},
+    {"menu": "Find Thermocouple Serial Numbers", "script": "phorest-find-thermocouples"},
+    {"menu": "Find Camera Index", "script": "phorest-find-camera"},
+    {"menu": "Locate Gratings in Image", "script": "phorest-generate-roi-manifest"},
+    {"menu": "\t\t( Check ROI listing )", "script": "phorest-check-roi"},
 ]
 
 background_scripts = [
-    {"menu": "\t\t( Start Periodic Image Collection Process )", "script": "run_collector.py"},
-    {"menu": "\t\t( Start Image Analysis Process )", "script": "run_processor.py"},
-    {"menu": "\t\t( Start Data Plotting Process )", "script": "run_communicator.py"},
-    {"menu": "\t\t( Start Image Compression Process )", "script": "run_compressor.py"},
-    {"menu": "\t\t( Start File Backup Process )", "script": "run_file_backup.py"},
-    {"menu": "\t\t( Start Sync to remote direcory Process )", "script": "run_syncer.py"},
-    {"menu": "Start Continuous Image Capture", "script": "run_continuous_capture.py"},
+    {"menu": "\t\t( Start Periodic Image Collection Process )", "script": "phorest-collector"},
+    {"menu": "\t\t( Start Image Analysis Process )", "script": "phorest-processor"},
+    {"menu": "\t\t( Start Data Plotting Process )", "script": "phorest-communicator"},
+    {"menu": "\t\t( Start Image Compression Process )", "script": "phorest-compressor"},
+    {"menu": "\t\t( Start File Backup Process )", "script": "phorest-backup"},
+    {"menu": "\t\t( Start Sync to remote direcory Process )", "script": "phorest-syncer"},
+    {"menu": "Start Continuous Image Capture", "script": "phorest-continuous-capture"},
 ]
 
 
@@ -154,11 +149,12 @@ def check_running_background_scripts_status(stdscr):
 
 def start_all_background_scripts(stdscr):
     scripts_to_start = [
-        "run_collector.py",
-        "run_processor.py",
-        "run_communicator.py",
-        "run_compressor.py",
-        "run_file_backup.py",
+        "phorest-collector",
+        "phorest-processor",
+        "phorest-communicator",
+        "phorest-compressor",
+        "phorest-backup",
+        "phorest-syncer",
     ]
     stdscr.clear()
     h, w = stdscr.getmaxyx()
@@ -168,8 +164,8 @@ def start_all_background_scripts(stdscr):
     stdscr.refresh()
     curses.napms(500)
 
-    for entry in scripts_to_start:
-        run_background_script_detached(stdscr, entry, ask_for_enter=False)
+    for command_name in scripts_to_start:
+        run_background_script_detached(stdscr, command_name, ask_for_enter=False)
         curses.napms(1000)
 
 
@@ -238,10 +234,10 @@ def get_tracked_pids():
     return tracked_pids
 
 
-def add_pid_to_file(script_name, pid):
+def add_pid_to_file(command_name, pid):
     """Appends a new script_name,pid entry to the PID file."""
     with PID_FILE.open("a") as f:
-        f.write(f"{script_name},{pid},ACTIVE\n")
+        f.write(f"{command_name},{pid},ACTIVE\n")
 
 
 def is_pid_active(pid):
@@ -267,7 +263,7 @@ def is_pid_active(pid):
         return None
 
 
-def is_script_already_running(script_name):
+def is_script_already_running(command_name):
     """
     Checks if an instance of the given script_name is already running
     by looking up tracked PIDs and verifying them with 'ps'.
@@ -278,13 +274,10 @@ def is_script_already_running(script_name):
 
     for entry in tracked_pids:
         # Only check PIDs for the *specific* script we care about right now
-        if entry["name"] == script_name:
+        if entry["name"] == command_name:
             cmd = is_pid_active(entry["pid"])
-            if cmd:
-                # Double-check that the command string still matches the script
-                if ("python3" in cmd) and (f"{script_name}" in cmd):
-                    return entry["pid"]  # Found an active instance
-
+            if cmd and command_name in cmd:
+                return entry["pid"]  # Found an active instance
     return None  # No active instance found for this script
 
 
@@ -392,18 +385,18 @@ def draw_menu(stdscr, selected_row_idx):
 
 
 # --- Function to run a background script (simplified) ---
-def run_background_script_detached(stdscr, script_name, ask_for_enter=True):
+def run_background_script_detached(stdscr, command_name, ask_for_enter=True):
     """
     Launches the given Python script in the background, detaches it,
     and appends its PID to a text file. Includes single instance check.
     """
-    existing_pid = is_script_already_running(script_name)
+    existing_pid = is_script_already_running(command_name)
     if existing_pid:
         stdscr.clear()
         stdscr.addstr(
             0,
             0,
-            f"Error: '{script_name}' is already running with PID {existing_pid}.",
+            f"Error: '{command_name}' is already running with PID {existing_pid}.",
             curses.color_pair(1) | curses.A_BOLD,
         )
         stdscr.addstr(2, 0, "Please stop the existing instance or choose another script.")
@@ -413,42 +406,26 @@ def run_background_script_detached(stdscr, script_name, ask_for_enter=True):
         return False
 
     stdscr.clear()
-    stdscr.addstr(0, 0, f"Attempting to launch '{script_name}' in background...")
+    stdscr.addstr(0, 0, f"Attempting to launch '{command_name}' in background...")
     stdscr.refresh()
     curses.napms(500)
 
-    # Construct the full path to the script
-    full_script_path = Path(PROJECT_ROOT, 'launchers', script_name)
-
-    # Prepare environment variables for the subprocess
-    env = os.environ.copy()
-    # Add the project root to PYTHONPATH for the subprocess
-    if "PYTHONPATH" in env:
-        env["PYTHONPATH"] = f"{PROJECT_ROOT}{os.pathsep}{env['PYTHONPATH']}"
-    else:
-        env["PYTHONPATH"] = str(PROJECT_ROOT) # Convert Path to string for environment variable
-
-
-    # sys.executable is used to ensure the script runs with the same Python interpreter
-    # it returns the path to the Python interpreter being used by the currrent script
-    # i.e. '/home/labuser/Documents/Python/phorest_pipeline/.venv/bin/python3'
     try:
         process = subprocess.Popen(
-            [sys.executable, str(full_script_path)],
+            [command_name],
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             preexec_fn=os.setsid,
             close_fds=True,
-            env=env,
             cwd=str(PROJECT_ROOT),  # Set the working directory to the project root
         )
 
-        add_pid_to_file(script_name, process.pid)
+        add_pid_to_file(command_name, process.pid)
 
         stdscr.clear()
         stdscr.addstr(
-            0, 0, f"'{script_name}' launched in background (PID: {process.pid}).", curses.A_BOLD
+            0, 0, f"'{command_name}' launched in background (PID: {process.pid}).", curses.A_BOLD
         )
         if ask_for_enter:
             stdscr.addstr(2, 0, "Press any key to return to menu...")
@@ -460,17 +437,18 @@ def run_background_script_detached(stdscr, script_name, ask_for_enter=True):
     except Exception as e:
         stdscr.clear()
         stdscr.addstr(
-            0, 0, f"Failed to launch '{script_name}': {e}", curses.color_pair(1) | curses.A_BOLD
+            0, 0, f"Failed to launch '{command_name}': {e}", curses.color_pair(1) | curses.A_BOLD
         )
-        stdscr.addstr(1, 0, "Press any key to continue...")
+        stdscr.addstr(2, 0, "This may be because the project is not installed in editable mode.")
+        stdscr.addstr(3, 0, "Try running: uv pip install -e .")
+        stdscr.addstr(5, 0, "Press any key to continue...")
         stdscr.refresh()
         stdscr.getch()
-        print(f"Error launching script '{script_name}': {e}", file=sys.stderr)
         return False
 
 
 # --- Function to display captured output from info-gathering scripts ---
-def run_foreground_script(stdscr, script_name):
+def run_foreground_script(stdscr, command_name):
     """
     Runs an information-gathering script, captures its output, and displays it in the TUI.
     """
@@ -482,44 +460,32 @@ def run_foreground_script(stdscr, script_name):
     stdscr.clear()
     h, w = stdscr.getmaxyx()
 
-    message = f"Running '{script_name}' and capturing output..."
+    message = f"Running '{command_name}' and capturing output..."
     stdscr.addstr(0, w // 2 - len(message) // 2, message)
     stdscr.refresh()
     curses.napms(500)
 
-    # Construct the full path to the script
-    full_script_path = Path(PROJECT_ROOT, 'launchers', script_name)
-
-    # Prepare environment variables for the subprocess
-    env = os.environ.copy()
-    if "PYTHONPATH" in env:
-        env["PYTHONPATH"] = f"{PROJECT_ROOT}{os.pathsep}{env['PYTHONPATH']}"
-    else:
-        env["PYTHONPATH"] = str(PROJECT_ROOT) # Convert Path to string for environment variable
-
-
     try:
         result = subprocess.run(
-            [sys.executable, str(full_script_path)],
+            [command_name],
             capture_output=True,
             text=True,
             check=True,
-            env=env,
             cwd=str(PROJECT_ROOT)
         )
 
         all_output_lines = []
         if result.stdout:
-            all_output_lines.append(f"--- Output for '{script_name}' (STDOUT) ---")
+            all_output_lines.append(f"--- Output for '{command_name}' (STDOUT) ---")
             all_output_lines.extend(result.stdout.splitlines())
         if result.stderr:
-            all_output_lines.append(f"\n--- Errors/Warnings for '{script_name}' (STDERR) ---")
+            all_output_lines.append(f"\n--- Errors/Warnings for '{command_name}' (STDERR) ---")
             all_output_lines.extend(result.stderr.splitlines())
 
         current_scroll_pos = 0
         while True:
             stdscr.clear()
-            stdscr.addstr(0, 0, f"Output for '{script_name}'", curses.A_BOLD)
+            stdscr.addstr(0, 0, f"Output for '{command_name}'", curses.A_BOLD)
 
             start_line_idx = current_scroll_pos
             end_line_idx = min(len(all_output_lines), current_scroll_pos + h - 4)
@@ -562,7 +528,7 @@ def run_foreground_script(stdscr, script_name):
 
     except subprocess.CalledProcessError as e:
         stdscr.clear()
-        stdscr.addstr(0, 0, f"Error running script '{script_name}':", ERROR_ATTRIBUTES)
+        stdscr.addstr(0, 0, f"Error running script '{command_name}':", ERROR_ATTRIBUTES)
         stdscr.addstr(1, 0, f"Command: {e.cmd}")
         stdscr.addstr(2, 0, f"Return Code: {e.returncode}")
 

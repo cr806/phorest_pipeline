@@ -178,6 +178,9 @@ try:
     )
     GENERATED_FILES_DIR = Path(PROJECT_ROOT, settings.get("Assets", {}).get("generated_files_dir"))
 
+    # --- Storage Check Settings ---
+    USB_UUID = settings.get("Storage", {}).get("usb_uuid", "")
+
     # --- Development Settings ---
     DEBUG_MODE = settings.get("Development", {}).get("debug_mode", False)
 
