@@ -9,7 +9,7 @@ from phorest_pipeline.shared.image_sources import (
     ImageTransform,
 )
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 
 CONFIG_FILEPATH = Path(PROJECT_ROOT, "configs", "Phorest_config.toml")
 
