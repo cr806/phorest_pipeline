@@ -1,6 +1,6 @@
 ## Raspberry Pi Installation Guide
 
-This guide provides the minimal steps required to set up the Phorest Pipeline project on a fresh Raspberry Pi.
+This guide provides the minimal steps required to set up the Phorest Pipeline project on a fresh Raspberry Pi, including the necessary steps to enable the main TUI and its command launchers.
 
 ### 1. Update Your System
 
@@ -17,21 +17,20 @@ You will need `git` to clone the repository and `uv` to manage the Python enviro
 sudo apt-get install git -y
 curl -LsSf [https://astral.sh/uv/install.sh](https://astral.sh/uv/install.sh) | sh
 ```
+
 After installing `uv`, you may need to restart your terminal or run `source $HOME/.cargo/env` for the `uv` command to be available.
 
 ### 3. Clone the Project
-
 Clone the Phorest Pipeline repository from GitHub to your desired location (e.g., the home directory).
 ```bash
 git clone <your-repository-url>
 cd phorest-pipeline
 ```
 
-### 4. Install Dependencies
-
-Use `uv` to create a virtual environment and install all the required Python packages. This command reads the `pyproject.toml` and `uv.lock` files to create a consistent environment.
+### 4. Install the Project in Editable Mode
+To ensure that the TUI can launch all the pipeline services, you must install the project in "editable" mode. This command will create a virtual environment, install all dependencies, and create the necessary command-line scripts (e.g., `phorest-collector`).
 ```bash
-uv sync
+uv pip install -e .
 ```
 
 ### 5. Activate the Environment
