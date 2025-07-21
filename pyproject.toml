@@ -18,7 +18,16 @@ dependencies = [
 ]
 
 [project.scripts]
+# Main TUI Application
 phorest = "phorest:main"
+
+# Pipeline Services
+phorest-collector = "phorest_pipeline.collector.logic:run_collector"
+phorest-processor = "phorest_pipeline.processor.logic:run_processor"
+phorest-communicator = "phorest_pipeline.communicator.logic:run_communicator"
+phorest-compressor = "phorest_pipeline.compressor.logic:run_compressor"
+phorest-backup = "phorest_pipeline.file_backup.logic:run_file_backup"
+phorest-syncer = "phorest_pipeline.syncer.logic:run_syncer"
 
 [tool.setuptools]
 # Tell setuptools exactly which top-level directories are packages
