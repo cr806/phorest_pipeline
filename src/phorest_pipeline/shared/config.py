@@ -94,6 +94,7 @@ try:
     ENABLE_BACKUP = settings.get("Services", {}).get("enable_file_backup", False)
     ENABLE_COMPRESSOR = settings.get("Services", {}).get("enable_image_compression", False)
     ENABLE_SYNCER = settings.get("Services", {}).get("enable_remote_sync", False)
+    ENABLE_HEALTH_CHECK = settings.get("Services", {}).get("enable_service_health_check", False)
 
 
     # --- Timing ---

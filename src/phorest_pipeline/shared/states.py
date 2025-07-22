@@ -43,3 +43,10 @@ class SyncerState(Enum):
     SYNCING_FILES = auto()
     WAITING_TO_RUN = auto()
     FATAL_ERROR = auto()
+
+
+class HealthCheckerState(Enum):
+    IDLE = auto()
+    CHECKING_HEALTH = auto()
+    WAITING_TO_RUN = auto()
+    FATAL_ERROR = auto()

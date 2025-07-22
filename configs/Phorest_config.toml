@@ -27,6 +27,7 @@ enable_brightfield = false                                                      
 enable_file_backup = false                                                      # Enable or disable the file backup service
 enable_remote_sync = true                                                       # Enable or disable the syncer service
 enable_image_compression = false                                                # Enable or disable image compression (Compressing PNG images is not worth it)
+enable_service_health_check = true                                              # Enable or disable service periodic health check
 
 # --- Timing Intervals (in seconds) ---
 [Timing]
