@@ -11,7 +11,6 @@ number_of_subROIs = 0                                                           
 # root_dir = "/mnt/ARGUS_data"                                                          # Root directory for the project (typically a mounted USB drive)
 remote_root_dir = "/mnt/storage/Lisa/GMR/Array/SpecialBox/Cuthbert/250716"      # Remote root directory for the project (all files will be copied here if 'syncer' is ran)
 root_dir = "."                                                                  # Root directory for the project
-flag_dir = "flags"                                                              # Directory for flag files
 data_dir = "data"                                                               # Directory for raw data
 results_dir = "results"                                                         # Directory for processed results
 continuous_capture_dir = "continuous_capture"                                   # Directory for continuous capture data
@@ -78,6 +77,7 @@ camera_contrast = 0.5
 # --- Advanced - DO NOT change unless you know what you are doing ---
 # --- Flag File Names ---
 [Flags]
+flag_dir = "flags"                                                              # Directory for flag files
 data_ready = "data_ready.flag"                                                  # Flag file indicating data is ready
 results_ready = "results_ready.flag"                                            # Flag file indicating results are ready
 
