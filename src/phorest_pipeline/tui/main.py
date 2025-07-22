@@ -36,6 +36,7 @@ BACKGROUND_SCRIPTS = [
     {"menu": "\t\t( Start Image Compression Process )", "script": "phorest-compressor"},
     {"menu": "\t\t( Start File Backup Process )", "script": "phorest-backup"},
     {"menu": "\t\t( Start Sync to remote direcory Process )", "script": "phorest-syncer"},
+    {"menu": "\t\t( Start Health Check Process )", "script": "phorest-health-check"},
     {"menu": "Start Continuous Image Capture", "script": "phorest-continuous-capture"},
 ]
 

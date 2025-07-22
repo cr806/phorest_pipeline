@@ -76,6 +76,7 @@ BACKGROUND_SCRIPTS = [
     {"menu": "Start Compressor", "script": "phorest-compressor", "type": "background"},
     {"menu": "Start Backup", "script": "phorest-backup", "type": "background"},
     {"menu": "Start Syncer", "script": "phorest-syncer", "type": "background"},
+    {"menu": "Start Health Check", "script": "phorest-health-check", "type": "background"},
     {
         "menu": "Start Continuous Capture",
         "script": "phorest-continuous-capture",
