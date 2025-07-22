@@ -10,7 +10,9 @@ from textual.containers import Container, Vertical
 from textual.screen import ModalScreen, Screen
 from textual.widgets import Button, DataTable, Footer, Header, RichLog, Static
 
-# --- Project Imports ---
+from phorest_pipeline.shared.config import FLAG_DIR
+from phorest_pipeline.shared.metadata_manager import initialise_status_file
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 PID_FILE = Path(PROJECT_ROOT, "flags", "background_pids.txt")
 
@@ -170,9 +172,9 @@ class ManageProcessesScreen(ModalScreen):
 
             active_processes = [p for p in get_tracked_pids() if is_pid_active(p["pid"])]
             if not active_processes:
-                self.app.bell() # Provide feedback that there's nothing to do
+                self.app.bell()  # Provide feedback that there's nothing to do
                 return
-            
+
             if table.cursor_row >= 0:
                 row_data = table.get_row_at(table.cursor_row)
                 pid_to_kill = int(row_data[1])
@@ -205,7 +207,9 @@ class PhorestTUI(App):
                     yield Button(item["menu"], id=item["script"], classes="fg_button")
 
             with Vertical(id="background_container"):
-                yield Static("Phorest data collection and processing services", classes="group_header")
+                yield Static(
+                    "Phorest data collection and processing services", classes="group_header"
+                )
                 for item in BACKGROUND_SCRIPTS:
                     yield Button(item["menu"], id=item["script"], classes="bg_button")
 
@@ -254,6 +258,11 @@ class PhorestTUI(App):
 
 def main():
     """Main entry point for the application."""
+
+    # Initialize the status file on startup
+    all_service_names = [s["script"] for s in BACKGROUND_SCRIPTS]
+    initialise_status_file(all_service_names, FLAG_DIR)
+
     app = PhorestTUI()
     app.run()
 

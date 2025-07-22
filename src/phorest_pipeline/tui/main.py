@@ -6,6 +6,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+from phorest_pipeline.shared.config import FLAG_DIR
+from phorest_pipeline.shared.metadata_manager import initialise_status_file
+
 # --- Configuration for PID File ---
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 PID_FILE = Path(PROJECT_ROOT, "flags", "background_pids.txt")  # File to store script_name,pid
@@ -18,7 +21,7 @@ MIN_HEIGHT = 23
 MIN_WIDTH = 80
 
 # --- Script Categories ---
-foreground_scripts = [
+FOREGROUND_SCRIPTS = [
     {"menu": "Check USB Storage", "script": "phorest-check-storage"},
     {"menu": "Find Thermocouple Serial Numbers", "script": "phorest-find-thermocouples"},
     {"menu": "Find Camera Index", "script": "phorest-find-camera"},
@@ -26,7 +29,7 @@ foreground_scripts = [
     {"menu": "\t\t( Check ROI listing )", "script": "phorest-check-roi"},
 ]
 
-background_scripts = [
+BACKGROUND_SCRIPTS = [
     {"menu": "\t\t( Start Periodic Image Collection Process )", "script": "phorest-collector"},
     {"menu": "\t\t( Start Image Analysis Process )", "script": "phorest-processor"},
     {"menu": "\t\t( Start Data Plotting Process )", "script": "phorest-communicator"},
@@ -194,7 +197,7 @@ def stop_all_background_scripts(stdscr):
         curses.napms(500)
 
 
-multiple_scripts = [
+multiple_action_functions = [
     {"menu": "START All processes for Data collection", "script": start_all_background_scripts},
     {"menu": "STOP All Data collection processes", "script": stop_all_background_scripts},
     {
@@ -203,7 +206,7 @@ multiple_scripts = [
     },
 ]
 
-all_scripts = multiple_scripts + background_scripts + foreground_scripts
+all_scripts = multiple_action_functions + BACKGROUND_SCRIPTS + FOREGROUND_SCRIPTS
 
 
 # --- Helper functions for PID file management ---
@@ -373,7 +376,7 @@ def draw_menu(stdscr, selected_row_idx):
         y = y_offset + idx
 
         attrs = 0
-        # if script_option in foreground_scripts:
+        # if script_option in FOREGROUND_SCRIPTS:
         #     attrs |= curses.A_UNDERLINE
 
         if idx == selected_row_idx:
@@ -467,11 +470,7 @@ def run_foreground_script(stdscr, command_name):
 
     try:
         result = subprocess.run(
-            [command_name],
-            capture_output=True,
-            text=True,
-            check=True,
-            cwd=str(PROJECT_ROOT)
+            [command_name], capture_output=True, text=True, check=True, cwd=str(PROJECT_ROOT)
         )
 
         all_output_lines = []
@@ -600,8 +599,10 @@ def run_tui_app(stdscr):
         # Return a dictionary with error info. The wrapper will handle teardown.
         return {
             "error": "size",
-            "current_h": h, "current_w": w,
-            "required_h": MIN_HEIGHT, "required_w": MIN_WIDTH
+            "current_h": h,
+            "current_w": w,
+            "required_h": MIN_HEIGHT,
+            "required_w": MIN_WIDTH,
         }
 
     curses.curs_set(0)
@@ -641,11 +642,11 @@ def run_tui_app(stdscr):
         elif key == curses.KEY_ENTER or key in [10, 13]:
             selected_option = all_scripts[current_row_idx]
 
-            if selected_option in multiple_scripts:
+            if selected_option in multiple_action_functions:
                 selected_option["script"](stdscr)
-            elif selected_option in foreground_scripts:
+            elif selected_option in FOREGROUND_SCRIPTS:
                 run_foreground_script(stdscr, selected_option["script"])
-            elif selected_option in background_scripts:
+            elif selected_option in BACKGROUND_SCRIPTS:
                 stdscr.clear()
                 stdscr.addstr(
                     0, 0, f"Attempting to launch '{selected_option['script']}'...", curses.A_DIM
@@ -685,13 +686,24 @@ def run_tui_app(stdscr):
 
 def main():
     """The entry point for the phorest TUI application."""
+
+    # Initialize the status file on startup
+    all_service_names = [s["script"] for s in BACKGROUND_SCRIPTS]
+    initialise_status_file(all_service_names, FLAG_DIR)
+
     # The curses.wrapper handles the curses setup and passes 'stdscr' to run_tui_app
     result = curses.wrapper(run_tui_app)
 
     if isinstance(result, dict) and result.get("error") == "size":
         print("Error: Terminal window is too small.", file=sys.stderr)
-        print(f"       Current dimensions: {result['current_w']} width x {result['current_h']} height.", file=sys.stderr)
-        print(f"       Required minimum dimensions: {result['required_w']} width x {result['required_h']} height.", file=sys.stderr)
+        print(
+            f"       Current dimensions: {result['current_w']} width x {result['current_h']} height.",
+            file=sys.stderr,
+        )
+        print(
+            f"       Required minimum dimensions: {result['required_w']} width x {result['required_h']} height.",
+            file=sys.stderr,
+        )
         print("\nPlease resize your terminal window and run the script again.", file=sys.stderr)
         sys.exit(1)
 
