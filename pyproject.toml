@@ -20,6 +20,7 @@ dependencies = [
 [project.scripts]
 # Main TUI Application
 phorest = "phorest_pipeline.tui.main:main"
+phorest-tui = "phorest_pipeline.tui.textual_main:main"
 
 # Pipeline Services
 phorest-collector = "phorest_pipeline.collector.logic:run_collector"
@@ -35,6 +36,9 @@ phorest-generate-roi-manifest = "phorest_pipeline.scripts.generate_roi_manifest:
 phorest-find-camera = "phorest_pipeline.scripts.find_camera_index:main"
 phorest-find-thermocouples = "phorest_pipeline.scripts.find_thermocouple_serials:main"
 phorest-check-storage = "phorest_pipeline.scripts.check_storage:main"
+
+[project.optional-dependencies]
+tui = ["textual"]
 
 [tool.setuptools]
 # Tell setuptools exactly which top-level directories are packages

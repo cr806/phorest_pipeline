@@ -1,4 +1,4 @@
-# phorest.py
+# src/phorest_pipeline/tui/main.py
 import curses
 import os
 import signal

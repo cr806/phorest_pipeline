@@ -1,0 +1,39 @@
+/* src/phorest_pipeline/tui/tui_styles.css */
+
+/* Style for the container holding the foreground script buttons */
+#foreground_container {
+    background: $panel-darken-1; /* A slightly darker background color */
+    padding: 1;
+    margin: 1 2;
+    border: round white;
+}
+
+/* Style for the container holding the background service buttons */
+#background_container {
+    background: $panel-darken-2; /* An even darker background color for separation */
+    padding: 1;
+    margin: 1 2;
+    border: round white;
+}
+
+/* Style for the group headers */
+.group_header {
+    width: 100%;
+    text-align: center;
+    margin-bottom: 1;
+    text-style: bold underline;
+}
+
+/* Style for all buttons to make them take up the full width */
+Button {
+    width: 100%;
+}
+
+#manage_dialog {
+    align: center middle;
+    width: 80%;
+    height: 80%;
+    border: thick $primary;
+    background: $surface;
+    padding: 1;
+}
