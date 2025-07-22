@@ -11,44 +11,24 @@ from textual.screen import ModalScreen, Screen
 from textual.widgets import Button, DataTable, Footer, Header, RichLog, Static
 
 from phorest_pipeline.shared.config import FLAG_DIR
-from phorest_pipeline.shared.metadata_manager import initialise_status_file
+from phorest_pipeline.shared.metadata_manager import (
+    get_pipeline_status,
+    initialise_status_file,
+    update_service_status,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
-PID_FILE = Path(PROJECT_ROOT, "flags", "background_pids.txt")
-
 
 # --- Helper functions for PID management ---
-def get_tracked_pids():
-    tracked_pids = []
-    if PID_FILE.exists():
-        with PID_FILE.open("r") as f:
-            for line in f:
-                line = line.strip()
-                if line:
-                    parts = line.split(",")
-                    if len(parts) == 3:
-                        try:
-                            tracked_pids.append(
-                                {"name": parts[0], "pid": int(parts[1]), "status": parts[2]}
-                            )
-                        except ValueError:
-                            continue
-    return tracked_pids
-
-
 def is_pid_active(pid):
+    if pid is None:
+        return False
     try:
-        result = subprocess.run(
-            ["ps", "-p", str(pid), "-o", "command="], capture_output=True, text=True, check=False
-        )
-        return result.returncode == 0 and result.stdout.strip()
-    except Exception:
-        return None
-
-
-def add_pid_to_file(command_name, pid):
-    with PID_FILE.open("a") as f:
-        f.write(f"{command_name},{pid},ACTIVE\n")
+        os.kill(pid, 0)
+    except OSError:
+        return False
+    else:
+        return True
 
 
 # --- Data Definitions ---
@@ -158,7 +138,11 @@ class ManageProcessesScreen(ModalScreen):
         table = self.query_one(DataTable)
         table.clear()
 
-        active_processes = [p for p in get_tracked_pids() if is_pid_active(p["pid"])]
+        all_statuses = get_pipeline_status()
+        active_processes = []
+        for name, data in all_statuses.items():
+            if data.get("status") == "running" and is_pid_active(data.get("pid")):
+                active_processes.append({"name": name, "pid": data.get("pid")})
 
         if not active_processes:
             table.add_row("[dim]No active processes found.[/dim]")
@@ -171,22 +155,24 @@ class ManageProcessesScreen(ModalScreen):
         if event.button.id == "kill_button":
             table = self.query_one(DataTable)
 
-            active_processes = [p for p in get_tracked_pids() if is_pid_active(p["pid"])]
-            if not active_processes:
-                self.app.bell()  # Provide feedback that there's nothing to do
+            all_statuses = get_pipeline_status()
+            active_processes = [p for p in all_statuses.values() if p.get("status") == "running" and is_pid_active(p.get("pid"))]
+            if not active_processes or table.cursor_row < 0:
+                self.app.bell()
                 return
 
-            if table.cursor_row >= 0:
-                row_data = table.get_row_at(table.cursor_row)
-                pid_to_kill = int(row_data[1])
+            row_data = table.get_row_at(table.cursor_row)
+            command_id = row_data[0]
+            pid_to_kill = int(row_data[1])
 
-                try:
-                    os.kill(pid_to_kill, signal.SIGINT)
-                    self.app.bell()  # Audible feedback
-                    self.refresh_processes()
-                except Exception:
-                    # You could show a proper dialog here
-                    pass
+            try:
+                os.kill(pid_to_kill, signal.SIGINT)
+                update_service_status(command_id, pid=pid_to_kill, status="stopped")
+                self.app.bell()  # Audible feedback
+                self.refresh_processes()
+            except Exception:
+                # You could show a proper dialog here
+                pass
 
 
 # --- The Main App ---
@@ -246,7 +232,7 @@ class PhorestTUI(App):
                     preexec_fn=os.setsid,
                     cwd=str(PROJECT_ROOT),
                 )
-                add_pid_to_file(command_id, process.pid)
+                update_service_status(command_id, pid=process.pid, status="running")
                 self.bell()  # Simple feedback
             except Exception:
                 # In a real app, you'd show a proper error dialog here
@@ -262,7 +248,7 @@ def main():
 
     # Initialize the status file on startup
     all_service_names = [s["script"] for s in BACKGROUND_SCRIPTS]
-    initialise_status_file(all_service_names, FLAG_DIR)
+    initialise_status_file(all_service_names)
 
     app = PhorestTUI()
     app.run()

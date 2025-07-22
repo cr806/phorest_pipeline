@@ -6,6 +6,7 @@ import signal
 import time
 from collections import deque
 from pathlib import Path
+import logging
 
 import matplotlib.pyplot as plt
 
@@ -27,7 +28,7 @@ from phorest_pipeline.shared.logger_config import configure_logger
 from phorest_pipeline.shared.metadata_manager import lock_and_manage_file
 from phorest_pipeline.shared.states import HealthCheckerState  # Assuming you add this
 
-logger = configure_logger(name=__name__, rotate_daily=True, log_filename="health_checker.log")
+logger = configure_logger(name=__name__, level=logging.DEBUG, rotate_daily=True, log_filename="health_checker.log")
 
 # --- Configuration ---
 HEALTH_CHECK_INTERVAL = 30  # Check every 10 minutes by default

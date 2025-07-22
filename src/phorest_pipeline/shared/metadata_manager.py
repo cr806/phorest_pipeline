@@ -7,7 +7,7 @@ import shutil
 from contextlib import contextmanager
 from pathlib import Path
 
-from phorest_pipeline.shared.config import STATUS_FILENAME
+from phorest_pipeline.shared.config import STATUS_FILENAME, FLAG_DIR
 from phorest_pipeline.shared.logger_config import configure_logger
 
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename="shared.log")
@@ -417,51 +417,87 @@ def move_file_with_lock(source_path: Path, destination_path: Path):
         raise
 
 
-def initialise_status_file(services: list[str], flags_dir: Path):
+def initialise_status_file(services: list[str]):
     """
-    Creates or resets the pipeline_status.json file.  This is called once by
-    the TUI on startup.
+    Creates or updates the pipeline_status.json file.
+    This non-destructive function will add any new services it is aware of
+    without overwriting the status of existing ones.
     """
-    status_path = Path(flags_dir, STATUS_FILENAME)
-    initial_status = {}
-    for service in services:
-        initial_status[service] = {"status": "stopped", "pid": None, "last_heartbeat": None}
-
+    status_path = Path(FLAG_DIR, STATUS_FILENAME)
     try:
         with lock_and_manage_file(status_path):
-            with status_path.open("w") as f:
-                json.dump(initial_status, f, indent=4)
-        logger.info(f"Successfully initialised status file at {status_path}")
-    except Exception as e:
-        logger.error(f"Failed to initialise status file: {e}", exc_info=True)
-
-
-def update_service_heartbeat(
-    service_name: str, flags_dir: Path, pid: int | None = None, status: str | None = None
-):
-    """
-    Updates the heartbeat timestamp and optionally the PID and status for a service
-    """
-    status_path = Path(flags_dir, STATUS_FILENAME)
-    try:
-        with lock_and_manage_file(status_path):
+            # 1. Read existing data if the file exists and is not empty
             if status_path.exists() and status_path.stat().st_size > 0:
                 with status_path.open("r") as f:
                     current_status = json.load(f)
             else:
                 current_status = {}
 
+            # 2. Check for new services and add them if they don't exist
+            updated = False
+            for service in services:
+                if service not in current_status:
+                    current_status[service] = {
+                        "status": "stopped",
+                        "pid": None,
+                        "last_heartbeat": None
+                    }
+                    updated = True
+                    logger.info(f"Added new service '{service}' to status file.")
+
+            # 3. Write back to the file only if changes were made or if it's a new file
+            if updated or not status_path.exists():
+                with status_path.open("w") as f:
+                    json.dump(current_status, f, indent=4)
+                logger.info(f"Status file at {status_path} is up to date.")
+            else:
+                logger.info("Status file already contains all services. No changes made.")
+
+    except Exception as e:
+        logger.error(f"Failed to initialise status file: {e}", exc_info=True)
+
+
+def get_pipeline_status() -> dict:
+    """
+    Safely loads and returns the entire contents of the pipeline_status.json file.
+    """
+    status_path = Path(FLAG_DIR, STATUS_FILENAME)
+    try:
+        with lock_and_manage_file(status_path):
+            if status_path.exists() and status_path.stat().st_size > 0:
+                with status_path.open("r") as f:
+                    return json.load(f)
+            else:
+                return {}
+        logger.info(f"[METADATA] [STATUS] Successfully retrieved status file at {status_path}")
+    except Exception as e:
+        logger.error(f"Failed to get pipeline status: {e}", exc_info=True)
+        return {}
+
+
+def update_service_status(service_name: str, pid: int | None = None, status: str | None = None, heartbeat: bool = False):
+    """
+    Updates the status, PID, and/or heartbeat timestamp for a given service
+    in the pipeline_status.json file.
+    """
+    status_path = Path(FLAG_DIR, STATUS_FILENAME)
+    try:
+            current_status = get_pipeline_status()
+
+            # Ensure the service key exists
             if service_name not in current_status:
                 current_status[service_name] = {}
 
-            # Update fields
-            current_status[service_name]["last_heatbeat"] = datetime.datetime.now().isoformat()
+            # Update the fields that were provided
             if pid is not None:
-                current_status[service_name]["pid"] = pid
+                current_status[service_name]['pid'] = pid
             if status is not None:
-                current_status[service_name]["status"] = status
+                current_status[service_name]['status'] = status
+            if heartbeat:
+                current_status[service_name]['last_heartbeat'] = datetime.datetime.now().isoformat()
 
             with status_path.open("w") as f:
                 json.dump(current_status, f, indent=4)
+            logger.info(f"[METADATA] [STATUS] Successfully updated status file at {status_path}")
     except Exception as e:
-        logger.error(f"Failed to update heartbeat for {service_name}: {e}", exc_info=True)
+        logger.error(f"Failed to update status for {service_name}: {e}")

@@ -6,15 +6,11 @@ import subprocess
 import sys
 from pathlib import Path
 
-from phorest_pipeline.shared.config import FLAG_DIR
-from phorest_pipeline.shared.metadata_manager import initialise_status_file
+from phorest_pipeline.shared.config import FLAG_DIR, STATUS_FILENAME
+from phorest_pipeline.shared.metadata_manager import get_pipeline_status, update_service_status, initialise_status_file
 
 # --- Configuration for PID File ---
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
-PID_FILE = Path(PROJECT_ROOT, "flags", "background_pids.txt")  # File to store script_name,pid
-PID_FILE.parent.mkdir(parents=True, exist_ok=True)
-if not PID_FILE.exists():
-    PID_FILE.touch()
 
 # Define minimum dimensions for the TUI window
 MIN_HEIGHT = 23
@@ -41,6 +37,20 @@ BACKGROUND_SCRIPTS = [
 ]
 
 
+def is_pid_active(pid):
+    """
+    Checks if a given PID corresponds to an active process.
+    Returns the command string if active, None otherwise.
+    """
+    if pid is None:
+        return False
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return False
+    else:
+        return True
+
 # --- Interactive Function to Check and Manage Running Background Scripts ---
 def check_running_background_scripts_status(stdscr):
     """
@@ -65,16 +75,11 @@ def check_running_background_scripts_status(stdscr):
             "Use UP/DOWN to navigate, ENTER to refresh, 'K' to send SIGINT, 'Q' to return to menu.",
         )
 
-        cleanup_pid_file()  # Always clean the file before displaying and interacting
-        tracked_pids = get_tracked_pids()  # Get the now cleaned list
-        active_processes_to_display = tracked_pids
-
-        # # Filter for truly active processes to display for interaction
-        # active_processes_to_display = []
-        # for entry in tracked_pids:
-        #     cmd = is_pid_active(entry["pid"])
-        #     if cmd and ("python3" in cmd) and (f"{entry['name']}" in cmd):
-        #         active_processes_to_display.append(entry)
+        all_statuses = get_pipeline_status()
+        active_processes_to_display = []
+        for name, data in all_statuses.items():
+            if data.get("status") == "running" and is_pid_active(data.get("pid")):
+                active_processes_to_display.append({"name": name, "pid": data.get("pid")})
 
         results_lines = []
         if not active_processes_to_display:
@@ -159,9 +164,10 @@ def start_all_background_scripts(stdscr):
         "phorest-compressor",
         "phorest-backup",
         "phorest-syncer",
+        "phorest-health-check",
     ]
     stdscr.clear()
-    h, w = stdscr.getmaxyx()
+    _, w = stdscr.getmaxyx()
 
     message = "Starting all data collection, analysis, and backup scripts..."
     stdscr.addstr(0, w // 2 - len(message) // 2, message)
@@ -174,10 +180,11 @@ def start_all_background_scripts(stdscr):
 
 
 def stop_all_background_scripts(stdscr):
-    tracked_pids = get_tracked_pids()
-
+    """
+    Stops all running background services.
+    """
     stdscr.clear()
-    h, w = stdscr.getmaxyx()
+    _, w = stdscr.getmaxyx()
 
     message = "Stopping all data collection, analysis, and backup scripts..."
     stdscr.addstr(0, w // 2 - len(message) // 2, message)
@@ -185,15 +192,15 @@ def stop_all_background_scripts(stdscr):
     curses.napms(500)
 
     # Filter for truly active processes to display for interaction
-    active_processes_to_stop = []
-    for entry in tracked_pids:
-        cmd = is_pid_active(entry["pid"])
-        if cmd and ("python3" in cmd) and (f"{entry['name']}" in cmd):
-            active_processes_to_stop.append(entry)
+    all_statuses = get_pipeline_status()
+    processes_to_stop = []
+    for name, data in all_statuses.items():
+        if data.get("status") == "running" and is_pid_active(data.get("pid")):
+            processes_to_stop.append({"name": name, "pid": data.get("pid")})
 
     stdscr.clear()
     stdscr.refresh()
-    for process in active_processes_to_stop:
+    for process in processes_to_stop:
         issue_sigint(stdscr, process["pid"], process["name"], ask_for_enter=False)
         curses.napms(500)
 
@@ -211,163 +218,33 @@ all_scripts = multiple_action_functions + BACKGROUND_SCRIPTS + FOREGROUND_SCRIPT
 
 
 # --- Helper functions for PID file management ---
-def get_tracked_pids():
-    """Reads the PID file and returns a list of (script_name, pid) dictionaries."""
-    tracked_pids = []
-    if PID_FILE.exists():
-        with PID_FILE.open("r") as f:
-            for line in f:
-                line = line.strip()
-                if line:
-                    parts = line.split(",")
-                    if len(parts) == 3:
-                        try:
-                            script_name = parts[0]
-                            pid = int(parts[1])
-                            status = parts[2].strip()
-                            tracked_pids.append(
-                                {
-                                    "name": script_name,
-                                    "pid": pid,
-                                    "status": status,
-                                }
-                            )
-                        except ValueError:
-                            # Skip malformed lines
-                            continue
-    return tracked_pids
-
-
-def add_pid_to_file(command_name, pid):
-    """Appends a new script_name,pid entry to the PID file."""
-    with PID_FILE.open("a") as f:
-        f.write(f"{command_name},{pid},ACTIVE\n")
-
-
-def is_pid_active(pid):
-    """
-    Checks if a given PID corresponds to an active process using 'ps -p PID -o command='.
-    Returns the command string if active, None otherwise.
-    """
-    try:
-        result = subprocess.run(
-            ["ps", "-p", str(pid), "-o", "command="], capture_output=True, text=True, check=False
-        )
-
-        if result.returncode != 0:
-            return None  # PID does not exist or process is gone
-
-        command_output = result.stdout.strip()
-        if command_output:
-            return command_output
-        else:
-            return None
-    except Exception as e:
-        print(f"Error checking PID {pid} with ps: {e}", file=sys.stderr)
-        return None
-
-
 def is_script_already_running(command_name):
-    """
-    Checks if an instance of the given script_name is already running
-    by looking up tracked PIDs and verifying them with 'ps'.
-    Does NOT modify the PID file; it only reads.
-    Returns the PID if found, None otherwise.
-    """
-    tracked_pids = get_tracked_pids()  # Read all PIDs from the file
-
-    for entry in tracked_pids:
-        # Only check PIDs for the *specific* script we care about right now
-        if entry["name"] == command_name:
-            cmd = is_pid_active(entry["pid"])
-            if cmd and command_name in cmd:
-                return entry["pid"]  # Found an active instance
-    return None  # No active instance found for this script
-
-
-def cleanup_pid_file():
-    """
-    Reads the PID file, checks all PIDs for active processes,
-    and rewrites the file with only the active, matching PIDs.
-    This is an explicit cleanup step.
-    """
-    tracked_pids = get_tracked_pids()
-    updated_pids_list = []
-
-    for entry in tracked_pids:
-        cmd = is_pid_active(entry["pid"])
-        if cmd:
-            # Check if the PID is still running the expected script
-            if ("python3" in cmd) and (f"{entry['name']}" in cmd):
-                updated_pids_list.append(entry)  # Keep this active entry
-        else:
-            updated_pids_list.append(
-                {
-                    "name": entry["name"],
-                    "pid": entry["pid"],
-                    "status": "DEAD",
-                }
-            )
-    # Rewrite the PID file with only the valid, active entries
-    with PID_FILE.open("w") as f:
-        for entry in updated_pids_list:
-            if entry["status"] == "ACTIVE":
-                f.write(f"{entry['name']},{entry['pid']},{entry['status']}\n")
-
-
-def refresh_pid_file():
-    """
-    Reads the PID file, checks all PIDs for active processes,
-    and rewrites the file with only the active, matching PIDs.
-    This is an explicit cleanup step.
-    """
-    tracked_pids = get_tracked_pids()
-    updated_pids_list = []
-
-    for entry in tracked_pids:
-        cmd = is_pid_active(entry["pid"])
-        if cmd:
-            # Check if the PID is still running the expected script
-            if ("python3" in cmd) and (f"{entry['name']}" in cmd):
-                updated_pids_list.append(entry)  # Keep this active entry
-        else:
-            updated_pids_list.append(
-                {
-                    "name": entry["name"],
-                    "pid": entry["pid"],
-                    "status": "DEAD",
-                }
-            )
-    # Rewrite the PID file with only the valid, active entries
-    with PID_FILE.open("w") as f:
-        for entry in updated_pids_list:
-            f.write(f"{entry['name']},{entry['pid']},{entry['status']}\n")
-
+    """Checks if a script is already running by checking the central status file."""
+    all_statuses = get_pipeline_status()
+    service_status = all_statuses.get(command_name)
+    if service_status and service_status.get("status") == "running" and is_pid_active(service_status.get("pid")):
+        return service_status.get("pid")
+    return None
 
 # --- Main Menu Drawing Function ---
 def draw_menu(stdscr, selected_row_idx):
     """Draws the main script selection menu on the curses screen."""
     stdscr.clear()
-    h, w = stdscr.getmaxyx()
+    _, w = stdscr.getmaxyx()
 
     title = "Project Setup Scripts"
     stdscr.addstr(0, w // 2 - len(title) // 2, title, curses.A_BOLD)
     stdscr.addstr(2, 0, "Use UP/DOWN arrows to navigate, ENTER to select, Q to quit.")
 
     # Dynamically count active background processes for display.
+    all_statuses = get_pipeline_status()
     active_count = 0
-    dead_count = 0
-    refresh_pid_file()  # Ensure file is clean before counting for display
-    for entry in get_tracked_pids():
-        cmd = is_pid_active(entry["pid"])
-        if cmd and ("python3" in cmd) and (f"{entry['name']}" in cmd):
+    for data in all_statuses.values():
+        if data.get("status") == "running" and is_pid_active(data.get("pid")):
             active_count += 1
-        else:
-            dead_count += 1
     stdscr.addstr(
         3, 0, f"Currently tracked ACTIVE background processes: {active_count}", curses.A_DIM
     )
-    stdscr.addstr(4, 0, f"Currently tracked DEAD background processes: {dead_count}", curses.A_DIM)
     stdscr.addstr(5, 0, "Scripts for information gathering are underlined.")
 
     y_offset = 7
@@ -425,7 +302,7 @@ def run_background_script_detached(stdscr, command_name, ask_for_enter=True):
             cwd=str(PROJECT_ROOT),  # Set the working directory to the project root
         )
 
-        add_pid_to_file(command_name, process.pid)
+        update_service_status(command_name, pid=process.pid, status="running")
 
         stdscr.clear()
         stdscr.addstr(
@@ -573,9 +450,11 @@ def issue_sigint(stdscr, pid, script_name, ask_for_enter=True):
     SUCCESS_ATTRIBUTES = curses.color_pair(3) | curses.A_BOLD
     try:
         os.kill(pid, signal.SIGINT)
+        update_service_status(script_name, pid=None, status="stopped")
         message = f"Sent SIGINT to {script_name} (PID: {pid}). It should terminate gracefully."
         stdscr.addstr(0, 0, message, SUCCESS_ATTRIBUTES)  # Green for success
     except ProcessLookupError:
+        update_service_status(script_name, pid=None, status="stopped")
         message = f"Error: Process with PID {pid} not found (already terminated?)."
         stdscr.addstr(0, 0, message, ERROR_ATTRIBUTES)  # Red for error
     except Exception as e:
@@ -627,8 +506,6 @@ def run_tui_app(stdscr):
     # ERROR_ATTRIBUTES = curses.color_pair(1) | curses.A_BOLD
     WARNING_ATTRIBUTES = curses.color_pair(2) | curses.A_BOLD
 
-    cleanup_pid_file()
-
     current_row_idx = 0
 
     while True:
@@ -659,10 +536,9 @@ def run_tui_app(stdscr):
 
         elif key == ord("q") or key == ord("Q"):
             active_count = 0
-            cleanup_pid_file()
-            for entry in get_tracked_pids():
-                cmd = is_pid_active(entry["pid"])
-                if cmd and ("python3" in cmd) and (f"{entry['name']}" in cmd):
+            all_statuses = get_pipeline_status()
+            for data in all_statuses.values():
+                if data.get("status") == "running" and is_pid_active(data.get("pid")):
                     active_count += 1
 
             if active_count > 0:
@@ -670,7 +546,7 @@ def run_tui_app(stdscr):
                 stdscr.addstr(
                     0,
                     0,
-                    f"WARNING: {active_count} background processes are still running (tracked in {PID_FILE.as_posix()})!",
+                    f"WARNING: {active_count} background processes are still running (tracked in {Path(FLAG_DIR, STATUS_FILENAME).as_posix()})!",
                     WARNING_ATTRIBUTES,
                 )
                 stdscr.addstr(
@@ -690,7 +566,7 @@ def main():
 
     # Initialize the status file on startup
     all_service_names = [s["script"] for s in BACKGROUND_SCRIPTS]
-    initialise_status_file(all_service_names, FLAG_DIR)
+    initialise_status_file(all_service_names)
 
     # The curses.wrapper handles the curses setup and passes 'stdscr' to run_tui_app
     result = curses.wrapper(run_tui_app)
