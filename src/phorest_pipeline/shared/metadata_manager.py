@@ -7,6 +7,7 @@ import shutil
 from contextlib import contextmanager
 from pathlib import Path
 
+from phorest_pipeline.shared.config import STATUS_FILENAME
 from phorest_pipeline.shared.logger_config import configure_logger
 
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename="shared.log")
@@ -215,9 +216,7 @@ def add_entry(
         raise  # Re-raise to propagate error to collector
 
 
-def append_metadata(
-    manifest_path: Path, metadata_to_append: dict | list[dict]
-):
+def append_metadata(manifest_path: Path, metadata_to_append: dict | list[dict]):
     """
     Safely appends one or more entries to a metadata file.
 
@@ -416,3 +415,53 @@ def move_file_with_lock(source_path: Path, destination_path: Path):
             f"[METADATA] [MOVE] An unexpect error occured while moving {source_path.name}: {e}"
         )
         raise
+
+
+def initialise_status_file(services: list[str], flags_dir: Path):
+    """
+    Creates or resets the pipeline_status.json file.  This is called once by
+    the TUI on startup.
+    """
+    status_path = Path(flags_dir, STATUS_FILENAME)
+    initial_status = {}
+    for service in services:
+        initial_status[service] = {"status": "stopped", "pid": None, "last_heartbeat": None}
+
+    try:
+        with lock_and_manage_file(status_path):
+            with status_path.open("w") as f:
+                json.dump(initial_status, f, indent=4)
+        logger.info(f"Successfully initialised status file at {status_path}")
+    except Exception as e:
+        logger.error(f"Failed to initialise status file: {e}", exc_info=True)
+
+
+def update_service_heartbeat(
+    service_name: str, flags_dir: Path, pid: int | None = None, status: str | None = None
+):
+    """
+    Updates the heartbeat timestamp and optionally the PID and status for a service
+    """
+    status_path = Path(flags_dir, STATUS_FILENAME)
+    try:
+        with lock_and_manage_file(status_path):
+            if status_path.exists() and status_path.stat().st_size > 0:
+                with status_path.open("r") as f:
+                    current_status = json.load()
+            else:
+                current_status = {}
+
+            if service_name not in current_status:
+                current_status[service_name] = {}
+
+            # Update fields
+            current_status[service_name]["last_heatbeat"] = datetime.datetime.now().isoformat()
+            if pid is not None:
+                current_status[service_name]["pid"] = pid
+            if status is not None:
+                current_status[service_name]["status"] = status
+
+            with status_path.open("w") as f:
+                json.dump(current_status, f, indent=4)
+    except Exception as e:
+        logger.error(f"Failed to update heartbeat for {service_name}: {e}", exc_info=True)

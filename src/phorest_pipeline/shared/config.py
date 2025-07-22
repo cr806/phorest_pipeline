@@ -19,6 +19,9 @@ RESULTS_FILENAME = Path("processing_results.jsonl")
 CSV_FILENAME = Path("communicating_results.csv")
 IMAGE_FILENAME = Path("processed_data_plot.png")
 
+STATUS_FILENAME = Path("pipeline_status.json")
+
+
 
 def load_config():
     if not CONFIG_FILEPATH.is_file():
@@ -41,15 +44,6 @@ def get_path(config: dict, section_name: str, key: str, fallback: str) -> Path:
     # .get() on a dict handles missing sections/keys gracefully
     value = config.get(section_name, {}).get(key, fallback)
     return Path(value)
-
-
-def get_flag_path(config: dict, flag_name_key: str) -> Path:
-    """Gets the full path for a flag file."""
-    flag_dir = get_path(config, "Paths", "flag_dir", "flags")  # Now specify section for get_path
-    flag_filename = config.get("Flags", {}).get(flag_name_key)  # Access directly from dict
-    if not flag_filename:
-        raise ValueError(f"Flag key '{flag_name_key}' not found in config [Flags]")
-    return Path(flag_dir, flag_filename)
 
 
 def check_or_create_dir(path: Path):
@@ -162,8 +156,12 @@ try:
 
     # --- Advanced config entries ---
     # --- Flags ---
-    DATA_READY_FLAG = get_flag_path(settings, "data_ready")
-    RESULTS_READY_FLAG = get_flag_path(settings, "results_ready")
+    FLAG_DIR = get_path(settings, "Flags", "flag_dir", "flags")
+    DATA_READY_FLAG = get_path(settings, "Flags", "data_ready", "data_ready.flag")
+    RESULTS_READY_FLAG = get_path(settings, "Flags", "results_ready", "results_ready.flag")
+    
+    DATA_READY_FLAG = Path(FLAG_DIR, DATA_READY_FLAG)
+    RESULTS_READY_FLAG = Path(FLAG_DIR, RESULTS_READY_FLAG)
 
     # --- Static Asset Paths ---
     ROI_GENERATION_IMAGE_PATH = Path(
