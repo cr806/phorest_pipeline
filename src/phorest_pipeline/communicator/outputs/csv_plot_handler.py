@@ -19,7 +19,7 @@ CSV_FILENAME = Path("communicating_results.csv")
 RESULTS_IMAGE = Path("processed_data_plot.png")
 
 
-def save_results_json_as_csv(processed_entries: list[dict], csv_path: Path) -> None:
+def save_results_json_as_csv(processed_entries: list[dict], csv_path: Path) -> bool:
     """
     Combines data from the data manifest and the results manifest to create a CSV.
     """
@@ -33,7 +33,7 @@ def save_results_json_as_csv(processed_entries: list[dict], csv_path: Path) -> N
         }
     except Exception as e:
         logger.error(f"Could not load or parse results manifest: {e}", exc_info=True)
-        return
+        return False
     
     logger.info(f"Parsing {len(processed_entries)} entries to create CSV...")
     records = []
@@ -82,6 +82,10 @@ def save_results_json_as_csv(processed_entries: list[dict], csv_path: Path) -> N
             for sensor, value in temp_readings.items():
                 record[f"temperature_{sensor.lower().replace(' ', '_')}"] = value
             records.append(record)
+    
+    if not records:
+        logger.warning("No valid records found to generate a CSV file. Skipping.")
+        return False
 
     # Create the DataFrame
     df = pd.DataFrame(records)
@@ -89,8 +93,10 @@ def save_results_json_as_csv(processed_entries: list[dict], csv_path: Path) -> N
         with lock_and_manage_file(csv_path):
             df.to_csv(csv_path, index=False)
         logger.info(f"Successfully saved CSV to {csv_path} (under lock).")
+        return True
     except Exception as e:
         logger.error(f"Failed to save CSV file under lock at {csv_path}: {e}", exc_info=True)
+        return False
 
 
 def save_plot_of_results(csv_path: Path, image_path: Path) -> None:
@@ -220,8 +226,12 @@ def generate_report(processed_entries: list[dict]) -> bool:
     image_path = Path(RESULTS_DIR, RESULTS_IMAGE)
 
     try:
-        save_results_json_as_csv (processed_entries, csv_path)
-        save_plot_of_results(csv_path, image_path)
+        # Check if the CSV was successfully created before trying to plot it.
+        csv_created_successfully = save_results_json_as_csv(processed_entries, csv_path)
+        if csv_created_successfully:
+            save_plot_of_results(csv_path, image_path)
+        else:
+            logger.info("Skipping plot generation as no new CSV data was created.")
         logger.info("Successfully generated CSV and plot report.")
         return True
     except Exception as e:
