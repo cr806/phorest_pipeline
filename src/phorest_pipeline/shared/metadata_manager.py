@@ -429,13 +429,13 @@ def move_file_with_lock(source_path: Path, destination_path: Path):
         raise
 
 
-def initialise_status_file(services: list[str], flags_dir: Path):
+def initialise_status_file(services: list[str]):
     """
     Creates or updates the pipeline_status.json file. This non-destructive
     function validates the status of running processes, and adds any new
     services it is aware of without overwriting existing state.
     """
-    status_path = flags_dir / STATUS_FILENAME
+    status_path = Path(FLAG_DIR, STATUS_FILENAME)
     try:
         with lock_and_manage_file(status_path):
             # 1. Read existing data if the file exists and is not empty
@@ -515,6 +515,8 @@ def update_service_status(service_name: str, pid: int | None = None, status: str
                 current_status[service_name]['pid'] = pid
             if status is not None:
                 current_status[service_name]['status'] = status
+                if status == "stopped":
+                    current_status[service_name]['pid'] = None
             if heartbeat:
                 current_status[service_name]['last_heartbeat'] = datetime.datetime.now().isoformat()
 
