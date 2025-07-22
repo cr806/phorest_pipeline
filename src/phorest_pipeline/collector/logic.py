@@ -79,7 +79,6 @@ class Collector:
 
         if settings is None:
             logger.error("Configuration error. Halting.")
-            time.sleep(POLL_INTERVAL * 5)
             self.current_state = CollectorState.FATAL_ERROR  # Exit on config error
             return
 
@@ -96,7 +95,10 @@ class Collector:
                     self.failure_count = 0  # Reset failure count when *entering* COLLECTING state
                     self.current_state = CollectorState.COLLECTING
                 else:
-                    time.sleep(POLL_INTERVAL)
+                    for _ in range(POLL_INTERVAL):
+                        if self.shutdown_requested:
+                            return
+                        time.sleep(1)
 
             case CollectorState.COLLECTING:
                 logger.info("--- Running Collection ---")

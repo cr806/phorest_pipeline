@@ -87,7 +87,6 @@ class Communicator:
 
         if settings is None:
             logger.debug("Configuration error. Halting.")
-            time.sleep(POLL_INTERVAL * 5)
             self.current_state = CommunicatorState.FATAL_ERROR
             return
 
@@ -122,7 +121,10 @@ class Communicator:
                         self.current_state = CommunicatorState.IDLE
                         logger.debug("WAITING_FOR_RESULTS -> IDLE")
                 else:
-                    time.sleep(POLL_INTERVAL)
+                    for _ in range(POLL_INTERVAL):
+                        if self.shutdown_requested:
+                            return
+                        time.sleep(1)
 
             case CommunicatorState.COMMUNICATING:
                 logger.info("--- Running Communication ---")

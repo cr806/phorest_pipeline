@@ -177,7 +177,10 @@ class Syncer:
                     logger.debug("WAITING_TO_RUN -> SYNCING_FILES")
                     self.current_state = SyncerState.SYNCING_FILES
                 else:
-                    time.sleep(POLL_INTERVAL)
+                    for _ in range(POLL_INTERVAL):
+                        if self.shutdown_requested:
+                            return
+                        time.sleep(1)
 
             case SyncerState.SYNCING_FILES:
                 logger.info("--- Starting Sync Cycle ---")

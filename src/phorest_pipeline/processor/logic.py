@@ -158,7 +158,10 @@ class Processor:
                         self.current_state = ProcessorState.IDLE
                         logger.debug("WAITING_FOR_DATA -> IDLE")
                 else:
-                    time.sleep(POLL_INTERVAL)
+                    for _ in range(POLL_INTERVAL):
+                        if self.shutdown_requested:
+                            return
+                        time.sleep(1)
 
             case ProcessorState.PROCESSING:
                 logger.info("--- Checking for PENDING Data to Process ---")

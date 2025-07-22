@@ -118,7 +118,6 @@ class FileBackup:
 
         if settings is None:
             logger.debug("Configuration error. Halting.")
-            time.sleep(POLL_INTERVAL * 5)
             self.current_state = BackupState.FATAL_ERROR
             return
 
@@ -135,7 +134,10 @@ class FileBackup:
                     logger.debug("WAITING_TO_RUN -> BACKUP_FILES")
                     self.current_state = BackupState.BACKUP_FILES
                 else:
-                    time.sleep(POLL_INTERVAL)
+                    for _ in range(POLL_INTERVAL):
+                        if self.shutdown_requested:
+                            return
+                        time.sleep(1)
 
             case BackupState.BACKUP_FILES:
                 logger.info("--- Starting Full Backup and Compression Cycle ---")

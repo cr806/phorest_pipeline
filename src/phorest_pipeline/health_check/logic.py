@@ -20,6 +20,7 @@ from phorest_pipeline.shared.config import (
     PROCESSOR_INTERVAL,
     RESULTS_DIR,
     STATUS_FILENAME,
+    SYNC_INTERVAL,
     settings,
 )
 from phorest_pipeline.shared.logger_config import configure_logger
@@ -40,7 +41,7 @@ SERVICE_CONFIG = {
     "phorest-communicator": {"log": "comms.log", "interval": COMMUNICATOR_INTERVAL},
     "phorest-compressor": {"log": "compressor.log", "interval": COMPRESSOR_INTERVAL},
     "phorest-backup": {"log": "file_backup.log", "interval": FILE_BACKUP_INTERVAL},
-    "phorest-syncer": {"log": "syncer.log", "interval": HEALTH_CHECK_INTERVAL},
+    "phorest-syncer": {"log": "syncer.log", "interval": SYNC_INTERVAL},
 }
 
 
@@ -96,8 +97,11 @@ class HealthChecker:
         color_map = {"green": "green", "yellow": "gold", "red": "red", "grey": "grey"}
 
         for i, (service, data) in enumerate(health_data.items()):
+            # Ensure axes is always a 2D array, even with one service
+            ax_light = axes[i, 0] if num_services > 1 else axes[0]
+            ax_text = axes[i, 1] if num_services > 1 else axes[1]
+
             # --- Traffic Light Column ---
-            ax_light = axes[i, 0]
             ax_light.set_xlim(0, 1)
             ax_light.set_ylim(0, 1)
             ax_light.add_patch(
@@ -106,31 +110,19 @@ class HealthChecker:
             ax_light.axis("off")
 
             # --- Status Text Column ---
-            ax_text = axes[i, 1]
             ax_text.axis("off")
-
             status_text = (
-                f"[bold]{service}[/bold]\n"
-                f"Status: [bold {data['color']}]{data['status'].upper()}[/bold]\n"
+                f"Service: {service}\n"
+                f"Status: {data['status'].upper()}\n"
                 f"PID: {data.get('pid', 'N/A')}\n"
                 f"Last Heartbeat: {data.get('last_heartbeat', 'N/A')}"
             )
-
             if data.get("log_tail"):
-                status_text += f"\n\n[red]Last Log Entries:[/red]\n[dim]{data['log_tail']}[/dim]"
+                status_text += f"\n\nLast Log Entries:\n{data['log_tail']}"
 
-            # Use Text instead of annotate for better wrapping and formatting
-            fig.text(
-                0.25,
-                0.9 - (i * 1 / num_services),
-                status_text,
-                va="top",
-                ha="left",
-                wrap=True,
-                fontsize=10,
-            )
+            ax_text.text(0, 0.5, status_text, va='center', ha='left', wrap=True, fontsize=10)
 
-        plt.tight_layout(rect=[0, 0, 1, 0.93])
+        plt.tight_layout(rect=[0, 0, 1, 0.95])
         report_path = Path(RESULTS_DIR, REPORT_FILENAME)
         try:
             plt.savefig(report_path)
@@ -157,10 +149,14 @@ class HealthChecker:
             data = status_json.get(service, {})
             pid = data.get("pid")
             heartbeat_str = data.get("last_heartbeat")
+            status = data.get("status", "unknown")
 
             health_info = {"pid": pid, "last_heartbeat": heartbeat_str, "log_tail": None}
 
-            if not is_pid_active(pid):
+            if status == "stopped":
+                health_info["status"] = "Stopped"
+                health_info["color"] = "grey"
+            elif not is_pid_active(pid):
                 health_info["status"] = "Crashed"
                 health_info["color"] = "red"
                 health_info["log_tail"] = get_log_tail(Path(LOGS_DIR, config["log"]))
@@ -171,9 +167,7 @@ class HealthChecker:
                 now = datetime.datetime.now()
                 last_heartbeat = datetime.datetime.fromisoformat(heartbeat_str)
                 time_since_heartbeat = (now - last_heartbeat).total_seconds()
-
-                # Allow a 50% buffer
-                allowed_time = config["interval"] * 1.5
+                allowed_time = config["interval"] * 1.5 # Allow a 50% buffer
 
                 if time_since_heartbeat > allowed_time:
                     health_info["status"] = "Hung / Stale Heartbeat"
@@ -193,7 +187,6 @@ class HealthChecker:
 
         if settings is None:
             logger.debug("Configuration error. Halting.")
-            time.sleep(POLL_INTERVAL * 5)
             self.current_state = HealthCheckerState.FATAL_ERROR
 
         match self.current_state:
@@ -209,14 +202,19 @@ class HealthChecker:
                     logger.debug("WAITING_TO_RUN -> CHECKING_HEALTH")
                     self.current_state = HealthCheckerState.CHECKING_HEALTH
                 else:
-                    time.sleep(POLL_INTERVAL)
+                    for _ in range(POLL_INTERVAL):
+                        if self.shutdown_requested:
+                            return
+                        time.sleep(1)
+
 
             case HealthCheckerState.CHECKING_HEALTH:
-                logger.info("--- Starting Sync Cycle ---")
+                logger.info("--- Starting Health Check Cycle ---")
                 try:
                     health_data = self._perform_health_check()
-                    self._generate_report(health_data)
-                    logger.info("--- Sync Cycle Finished ---")
+                    if health_data:
+                        self._generate_report(health_data)
+                    logger.info("--- Health Check Cycle Finished ---")
                 except Exception as e:
                     logger.error(f"Error during health check cycle: {e}")
 
@@ -236,12 +234,13 @@ class HealthChecker:
             return
         
         if not ENABLE_HEALTH_CHECK:
-            logger.info("Syncer is disabled in config. Exiting.")
+            logger.info("Health checker is disabled in config. Exiting.")
             return
 
         try:
             while not self.shutdown_requested:
                 self._perform_health_check_cycle()
+
                 time.sleep(0.1)
         except Exception as e:
             logger.critical(f"UNEXPECTED ERROR in main loop: {e}", exc_info=True)

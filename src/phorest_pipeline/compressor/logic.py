@@ -74,7 +74,6 @@ class Compressor:
 
         if settings is None:
             logger.debug("Configuration error. Halting.")
-            time.sleep(POLL_INTERVAL * 5)
             self.current_state = CompressorState.FATAL_ERROR
             return
 
@@ -100,6 +99,16 @@ class Compressor:
                         f"Will wait for {COMPRESSOR_INTERVAL} seconds until next check..."
                     )
                     self.current_state = CompressorState.WAITING_TO_RUN
+            
+            case CompressorState.WAITING_TO_RUN:
+                now = time.monotonic()
+                if now >= self.next_run_time:
+                    self.current_state = CompressorState.IDLE
+                else:
+                    for _ in range(POLL_INTERVAL):
+                        if self.shutdown_requested:
+                            return
+                        time.sleep(1)
 
             case CompressorState.COMPRESSING_IMAGES:
                 logger.info(
@@ -167,13 +176,6 @@ class Compressor:
                 logger.debug("COMPRESSING_FILES -> CHECKING (for more work)")
                 self.current_state = CompressorState.CHECKING
                 time.sleep(0.1)
-
-            case CompressorState.WAITING_TO_RUN:
-                now = time.monotonic()
-                if now >= self.next_run_time:
-                    self.current_state = CompressorState.IDLE
-                else:
-                    time.sleep(POLL_INTERVAL)
 
             case CompressorState.FATAL_ERROR:
                 logger.error("[FATAL ERROR] Shutting down compressor.")
