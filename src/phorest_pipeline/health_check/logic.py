@@ -91,7 +91,7 @@ class HealthChecker:
         logger.info("Generating health report PNG...")
         num_services = len(health_data)
         fig, axes = plt.subplots(
-            num_services, 2, figsize=(12, 2 * num_services), gridspec_kw={"width_ratios": [1, 4]}
+            num_services, 2, figsize=(6, 2 * num_services), gridspec_kw={"width_ratios": [1, 4]}
         )
         fig.suptitle("Phorest Pipeline Health Status", fontsize=16, y=0.95)
 
