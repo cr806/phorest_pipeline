@@ -29,7 +29,7 @@ phorest-communicator = "phorest_pipeline.communicator.logic:run_communicator"
 phorest-compressor = "phorest_pipeline.compressor.logic:run_compressor"
 phorest-backup = "phorest_pipeline.file_backup.logic:run_file_backup"
 phorest-syncer = "phorest_pipeline.syncer.logic:run_syncer"
-phorest-health-check = "phorest_pipeline.health_checker.logic:run_health_checker"
+phorest-health-check = "phorest_pipeline.health_check.logic:run_health_check"
 
 phorest-continuous-capture = "phorest_pipeline.collector.continuous_capture_logic:run_continuous_capture"
 phorest-check-roi = "phorest_pipeline.scripts.check_roi_listing:main"

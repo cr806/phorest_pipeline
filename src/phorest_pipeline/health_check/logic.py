@@ -249,7 +249,7 @@ class HealthChecker:
             print("--- Health Checker Stopped ---")
 
 
-def run_health_checker():
+def run_health_check():
     """Main entry point to create and run a HealthChecker instance."""
     checker = HealthChecker()
     checker.run()
