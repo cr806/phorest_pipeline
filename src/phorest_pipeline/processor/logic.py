@@ -27,7 +27,7 @@ from phorest_pipeline.shared.metadata_manager import (
     append_metadata,
     load_metadata_with_lock,
     update_metadata_manifest_entry,
-    update_service_heartbeat,
+    update_service_status,
 )
 from phorest_pipeline.shared.states import ProcessorState
 
@@ -338,7 +338,7 @@ class Processor:
                 self._perform_processing()
 
                 # After a cycle is complete, send a heartbeat.
-                update_service_heartbeat(SCRIPT_NAME, FLAG_DIR)
+                update_service_status(SCRIPT_NAME, heartbeat=True)
 
                 # --- Check for FATAL_ERROR state to exit ---
                 if self.current_state == ProcessorState.FATAL_ERROR:

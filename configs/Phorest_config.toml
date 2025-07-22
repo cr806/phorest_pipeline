@@ -46,7 +46,7 @@ collector_retry_delay_seconds = 3                                               
 
 # --- Data Buffer Settings ---
 [Buffer]
-image_buffer_size = 1000                                                        # Maximum number of images to keep in the data directory
+image_buffer_size = 10                                                          # Maximum number of images to keep in the data directory
 
 # --- Communication Settings ---
 [Communication]

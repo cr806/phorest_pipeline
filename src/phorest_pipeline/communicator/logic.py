@@ -22,7 +22,7 @@ from phorest_pipeline.shared.logger_config import configure_logger
 from phorest_pipeline.shared.metadata_manager import (
     load_metadata_with_lock,
     update_metadata_manifest_entry,
-    update_service_heartbeat,
+    update_service_status,
 )
 from phorest_pipeline.shared.states import CommunicatorState
 
@@ -218,7 +218,7 @@ class Communicator:
                 self._perform_communication()
 
                 # After a cycle is complete, send a heartbeat.
-                update_service_heartbeat(SCRIPT_NAME, FLAG_DIR)
+                update_service_status(SCRIPT_NAME, heartbeat=True)
 
                 if self.current_state == CommunicatorState.FATAL_ERROR:
                     logger.error("Exiting due to FATAL_ERROR state.")

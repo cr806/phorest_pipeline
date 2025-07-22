@@ -22,7 +22,7 @@ from phorest_pipeline.shared.config import (
     settings,
 )
 from phorest_pipeline.shared.logger_config import configure_logger
-from phorest_pipeline.shared.metadata_manager import move_file_with_lock, update_service_heartbeat
+from phorest_pipeline.shared.metadata_manager import move_file_with_lock, update_service_status
 from phorest_pipeline.shared.states import BackupState
 
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename="file_backup.log")
@@ -165,7 +165,7 @@ class FileBackup:
                 self._perform_file_backup_cycle()
 
                 # After a cycle is complete, send a heartbeat.
-                update_service_heartbeat(SCRIPT_NAME, FLAG_DIR)
+                update_service_status(SCRIPT_NAME, heartbeat=True)
 
                 if self.current_state == BackupState.IDLE:
                     time.sleep(0.1)

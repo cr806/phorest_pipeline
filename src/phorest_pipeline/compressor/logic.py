@@ -17,7 +17,7 @@ from phorest_pipeline.shared.logger_config import configure_logger
 from phorest_pipeline.shared.metadata_manager import (
     load_metadata_with_lock,
     update_metadata_manifest_entry,
-    update_service_heartbeat,
+    update_service_status,
 )
 from phorest_pipeline.shared.states import CompressorState
 
@@ -199,7 +199,7 @@ class Compressor:
                 self._perform_compression_cycle()
 
                 # After a cycle is complete, send a heartbeat.
-                update_service_heartbeat(SCRIPT_NAME, FLAG_DIR)
+                update_service_status(SCRIPT_NAME, heartbeat=True)
 
                 time.sleep(0.1)
         except Exception as e:

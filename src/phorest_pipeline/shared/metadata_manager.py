@@ -125,6 +125,18 @@ def _save_metadata(metadata_path: Path, metadata_list: list):
         raise  # Re-raise to propagate error
 
 
+def _is_pid_active(pid: int | None) -> bool:
+    """Checks if a given PID is currently running. Returns False if pid is None."""
+    if pid is None:
+        return False
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return False
+    else:
+        return True
+
+
 @contextmanager
 def lock_and_manage_file(file_path: Path):
     """
@@ -417,13 +429,13 @@ def move_file_with_lock(source_path: Path, destination_path: Path):
         raise
 
 
-def initialise_status_file(services: list[str]):
+def initialise_status_file(services: list[str], flags_dir: Path):
     """
-    Creates or updates the pipeline_status.json file.
-    This non-destructive function will add any new services it is aware of
-    without overwriting the status of existing ones.
+    Creates or updates the pipeline_status.json file. This non-destructive
+    function validates the status of running processes, and adds any new
+    services it is aware of without overwriting existing state.
     """
-    status_path = Path(FLAG_DIR, STATUS_FILENAME)
+    status_path = flags_dir / STATUS_FILENAME
     try:
         with lock_and_manage_file(status_path):
             # 1. Read existing data if the file exists and is not empty
@@ -433,8 +445,18 @@ def initialise_status_file(services: list[str]):
             else:
                 current_status = {}
 
-            # 2. Check for new services and add them if they don't exist
             updated = False
+
+            # 2. Validate existing entries. If a service is marked "running" but
+            # the PID is not active, mark it as "stopped".
+            for service, data in current_status.items():
+                if data.get("status") == "running" and not _is_pid_active(data.get("pid")):
+                    logger.warning(f"Found stale process for '{service}' (PID: {data.get('pid')}). Marking as stopped.")
+                    data["status"] = "stopped"
+                    data["pid"] = None
+                    updated = True
+
+            # 3. Check for new services and add them if they don't exist
             for service in services:
                 if service not in current_status:
                     current_status[service] = {
@@ -445,13 +467,13 @@ def initialise_status_file(services: list[str]):
                     updated = True
                     logger.info(f"Added new service '{service}' to status file.")
 
-            # 3. Write back to the file only if changes were made or if it's a new file
+            # 4. Write back to the file only if changes were made or if it's a new file
             if updated or not status_path.exists():
                 with status_path.open("w") as f:
                     json.dump(current_status, f, indent=4)
-                logger.info(f"Status file at {status_path} is up to date.")
+                logger.info(f"Status file at {status_path} is initialised and up to date.")
             else:
-                logger.info("Status file already contains all services. No changes made.")
+                logger.info("Status file already contains all services and is valid. No changes made.")
 
     except Exception as e:
         logger.error(f"Failed to initialise status file: {e}", exc_info=True)
