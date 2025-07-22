@@ -232,7 +232,7 @@ def generate_report(processed_entries: list[dict]) -> bool:
             save_plot_of_results(csv_path, image_path)
         else:
             logger.info("Skipping plot generation as no new CSV data was created.")
-        logger.info("Successfully generated CSV and plot report.")
+        logger.info("Successfully completed CSV and plot report cycle.")
         return True
     except Exception as e:
         logger.error(f"An error occurred during CSV/Plot report generation: {e}", exc_info=True)

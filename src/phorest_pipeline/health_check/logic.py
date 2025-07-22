@@ -6,7 +6,6 @@ import signal
 import time
 from collections import deque
 from pathlib import Path
-import logging
 
 import matplotlib.pyplot as plt
 
@@ -28,7 +27,7 @@ from phorest_pipeline.shared.logger_config import configure_logger
 from phorest_pipeline.shared.metadata_manager import lock_and_manage_file
 from phorest_pipeline.shared.states import HealthCheckerState  # Assuming you add this
 
-logger = configure_logger(name=__name__, level=logging.DEBUG, rotate_daily=True, log_filename="health_checker.log")
+logger = configure_logger(name=__name__, rotate_daily=True, log_filename="health_checker.log")
 
 # --- Configuration ---
 HEALTH_CHECK_INTERVAL = 30  # Check every 10 minutes by default
@@ -59,7 +58,7 @@ def is_pid_active(pid: int) -> bool:
         return True
 
 
-def get_log_tail(log_path: Path, lines: int = 10) -> str:
+def get_log_tail(log_path: Path, lines: int = 5) -> str:
     """Gets the last N lines of a log file."""
     if not log_path.exists():
         return f"Log file not found:\n{log_path.name}"
@@ -76,7 +75,7 @@ class HealthChecker:
 
     def __init__(self):
         self.shutdown_requested = False
-        self.current_state = HealthCheckerState.IDLE
+        self.current_state = HealthCheckerState.CHECKING_HEALTH
         self.next_run_time = 0
         signal.signal(signal.SIGINT, self._graceful_shutdown)
         signal.signal(signal.SIGTERM, self._graceful_shutdown)
@@ -91,7 +90,7 @@ class HealthChecker:
         logger.info("Generating health report PNG...")
         num_services = len(health_data)
         fig, axes = plt.subplots(
-            num_services, 2, figsize=(6, 2 * num_services), gridspec_kw={"width_ratios": [1, 4]}
+            num_services, 2, figsize=(12, 2 * num_services), gridspec_kw={"width_ratios": [1, 4]}
         )
         fig.suptitle("Phorest Pipeline Health Status", fontsize=16, y=0.95)
 
@@ -99,16 +98,17 @@ class HealthChecker:
 
         for i, (service, data) in enumerate(health_data.items()):
             # Ensure axes is always a 2D array, even with one service
-            ax_light = axes[i, 0] if num_services > 1 else axes[0]
+            ax_indicator = axes[i, 0] if num_services > 1 else axes[0]
             ax_text = axes[i, 1] if num_services > 1 else axes[1]
 
             # --- Traffic Light Column ---
-            ax_light.set_xlim(0, 1)
-            ax_light.set_ylim(0, 1)
-            ax_light.add_patch(
+            ax_indicator.set_xlim(0, 1)
+            ax_indicator.set_ylim(0, 1)
+            ax_indicator.add_patch(
                 plt.Circle((0.5, 0.5), 0.4, color=color_map.get(data["color"], "grey"))
             )
-            ax_light.axis("off")
+            ax_indicator.axis("off")
+            ax_indicator.set_aspect('equal', 'box')
 
             # --- Status Text Column ---
             ax_text.axis("off")
