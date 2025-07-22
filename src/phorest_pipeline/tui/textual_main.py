@@ -6,7 +6,8 @@ from pathlib import Path
 
 # --- Textual Imports ---
 from textual.app import App, ComposeResult
-from textual.containers import Container, Vertical
+from textual.containers import Container, Horizontal, Vertical
+from textual.reactive import reactive
 from textual.screen import ModalScreen, Screen
 from textual.widgets import Button, DataTable, Footer, Header, RichLog, Static
 
@@ -64,10 +65,34 @@ BACKGROUND_SCRIPTS = [
     },
 ]
 
+
+class ServiceControl(Static):
+    """A widget to display and control a single background service."""
+
+    # reactive() makes this attribute automatically update the UI when it changes
+    is_running = reactive(False)
+
+    def __init__(self, name: str, script_id: str) -> None:
+        super().__init__()
+        self.service_name = name
+        self.script_id = script_id
+
+    def compose(self) -> ComposeResult:
+        """Create the child widgets for this control."""
+        with Horizontal():
+            yield Static(self.service_name, classes="service_label")
+            yield Button("Start", id=f"start_{self.script_id}", variant="success")
+            yield Button("Stop", id=f"stop_{self.script_id}", variant="error")
+
+    def watch_is_running(self, is_running: bool) -> None:
+        """Called when the 'is_running' reactive attribute changes."""
+        # This is the core logic: disable/enable buttons based on the state
+        self.query_one(f"#start_{self.script_id}", Button).disabled = is_running
+        self.query_one(f"#stop_{self.script_id}", Button).disabled = not is_running
+
+
 # --- Screens ---
 # Textual uses "Screens" to manage different views, like a main menu or a dialog box.
-
-
 class CommandOutputScreen(Screen):
     """A screen to display the output of a foreground command."""
 
@@ -186,6 +211,11 @@ class PhorestTUI(App):
     CSS_PATH = "tui_styles.css"
     BINDINGS = [("q", "quit", "Quit"), ("m", "manage", "Manage Processes")]
 
+    def on_mount(self) -> None:
+        """Set up a timer to refresh the status every few seconds."""
+        self.refresh_status()
+        self.set_interval(2, self.refresh_status) # Refresh every 2 seconds
+
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
         yield Header("Phorest Pipeline TUI")
@@ -202,31 +232,31 @@ class PhorestTUI(App):
                     "Phorest data collection and processing services", classes="group_header"
                 )
                 for item in BACKGROUND_SCRIPTS:
-                    yield Button(item["menu"], id=item["script"], classes="bg_button")
+                    yield ServiceControl(name=item["menu"], script_id=item["script"])
 
         yield Footer()
+    
+    def refresh_status(self) -> None:
+        """Get the latest status and update the UI."""
+        all_statuses = get_pipeline_status()
+        for service_control in self.query(ServiceControl):
+            status_data = all_statuses.get(service_control.script_id, {})
+            is_running = status_data.get("status") == "running" and is_pid_active(status_data.get("pid"))
+            service_control.is_running = is_running
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Event handler called when a button is pressed."""
+        button_id = str(event.button.id or "")
 
-        command_id = event.button.id
-        if not command_id:
+        # --- Handle Foreground Scripts ---
+        fg_script_info = next((s for s in FOREGROUND_SCRIPTS if s["script"] == button_id), None)
+        if fg_script_info:
+            self.push_screen(CommandOutputScreen(fg_script_info["menu"], button_id))
             return
 
-        # Find which script type was clicked
-        script_info = next(
-            (s for s in FOREGROUND_SCRIPTS + BACKGROUND_SCRIPTS if s["script"] == command_id), None
-        )
-
-        if not script_info:
-            return
-
-        if script_info["type"] == "foreground":
-            # For foreground scripts, push a new screen to show the output
-            self.push_screen(CommandOutputScreen(script_info["menu"], command_id))
-
-        elif script_info["type"] == "background":
-            # For background scripts, launch them and show a notification (or a brief dialog)
+        # --- Handle Start/Stop Buttons for Background Services ---
+        if button_id.startswith("start_"):
+            command_id = button_id.replace("start_", "")
             try:
                 process = subprocess.Popen(
                     [command_id],
@@ -234,13 +264,26 @@ class PhorestTUI(App):
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
                     preexec_fn=os.setsid,
-                    cwd=str(PROJECT_ROOT),
-                )
+                    cwd=str(PROJECT_ROOT)
+                    )
                 update_service_status(command_id, pid=process.pid, status="running")
-                self.bell()  # Simple feedback
+                self.bell()
             except Exception:
-                # In a real app, you'd show a proper error dialog here
-                pass
+                pass # Add error dialog in a real app
+            self.refresh_status()
+
+        elif button_id.startswith("stop_"):
+            command_id = button_id.replace("stop_", "")
+            all_statuses = get_pipeline_status()
+            pid_to_kill = all_statuses.get(command_id, {}).get("pid")
+            if pid_to_kill and is_pid_active(pid_to_kill):
+                try:
+                    os.kill(pid_to_kill, signal.SIGINT)
+                    update_service_status(command_id, pid=None, status="stopped")
+                    self.bell()
+                except Exception:
+                    pass # Add error dialog
+            self.refresh_status()
 
     def action_manage(self) -> None:
         """Action to show the process management screen."""
@@ -249,11 +292,8 @@ class PhorestTUI(App):
 
 def main():
     """Main entry point for the application."""
-
-    # Initialize the status file on startup
     all_service_names = [s["script"] for s in BACKGROUND_SCRIPTS]
     initialise_status_file(all_service_names)
-
     app = PhorestTUI()
     app.run()
 
