@@ -11,7 +11,6 @@ from phorest_pipeline.shared.config import (
     DATA_READY_FLAG,
     ENABLE_CAMERA,
     ENABLE_THERMOCOUPLE,
-    FLAG_DIR,
     METADATA_FILENAME,
     PROCESSOR_INTERVAL,
     RESULTS_DIR,

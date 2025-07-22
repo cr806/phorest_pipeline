@@ -13,7 +13,6 @@ from phorest_pipeline.shared.config import (
     ENABLE_CAMERA,
     ENABLE_THERMOCOUPLE,
     FAILURE_LIMIT,
-    FLAG_DIR,
     IMAGE_BUFFER_SIZE,
     METADATA_FILENAME,
     RETRY_DELAY,
@@ -262,7 +261,7 @@ class Collector:
         # Initial cleanup: remove data ready flag if it exists on startup
         if settings:
             snapshot_configs(logger=logger)
-            
+
             files_to_move = [Path(DATA_DIR, METADATA_FILENAME)]
             move_existing_files_to_backup(files_to_move, logger=logger)
             logger.info("Moved existing files to backup directory.")

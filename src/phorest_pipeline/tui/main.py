@@ -7,7 +7,11 @@ import sys
 from pathlib import Path
 
 from phorest_pipeline.shared.config import FLAG_DIR, STATUS_FILENAME
-from phorest_pipeline.shared.metadata_manager import get_pipeline_status, update_service_status, initialise_status_file
+from phorest_pipeline.shared.metadata_manager import (
+    get_pipeline_status,
+    initialise_status_file,
+    update_service_status,
+)
 
 # --- Configuration for PID File ---
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
@@ -50,6 +54,7 @@ def is_pid_active(pid):
         return False
     else:
         return True
+
 
 # --- Interactive Function to Check and Manage Running Background Scripts ---
 def check_running_background_scripts_status(stdscr):
@@ -222,9 +227,14 @@ def is_script_already_running(command_name):
     """Checks if a script is already running by checking the central status file."""
     all_statuses = get_pipeline_status()
     service_status = all_statuses.get(command_name)
-    if service_status and service_status.get("status") == "running" and is_pid_active(service_status.get("pid")):
+    if (
+        service_status
+        and service_status.get("status") == "running"
+        and is_pid_active(service_status.get("pid"))
+    ):
         return service_status.get("pid")
     return None
+
 
 # --- Main Menu Drawing Function ---
 def draw_menu(stdscr, selected_row_idx):

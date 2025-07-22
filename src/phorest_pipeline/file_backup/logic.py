@@ -13,7 +13,6 @@ from phorest_pipeline.shared.config import (
     DATA_DIR,
     ENABLE_BACKUP,
     FILE_BACKUP_INTERVAL,
-    FLAG_DIR,
     IMAGE_FILENAME,
     METADATA_FILENAME,
     RESULTS_DIR,

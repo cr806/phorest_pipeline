@@ -10,7 +10,6 @@ from phorest_pipeline.shared.config import (
     COMMUNICATOR_INTERVAL,
     CSV_FILENAME,
     DATA_DIR,
-    FLAG_DIR,
     IMAGE_FILENAME,
     METADATA_FILENAME,
     RESULTS_DIR,

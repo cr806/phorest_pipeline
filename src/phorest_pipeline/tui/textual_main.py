@@ -10,7 +10,6 @@ from textual.containers import Container, Vertical
 from textual.screen import ModalScreen, Screen
 from textual.widgets import Button, DataTable, Footer, Header, RichLog, Static
 
-from phorest_pipeline.shared.config import FLAG_DIR
 from phorest_pipeline.shared.metadata_manager import (
     get_pipeline_status,
     initialise_status_file,
@@ -18,6 +17,7 @@ from phorest_pipeline.shared.metadata_manager import (
 )
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+
 
 # --- Helper functions for PID management ---
 def is_pid_active(pid):
@@ -156,7 +156,11 @@ class ManageProcessesScreen(ModalScreen):
             table = self.query_one(DataTable)
 
             all_statuses = get_pipeline_status()
-            active_processes = [p for p in all_statuses.values() if p.get("status") == "running" and is_pid_active(p.get("pid"))]
+            active_processes = [
+                p
+                for p in all_statuses.values()
+                if p.get("status") == "running" and is_pid_active(p.get("pid"))
+            ]
             if not active_processes or table.cursor_row < 0:
                 self.app.bell()
                 return

@@ -9,7 +9,6 @@ from phorest_pipeline.shared.config import (
     COMPRESSOR_INTERVAL,
     DATA_DIR,
     ENABLE_COMPRESSOR,
-    FLAG_DIR,
     METADATA_FILENAME,
     settings,
 )
@@ -99,7 +98,7 @@ class Compressor:
                         f"Will wait for {COMPRESSOR_INTERVAL} seconds until next check..."
                     )
                     self.current_state = CompressorState.WAITING_TO_RUN
-            
+
             case CompressorState.WAITING_TO_RUN:
                 now = time.monotonic()
                 if now >= self.next_run_time:

@@ -8,7 +8,6 @@ from phorest_pipeline.shared.config import (
     BACKUP_DIR,
     DATA_DIR,
     ENABLE_SYNCER,
-    FLAG_DIR,
     METADATA_FILENAME,
     REMOTE_ROOT_DIR,
     RESULTS_DIR,
@@ -32,7 +31,7 @@ REMOTE_DATA_DIR = Path(REMOTE_ROOT_DIR, DATA_DIR.name)
 REMOTE_RESULTS_DIR = Path(REMOTE_ROOT_DIR, RESULTS_DIR.name)
 REMOTE_BACKUP_DIR = Path(REMOTE_ROOT_DIR, BACKUP_DIR.name)
 
-SCRIPT_NAME = 'phorest-syncer'
+SCRIPT_NAME = "phorest-syncer"
 
 
 def sync_archived_backups():
