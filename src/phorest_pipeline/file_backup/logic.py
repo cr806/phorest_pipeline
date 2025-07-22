@@ -134,7 +134,7 @@ class FileBackup:
                     logger.debug("WAITING_TO_RUN -> BACKUP_FILES")
                     self.current_state = BackupState.BACKUP_FILES
                 else:
-                    for _ in range(POLL_INTERVAL):
+                    for _ in range(int(POLL_INTERVAL)):
                         if self.shutdown_requested:
                             return
                         time.sleep(1)

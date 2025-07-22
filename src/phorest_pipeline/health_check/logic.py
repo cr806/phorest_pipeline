@@ -30,8 +30,8 @@ from phorest_pipeline.shared.states import HealthCheckerState  # Assuming you ad
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename="health_checker.log")
 
 # --- Configuration ---
-HEALTH_CHECK_INTERVAL = 600  # Check every 10 minutes by default
-POLL_INTERVAL = 30
+HEALTH_CHECK_INTERVAL = 30  # Check every 10 minutes by default
+POLL_INTERVAL = 10
 REPORT_FILENAME = Path("health_report.png")
 
 # Map service names to their log files and intervals
@@ -202,7 +202,7 @@ class HealthChecker:
                     logger.debug("WAITING_TO_RUN -> CHECKING_HEALTH")
                     self.current_state = HealthCheckerState.CHECKING_HEALTH
                 else:
-                    for _ in range(POLL_INTERVAL):
+                    for _ in range(int(POLL_INTERVAL)):
                         if self.shutdown_requested:
                             return
                         time.sleep(1)

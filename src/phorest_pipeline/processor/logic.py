@@ -127,7 +127,6 @@ class Processor:
 
         if settings is None:
             logger.debug("Configuration error. Halting.")
-            time.sleep(POLL_INTERVAL * 5)
             self.current_state = ProcessorState.FATAL_ERROR
 
         match self.current_state:
@@ -158,7 +157,7 @@ class Processor:
                         self.current_state = ProcessorState.IDLE
                         logger.debug("WAITING_FOR_DATA -> IDLE")
                 else:
-                    for _ in range(POLL_INTERVAL):
+                    for _ in range(int(POLL_INTERVAL)):
                         if self.shutdown_requested:
                             return
                         time.sleep(1)
@@ -174,11 +173,7 @@ class Processor:
                     logger.info("No more PENDING entries found in manifest.")
                     logger.debug("PROCESSING -> IDLE")
                     self.current_state = ProcessorState.IDLE
-                    # Ensure flag is present
-                    try:
-                        RESULTS_READY_FLAG.touch()
-                    except OSError as e:
-                        logger.error(f"Could not create flag {RESULTS_READY_FLAG}: {e}")
+                    return
 
                 # 2. Define chunk size to process now
                 chunk_size = 10
@@ -304,6 +299,11 @@ class Processor:
                 # 5. Collate results and perform a single batch update
                 logger.info("--- Collating results for batch update ---")
                 save_results_out(all_results_for_append, all_results_for_manifest_update)
+                # Ensure flag is present
+                try:
+                    RESULTS_READY_FLAG.touch()
+                except OSError as e:
+                    logger.error(f"Could not create flag {RESULTS_READY_FLAG}: {e}")
 
                 # 6. Loop back immediately to check for next chunk of work
                 self.current_state = ProcessorState.PROCESSING

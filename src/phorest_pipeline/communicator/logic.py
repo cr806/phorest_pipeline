@@ -121,7 +121,7 @@ class Communicator:
                         self.current_state = CommunicatorState.IDLE
                         logger.debug("WAITING_FOR_RESULTS -> IDLE")
                 else:
-                    for _ in range(POLL_INTERVAL):
+                    for _ in range(int(POLL_INTERVAL)):
                         if self.shutdown_requested:
                             return
                         time.sleep(1)

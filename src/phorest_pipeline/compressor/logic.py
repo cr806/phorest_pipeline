@@ -105,7 +105,7 @@ class Compressor:
                 if now >= self.next_run_time:
                     self.current_state = CompressorState.IDLE
                 else:
-                    for _ in range(POLL_INTERVAL):
+                    for _ in range(int(POLL_INTERVAL)):
                         if self.shutdown_requested:
                             return
                         time.sleep(1)

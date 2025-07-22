@@ -447,7 +447,7 @@ def update_service_heartbeat(
         with lock_and_manage_file(status_path):
             if status_path.exists() and status_path.stat().st_size > 0:
                 with status_path.open("r") as f:
-                    current_status = json.load()
+                    current_status = json.load(f)
             else:
                 current_status = {}
 
