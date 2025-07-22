@@ -13,6 +13,7 @@ from phorest_pipeline.shared.config import (
     ENABLE_CAMERA,
     ENABLE_THERMOCOUPLE,
     FAILURE_LIMIT,
+    FLAG_DIR,
     IMAGE_BUFFER_SIZE,
     METADATA_FILENAME,
     RETRY_DELAY,
@@ -24,7 +25,7 @@ from phorest_pipeline.shared.helper_utils import (
     snapshot_configs,
 )
 from phorest_pipeline.shared.logger_config import configure_logger
-from phorest_pipeline.shared.metadata_manager import add_entry
+from phorest_pipeline.shared.metadata_manager import add_entry, update_service_heartbeat
 from phorest_pipeline.shared.states import CollectorState
 
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename="collector.log")
@@ -48,6 +49,8 @@ if ENABLE_CAMERA:
             image_file_importer as camera_controller,
         )
     logger.info(f"Camera type: {CAMERA_TYPE}")
+
+SCRIPT_NAME = "phorest-collector"
 
 POLL_INTERVAL = COLLECTOR_INTERVAL / 5
 
@@ -270,6 +273,9 @@ class Collector:
         try:
             while not self.shutdown_requested:
                 self._perform_collection()
+
+                # After a cycle is complete, send a heartbeat.
+                update_service_heartbeat(SCRIPT_NAME, FLAG_DIR)
 
                 # --- Check for FATAL_ERROR state to exit ---
                 if self.current_state == CollectorState.FATAL_ERROR:

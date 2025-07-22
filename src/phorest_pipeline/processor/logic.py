@@ -11,6 +11,7 @@ from phorest_pipeline.shared.config import (
     DATA_READY_FLAG,
     ENABLE_CAMERA,
     ENABLE_THERMOCOUPLE,
+    FLAG_DIR,
     METADATA_FILENAME,
     PROCESSOR_INTERVAL,
     RESULTS_DIR,
@@ -26,10 +27,13 @@ from phorest_pipeline.shared.metadata_manager import (
     append_metadata,
     load_metadata_with_lock,
     update_metadata_manifest_entry,
+    update_service_heartbeat,
 )
 from phorest_pipeline.shared.states import ProcessorState
 
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename="processor.log")
+
+SCRIPT_NAME = "phorest-processor"
 
 POLL_INTERVAL = PROCESSOR_INTERVAL / 20 if PROCESSOR_INTERVAL > (5 * 20) else 5
 
@@ -180,8 +184,8 @@ class Processor:
 
                 # 3. Lock the manifest and 'claim' ONLY the chunk of work
                 logger.info(
-                        f"Found batch of {len(work_queue)} entries to process. Claiming a chunk of {len(process_chunk)}."
-                    )
+                    f"Found batch of {len(work_queue)} entries to process. Claiming a chunk of {len(process_chunk)}."
+                )
                 try:
                     update_metadata_manifest_entry(
                         Path(DATA_DIR, METADATA_FILENAME),
@@ -191,9 +195,9 @@ class Processor:
                     )
                 except Exception as e:
                     logger.error(f"Failed to claim chunk for processing: {e}", exc_info=True)
-                    self.current_state = ProcessorState.IDLE # Go idle and retry later
+                    self.current_state = ProcessorState.IDLE  # Go idle and retry later
                     return
-                
+
                 # 4. Process the claimed chunk
                 all_results_for_manifest_update = []
                 all_results_for_append = []
@@ -208,7 +212,9 @@ class Processor:
                                 status="pending",
                             )
                         except Exception as e:
-                            logger.error(f"Failed to reset chunk back to 'pending': {e}", exc_info=True)
+                            logger.error(
+                                f"Failed to reset chunk back to 'pending': {e}", exc_info=True
+                            )
                         self.current_state = ProcessorState.FATAL_ERROR
                         break
 
@@ -225,16 +231,14 @@ class Processor:
                             if image_meta and image_meta.get("filename"):
                                 image_results, img_proc_error_msg = process_image(image_meta)
                             else:
-                                img_proc_error_msg = "Camera enabled but no image data or filename found in entry."
+                                img_proc_error_msg = (
+                                    "Camera enabled but no image data or filename found in entry."
+                                )
                         else:
-                            img_proc_error_msg = (
-                                "Camera not enabled, skipping image processing."
-                            )
+                            img_proc_error_msg = "Camera not enabled, skipping image processing."
 
                         temperature_data = (
-                            entry_data.get("temperature_data", {})
-                            if ENABLE_THERMOCOUPLE
-                            else None
+                            entry_data.get("temperature_data", {}) if ENABLE_THERMOCOUPLE else None
                         )
 
                         if (ENABLE_CAMERA and image_results) or (
@@ -254,13 +258,13 @@ class Processor:
                         # --- Aggregate results for this single entry ---
                         final_result_entry = {
                             "manifest_entry_timestamp": entry_data.get("entry_timestamp_iso"),
-                            "image_timestamp": image_meta.get("timestamp_iso") if image_meta else None,
+                            "image_timestamp": image_meta.get("timestamp_iso")
+                            if image_meta
+                            else None,
                             "temperature_timestamp": temperature_data.get("timestamp_iso")
                             if temperature_data
                             else None,
-                            "image_filename": image_meta.get("filename")
-                            if image_meta
-                            else None,
+                            "image_filename": image_meta.get("filename") if image_meta else None,
                             "processing_timestamp_iso": datetime.datetime.now().isoformat(),
                             "processing_successful": processing_successful,
                             "processing_error_message": img_proc_error_msg,
@@ -329,6 +333,9 @@ class Processor:
         try:
             while not self.shutdown_requested:
                 self._perform_processing()
+
+                # After a cycle is complete, send a heartbeat.
+                update_service_heartbeat(SCRIPT_NAME, FLAG_DIR)
 
                 # --- Check for FATAL_ERROR state to exit ---
                 if self.current_state == ProcessorState.FATAL_ERROR:

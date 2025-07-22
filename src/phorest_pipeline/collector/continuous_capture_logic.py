@@ -8,10 +8,12 @@ from phorest_pipeline.shared.config import (
     CONTINUOUS_DIR,
     ENABLE_CAMERA,
     FAILURE_LIMIT,
+    FLAG_DIR,
     RETRY_DELAY,
     settings,  # Import settings to check if config loaded ok
 )
 from phorest_pipeline.shared.logger_config import configure_logger
+from phorest_pipeline.shared.metadata_manager import update_service_heartbeat
 from phorest_pipeline.shared.states import CollectorState
 
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename="continuous_capture.log")
@@ -31,6 +33,8 @@ if ENABLE_CAMERA:
     elif CAMERA_TYPE == ImageSourceType.DUMMY:
         from phorest_pipeline.collector.sources.dummy_camera_controller import camera_controller
     logger.info(f"Camera type: {CAMERA_TYPE}")
+
+SCRIPT_NAME = "phorest-continuous-capture"
 
 SAVENAME = "continuous_capture_frame.jpg"
 # RESOLUTION = (640, 480)
@@ -117,6 +121,9 @@ def run_continuous_capture():
             current_state, failure_count = perform_continuous_capture(
                 current_state, failure_count, filename=SAVENAME
             )
+
+            # After a cycle is complete, send a heartbeat.
+            update_service_heartbeat(SCRIPT_NAME, FLAG_DIR)
 
             # --- Check for FATAL_ERROR state to exit ---
             if current_state == CollectorState.FATAL_ERROR:

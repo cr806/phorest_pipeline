@@ -8,6 +8,7 @@ from phorest_pipeline.shared.config import (
     BACKUP_DIR,
     DATA_DIR,
     ENABLE_SYNCER,
+    FLAG_DIR,
     METADATA_FILENAME,
     REMOTE_ROOT_DIR,
     RESULTS_DIR,
@@ -19,6 +20,7 @@ from phorest_pipeline.shared.metadata_manager import (
     load_metadata_with_lock,
     lock_and_manage_file,
     update_metadata_manifest_entry,
+    update_service_heartbeat,
 )
 from phorest_pipeline.shared.states import SyncerState
 
@@ -29,6 +31,8 @@ POLL_INTERVAL = SYNC_INTERVAL / 20 if SYNC_INTERVAL > (5 * 20) else 5
 REMOTE_DATA_DIR = Path(REMOTE_ROOT_DIR, DATA_DIR.name)
 REMOTE_RESULTS_DIR = Path(REMOTE_ROOT_DIR, RESULTS_DIR.name)
 REMOTE_BACKUP_DIR = Path(REMOTE_ROOT_DIR, BACKUP_DIR.name)
+
+SCRIPT_NAME = 'phorest-syncer'
 
 
 def sync_archived_backups():
@@ -136,6 +140,7 @@ def sync_processed_images():
 
 class Syncer:
     """Encapsulates the state and logic for the file synchroniser."""
+
     def __init__(self):
         self.shutdown_requested = False
         self.current_state = SyncerState.IDLE
@@ -146,7 +151,7 @@ class Syncer:
         signal.signal(signal.SIGTERM, self._graceful_shutdown)
 
     def _graceful_shutdown(self, _signum, _frame):
-        """ Signal handler to initiate a graceful shutdown """
+        """Signal handler to initiate a graceful shutdown"""
         if not self.shutdown_requested:
             logger.info("Shutdown signal received. Finishing current cycle before stopping...")
             self.shutdown_requested = True
@@ -183,7 +188,7 @@ class Syncer:
                     logger.info("--- Sync Cycle Finished ---")
                 except Exception as e:
                     logger.error(f"Error during sync cycle: {e}")
-                
+
                 self.current_state = SyncerState.IDLE
 
             case SyncerState.FATAL_ERROR:
@@ -198,7 +203,7 @@ class Syncer:
         if settings is None:
             logger.debug("Configuration error. Halting.")
             return
-        
+
         if not ENABLE_SYNCER:
             logger.info("Syncer is disabled in config. Exiting.")
             return
@@ -206,6 +211,10 @@ class Syncer:
         try:
             while not self.shutdown_requested:
                 self._perform_sync_cycle()
+
+                # After a cycle is complete, send a heartbeat.
+                update_service_heartbeat(SCRIPT_NAME, FLAG_DIR)
+
                 time.sleep(0.1)  # Sleep to avoid busy waiting
         except Exception as e:
             logger.critical(f"UNEXPECTED ERROR in main loop: {e}", exc_info=True)
@@ -213,7 +222,8 @@ class Syncer:
             logger.info("--- Syncer Stopped ---")
             print("--- Syncer Stopped ---")
 
+
 def run_syncer():
-    """ Main entry point to create and run a Synchroniser instanace. """
+    """Main entry point to create and run a Synchroniser instanace."""
     sync = Syncer()
     sync.run()

@@ -9,6 +9,7 @@ from phorest_pipeline.shared.config import (
     COMPRESSOR_INTERVAL,
     DATA_DIR,
     ENABLE_COMPRESSOR,
+    FLAG_DIR,
     METADATA_FILENAME,
     settings,
 )
@@ -16,10 +17,13 @@ from phorest_pipeline.shared.logger_config import configure_logger
 from phorest_pipeline.shared.metadata_manager import (
     load_metadata_with_lock,
     update_metadata_manifest_entry,
+    update_service_heartbeat,
 )
 from phorest_pipeline.shared.states import CompressorState
 
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename="compressor.log")
+
+SCRIPT_NAME = "phorest-compressor"
 
 POLL_INTERVAL = COMPRESSOR_INTERVAL / 20 if COMPRESSOR_INTERVAL > (5 * 20) else 5
 
@@ -53,14 +57,14 @@ class Compressor:
         self.shutdown_requested = False
         self.current_state = CompressorState.IDLE
         self.next_run_time = 0
-        self.entries_to_process = [] # To hold the batch of work
+        self.entries_to_process = []  # To hold the batch of work
 
         # Register signal handlers
         signal.signal(signal.SIGINT, self._graceful_shutdown)
         signal.signal(signal.SIGTERM, self._graceful_shutdown)
-    
+
     def _graceful_shutdown(self, _signum, _frame):
-        """ Signal handler to initiate a graceful shutdown """
+        """Signal handler to initiate a graceful shutdown"""
         if not self.shutdown_requested:
             logger.info("Shutdown signal received. Finishing current cycle before stopping...")
             self.shutdown_requested = True
@@ -86,11 +90,15 @@ class Compressor:
                 self.entries_to_process = find_entries_to_compress(manifest_data)
 
                 if self.entries_to_process:
-                    logger.info(f"Found a batch of {len(self.entries_to_process)} files to compress.")
+                    logger.info(
+                        f"Found a batch of {len(self.entries_to_process)} files to compress."
+                    )
                     self.current_state = CompressorState.COMPRESSING_IMAGES
                 else:
                     logger.info("No entries found requiring compression.")
-                    logger.debug(f"Will wait for {COMPRESSOR_INTERVAL} seconds until next check...")
+                    logger.debug(
+                        f"Will wait for {COMPRESSOR_INTERVAL} seconds until next check..."
+                    )
                     self.current_state = CompressorState.WAITING_TO_RUN
 
             case CompressorState.COMPRESSING_IMAGES:
@@ -135,7 +143,9 @@ class Compressor:
                 # Update manifest
                 if updates_for_manifest:
                     try:
-                        logger.debug(f"Updating manifest for {len(updates_for_manifest)} entries...")
+                        logger.debug(
+                            f"Updating manifest for {len(updates_for_manifest)} entries..."
+                        )
                         indices = [item["index"] for item in updates_for_manifest]
                         filenames = [item["new_filename"] for item in updates_for_manifest]
 
@@ -164,11 +174,10 @@ class Compressor:
                     self.current_state = CompressorState.IDLE
                 else:
                     time.sleep(POLL_INTERVAL)
-            
+
             case CompressorState.FATAL_ERROR:
                 logger.error("[FATAL ERROR] Shutting down compressor.")
                 time.sleep(10)  # Prevent busy-looping in fatal state
-
 
     def run(self):
         """Main loop for the compressor process."""
@@ -186,6 +195,10 @@ class Compressor:
         try:
             while not self.shutdown_requested:
                 self._perform_compression_cycle()
+
+                # After a cycle is complete, send a heartbeat.
+                update_service_heartbeat(SCRIPT_NAME, FLAG_DIR)
+
                 time.sleep(0.1)
         except Exception as e:
             logger.critical(f"UNEXPECTED ERROR in main loop: {e}", exc_info=True)
@@ -195,6 +208,6 @@ class Compressor:
 
 
 def run_compressor():
-    """ Main entry point to create and run a Compressor instanace. """
+    """Main entry point to create and run a Compressor instanace."""
     compressor = Compressor()
     compressor.run()

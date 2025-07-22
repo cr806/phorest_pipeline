@@ -13,6 +13,7 @@ from phorest_pipeline.shared.config import (
     DATA_DIR,
     ENABLE_BACKUP,
     FILE_BACKUP_INTERVAL,
+    FLAG_DIR,
     IMAGE_FILENAME,
     METADATA_FILENAME,
     RESULTS_DIR,
@@ -21,10 +22,12 @@ from phorest_pipeline.shared.config import (
     settings,
 )
 from phorest_pipeline.shared.logger_config import configure_logger
-from phorest_pipeline.shared.metadata_manager import move_file_with_lock
+from phorest_pipeline.shared.metadata_manager import move_file_with_lock, update_service_heartbeat
 from phorest_pipeline.shared.states import BackupState
 
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename="file_backup.log")
+
+SCRIPT_NAME = "phorest-backup"
 
 POLL_INTERVAL = FILE_BACKUP_INTERVAL / 20 if FILE_BACKUP_INTERVAL > (5 * 20) else 5
 
@@ -70,15 +73,11 @@ def compress_files_in_backup_dir():
     """
     logger.info("--- Compressing Backed-up Files ---")
     if not BACKUP_DIR.exists():
-        logger.warning(
-            f"Backup root directory '{BACKUP_DIR}' not found. Nothing to compress."
-        )
+        logger.warning(f"Backup root directory '{BACKUP_DIR}' not found. Nothing to compress.")
         return
 
     # Find all files that don't end in .gz
-    files_to_compress = [
-        p for p in BACKUP_DIR.rglob("*") if p.is_file() and p.suffix != ".gz"
-    ]
+    files_to_compress = [p for p in BACKUP_DIR.rglob("*") if p.is_file() and p.suffix != ".gz"]
 
     if not files_to_compress:
         logger.info("No new files to compress in backup directory.")
@@ -162,6 +161,10 @@ class FileBackup:
         try:
             while not self.shutdown_requested:
                 self._perform_file_backup_cycle()
+
+                # After a cycle is complete, send a heartbeat.
+                update_service_heartbeat(SCRIPT_NAME, FLAG_DIR)
+
                 if self.current_state == BackupState.IDLE:
                     time.sleep(0.1)
         except Exception as e:

@@ -10,6 +10,7 @@ from phorest_pipeline.shared.config import (
     COMMUNICATOR_INTERVAL,
     CSV_FILENAME,
     DATA_DIR,
+    FLAG_DIR,
     IMAGE_FILENAME,
     METADATA_FILENAME,
     RESULTS_DIR,
@@ -21,6 +22,7 @@ from phorest_pipeline.shared.logger_config import configure_logger
 from phorest_pipeline.shared.metadata_manager import (
     load_metadata_with_lock,
     update_metadata_manifest_entry,
+    update_service_heartbeat,
 )
 from phorest_pipeline.shared.states import CommunicatorState
 
@@ -29,6 +31,8 @@ from .outputs.csv_plot_handler import generate_report
 # from .outputs.opc_ua_handler import send_data
 
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename="comms.log")
+
+SCRIPT_NAME = "phorest-communicator"
 
 POLL_INTERVAL = COMMUNICATOR_INTERVAL / 20 if COMMUNICATOR_INTERVAL > (5 * 20) else 5
 
@@ -210,6 +214,10 @@ class Communicator:
         try:
             while not self.shutdown_requested:
                 self._perform_communication()
+
+                # After a cycle is complete, send a heartbeat.
+                update_service_heartbeat(SCRIPT_NAME, FLAG_DIR)
+
                 if self.current_state == CommunicatorState.FATAL_ERROR:
                     logger.error("Exiting due to FATAL_ERROR state.")
                     break
