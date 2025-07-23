@@ -9,7 +9,7 @@ from textual.app import App, ComposeResult
 from textual.containers import Container, Horizontal, Vertical, VerticalScroll
 from textual.reactive import reactive
 from textual.screen import ModalScreen, Screen
-from textual.widgets import Button, DataTable, Footer, Header, RichLog, Static, Markdown
+from textual.widgets import Button, DataTable, Footer, Header, Markdown, RichLog, Static
 
 from phorest_pipeline.shared.metadata_manager import (
     get_pipeline_status,
@@ -20,16 +20,22 @@ from phorest_pipeline.shared.metadata_manager import (
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 TUI_HELP = Path(Path(__file__).resolve().parent, "TUI_help.md")
 
+
 # --- Helper functions for PID management ---
-def is_pid_active(pid):
+def is_pid_active(pid: int | None, expected_name: str) -> bool:
+    """
+    Checks if a given PID is active AND is running the expected command.
+    """
     if pid is None:
         return False
     try:
-        os.kill(pid, 0)
-    except OSError:
+        result = subprocess.run(
+            ["ps", "-p", str(pid), "-o", "command="], capture_output=True, text=True, check=False
+        )
+        # Check if the process exists and the command name is in the output
+        return result.returncode == 0 and expected_name in result.stdout
+    except Exception:
         return False
-    else:
-        return True
 
 
 # --- Data Definitions ---
@@ -64,6 +70,7 @@ BACKGROUND_SCRIPTS = [
         "type": "background",
     },
 ]
+
 
 class Help(Screen):
     """The help screen for the application."""
@@ -173,9 +180,9 @@ class ManageProcessesScreen(ModalScreen):
 
         all_statuses = get_pipeline_status()
         active_processes = []
-        for name, data in all_statuses.items():
-            if data.get("status") == "running" and is_pid_active(data.get("pid")):
-                active_processes.append({"name": name, "pid": data.get("pid")})
+        for service, data in all_statuses.items():
+            if data.get("status") == "running" and is_pid_active(data.get("pid"), service):
+                active_processes.append({"name": service, "pid": data.get("pid")})
 
         if not active_processes:
             table.add_row("[dim]No active processes found.[/dim]")
@@ -191,8 +198,8 @@ class ManageProcessesScreen(ModalScreen):
             all_statuses = get_pipeline_status()
             active_processes = [
                 p
-                for p in all_statuses.values()
-                if p.get("status") == "running" and is_pid_active(p.get("pid"))
+                for service, p in all_statuses.items()
+                if p.get("status") == "running" and is_pid_active(p.get("pid"), service)
             ]
             if not active_processes or table.cursor_row < 0:
                 self.app.bell()
@@ -226,7 +233,7 @@ class PhorestTUI(App):
     def on_mount(self) -> None:
         """Set up a timer to refresh the status every few seconds."""
         self.refresh_status()
-        self.set_interval(2, self.refresh_status) # Refresh every 2 seconds
+        self.set_interval(2, self.refresh_status)  # Refresh every 2 seconds
 
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
@@ -234,26 +241,27 @@ class PhorestTUI(App):
 
         # Use a scrollable container for all the buttons
         with VerticalScroll():
-            yield Static(
-                "Phorest data collection and processing services", classes="group_header"
-            )
+            yield Static("Phorest data collection and processing services", classes="group_header")
             with Vertical(id="background_container"):
                 for item in BACKGROUND_SCRIPTS:
                     yield ServiceControl(name=item["menu"], script_id=item["script"])
-            
+
             yield Static("Phorest single-use scripts", classes="group_header")
             with Container(id="foreground_container"):
                 for item in FOREGROUND_SCRIPTS:
                     yield Button(item["menu"], id=item["script"])
-    
+
         yield Footer()
-    
+
     def refresh_status(self) -> None:
         """Get the latest status and update the UI."""
         all_statuses = get_pipeline_status()
         for service_control in self.query(ServiceControl):
             status_data = all_statuses.get(service_control.script_id, {})
-            is_running = status_data.get("status") == "running" and is_pid_active(status_data.get("pid"))
+            is_running = status_data.get("status") == "running" and is_pid_active(
+                status_data.get("pid"),
+                service_control.script_id
+            )
             service_control.is_running = is_running
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -276,31 +284,31 @@ class PhorestTUI(App):
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
                     preexec_fn=os.setsid,
-                    cwd=str(PROJECT_ROOT)
-                    )
+                    cwd=str(PROJECT_ROOT),
+                )
                 update_service_status(command_id, pid=process.pid, status="running")
                 self.bell()
             except Exception:
-                pass # Add error dialog in a real app
+                pass  # Add error dialog in a real app
             self.refresh_status()
 
         elif button_id.startswith("stop_"):
             command_id = button_id.replace("stop_", "")
             all_statuses = get_pipeline_status()
             pid_to_kill = all_statuses.get(command_id, {}).get("pid")
-            if pid_to_kill and is_pid_active(pid_to_kill):
+            if pid_to_kill and is_pid_active(pid_to_kill, command_id):
                 try:
                     os.kill(pid_to_kill, signal.SIGINT)
                     update_service_status(command_id, pid=None, status="stopped")
                     self.bell()
                 except Exception:
-                    pass # Add error dialog
+                    pass  # Add error dialog
             self.refresh_status()
 
     def action_manage(self) -> None:
         """Action to show the process management screen."""
         self.push_screen(ManageProcessesScreen())
-    
+
     def action_help(self) -> None:
         """Action to show the help screen."""
         self.push_screen(Help())

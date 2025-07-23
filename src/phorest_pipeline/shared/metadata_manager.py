@@ -2,12 +2,12 @@
 import datetime
 import fcntl  # For file locking (Unix/Linux specific)
 import json
-import os
 import shutil
+import subprocess
 from contextlib import contextmanager
 from pathlib import Path
 
-from phorest_pipeline.shared.config import STATUS_FILENAME, FLAG_DIR
+from phorest_pipeline.shared.config import FLAG_DIR, STATUS_FILENAME
 from phorest_pipeline.shared.logger_config import configure_logger
 
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename="shared.log")
@@ -125,16 +125,20 @@ def _save_metadata(metadata_path: Path, metadata_list: list):
         raise  # Re-raise to propagate error
 
 
-def _is_pid_active(pid: int | None) -> bool:
-    """Checks if a given PID is currently running. Returns False if pid is None."""
+def is_pid_active(pid: int | None, expected_name: str) -> bool:
+    """
+    Checks if a given PID is active AND is running the expected command.
+    """
     if pid is None:
         return False
     try:
-        os.kill(pid, 0)
-    except OSError:
+        result = subprocess.run(
+            ["ps", "-p", str(pid), "-o", "command="], capture_output=True, text=True, check=False
+        )
+        # Check if the process exists and the command name is in the output
+        return result.returncode == 0 and expected_name in result.stdout
+    except Exception:
         return False
-    else:
-        return True
 
 
 @contextmanager
@@ -450,8 +454,10 @@ def initialise_status_file(services: list[str]):
             # 2. Validate existing entries. If a service is marked "running" but
             # the PID is not active, mark it as "stopped".
             for service, data in current_status.items():
-                if data.get("status") == "running" and not _is_pid_active(data.get("pid")):
-                    logger.warning(f"Found stale process for '{service}' (PID: {data.get('pid')}). Marking as stopped.")
+                if data.get("status") == "running" and not _is_pid_active(data.get("pid"), service):
+                    logger.warning(
+                        f"Found stale process for '{service}' (PID: {data.get('pid')}). Marking as stopped."
+                    )
                     data["status"] = "stopped"
                     data["pid"] = None
                     updated = True
@@ -462,7 +468,7 @@ def initialise_status_file(services: list[str]):
                     current_status[service] = {
                         "status": "stopped",
                         "pid": None,
-                        "last_heartbeat": None
+                        "last_heartbeat": None,
                     }
                     updated = True
                     logger.info(f"Added new service '{service}' to status file.")
@@ -473,7 +479,9 @@ def initialise_status_file(services: list[str]):
                     json.dump(current_status, f, indent=4)
                 logger.info(f"Status file at {status_path} is initialised and up to date.")
             else:
-                logger.info("Status file already contains all services and is valid. No changes made.")
+                logger.info(
+                    "Status file already contains all services and is valid. No changes made."
+                )
 
     except Exception as e:
         logger.error(f"Failed to initialise status file: {e}", exc_info=True)
@@ -497,31 +505,33 @@ def get_pipeline_status() -> dict:
         return {}
 
 
-def update_service_status(service_name: str, pid: int | None = None, status: str | None = None, heartbeat: bool = False):
+def update_service_status(
+    service_name: str, pid: int | None = None, status: str | None = None, heartbeat: bool = False
+):
     """
     Updates the status, PID, and/or heartbeat timestamp for a given service
     in the pipeline_status.json file.
     """
     status_path = Path(FLAG_DIR, STATUS_FILENAME)
     try:
-            current_status = get_pipeline_status()
+        current_status = get_pipeline_status()
 
-            # Ensure the service key exists
-            if service_name not in current_status:
-                current_status[service_name] = {}
+        # Ensure the service key exists
+        if service_name not in current_status:
+            current_status[service_name] = {}
 
-            # Update the fields that were provided
-            if pid is not None:
-                current_status[service_name]['pid'] = pid
-            if status is not None:
-                current_status[service_name]['status'] = status
-                if status == "stopped":
-                    current_status[service_name]['pid'] = None
-            if heartbeat:
-                current_status[service_name]['last_heartbeat'] = datetime.datetime.now().isoformat()
+        # Update the fields that were provided
+        if pid is not None:
+            current_status[service_name]["pid"] = pid
+        if status is not None:
+            current_status[service_name]["status"] = status
+            if status == "stopped":
+                current_status[service_name]["pid"] = None
+        if heartbeat:
+            current_status[service_name]["last_heartbeat"] = datetime.datetime.now().isoformat()
 
-            with status_path.open("w") as f:
-                json.dump(current_status, f, indent=4)
-            logger.info(f"[METADATA] [STATUS] Successfully updated status file at {status_path}")
+        with status_path.open("w") as f:
+            json.dump(current_status, f, indent=4)
+        logger.info(f"[METADATA] [STATUS] Successfully updated status file at {status_path}")
     except Exception as e:
         logger.error(f"Failed to update status for {service_name}: {e}")

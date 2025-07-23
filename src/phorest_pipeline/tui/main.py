@@ -41,19 +41,20 @@ BACKGROUND_SCRIPTS = [
 ]
 
 
-def is_pid_active(pid):
+def is_pid_active(pid: int | None, expected_name: str) -> bool:
     """
-    Checks if a given PID corresponds to an active process.
-    Returns the command string if active, None otherwise.
+    Checks if a given PID is active AND is running the expected command.
     """
     if pid is None:
         return False
     try:
-        os.kill(pid, 0)
-    except OSError:
+        result = subprocess.run(
+            ["ps", "-p", str(pid), "-o", "command="], capture_output=True, text=True, check=False
+        )
+        # Check if the process exists and the command name is in the output
+        return result.returncode == 0 and expected_name in result.stdout
+    except Exception:
         return False
-    else:
-        return True
 
 
 # --- Interactive Function to Check and Manage Running Background Scripts ---
@@ -82,9 +83,9 @@ def check_running_background_scripts_status(stdscr):
 
         all_statuses = get_pipeline_status()
         active_processes_to_display = []
-        for name, data in all_statuses.items():
-            if data.get("status") == "running" and is_pid_active(data.get("pid")):
-                active_processes_to_display.append({"name": name, "pid": data.get("pid")})
+        for service, data in all_statuses.items():
+            if data.get("status") == "running" and is_pid_active(data.get("pid"), service):
+                active_processes_to_display.append({"name": service, "pid": data.get("pid")})
 
         results_lines = []
         if not active_processes_to_display:
@@ -199,9 +200,9 @@ def stop_all_background_scripts(stdscr):
     # Filter for truly active processes to display for interaction
     all_statuses = get_pipeline_status()
     processes_to_stop = []
-    for name, data in all_statuses.items():
-        if data.get("status") == "running" and is_pid_active(data.get("pid")):
-            processes_to_stop.append({"name": name, "pid": data.get("pid")})
+    for service, data in all_statuses.items():
+        if data.get("status") == "running" and is_pid_active(data.get("pid"), service):
+            processes_to_stop.append({"name": service, "pid": data.get("pid")})
 
     stdscr.clear()
     stdscr.refresh()
@@ -223,14 +224,14 @@ all_scripts = multiple_action_functions + BACKGROUND_SCRIPTS + FOREGROUND_SCRIPT
 
 
 # --- Helper functions for PID file management ---
-def is_script_already_running(command_name):
+def is_script_already_running(service):
     """Checks if a script is already running by checking the central status file."""
     all_statuses = get_pipeline_status()
-    service_status = all_statuses.get(command_name)
+    service_status = all_statuses.get(service)
     if (
         service_status
         and service_status.get("status") == "running"
-        and is_pid_active(service_status.get("pid"))
+        and is_pid_active(service_status.get("pid"), service)
     ):
         return service_status.get("pid")
     return None
@@ -249,8 +250,8 @@ def draw_menu(stdscr, selected_row_idx):
     # Dynamically count active background processes for display.
     all_statuses = get_pipeline_status()
     active_count = 0
-    for data in all_statuses.values():
-        if data.get("status") == "running" and is_pid_active(data.get("pid")):
+    for service, data in all_statuses.items():
+        if data.get("status") == "running" and is_pid_active(data.get("pid"), service):
             active_count += 1
     stdscr.addstr(
         3, 0, f"Currently tracked ACTIVE background processes: {active_count}", curses.A_DIM
@@ -547,8 +548,8 @@ def run_tui_app(stdscr):
         elif key == ord("q") or key == ord("Q"):
             active_count = 0
             all_statuses = get_pipeline_status()
-            for data in all_statuses.values():
-                if data.get("status") == "running" and is_pid_active(data.get("pid")):
+            for service, data in all_statuses.items():
+                if data.get("status") == "running" and is_pid_active(data.get("pid"), service):
                     active_count += 1
 
             if active_count > 0:

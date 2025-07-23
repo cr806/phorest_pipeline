@@ -1,8 +1,8 @@
 # src/phorest_pipeline/health_checker/logic.py
 import datetime
 import json
-import os
 import signal
+import subprocess
 import time
 from collections import deque
 from pathlib import Path
@@ -45,17 +45,20 @@ SERVICE_CONFIG = {
 }
 
 
-def is_pid_active(pid: int) -> bool:
-    """Checks if a given PID is currently running."""
+def is_pid_active(pid: int | None, expected_name: str) -> bool:
+    """
+    Checks if a given PID is active AND is running the expected command.
+    """
     if pid is None:
         return False
     try:
-        # The "0" signal doesn't actually send a signal, but checks for process existence
-        os.kill(pid, 0)
-    except OSError:
+        result = subprocess.run(
+            ["ps", "-p", str(pid), "-o", "command="], capture_output=True, text=True, check=False
+        )
+        # Check if the process exists and the command name is in the output
+        return result.returncode == 0 and expected_name in result.stdout
+    except Exception:
         return False
-    else:
-        return True
 
 
 def get_log_tail(log_path: Path, lines: int = 5) -> str:
@@ -108,7 +111,7 @@ class HealthChecker:
                 plt.Circle((0.5, 0.5), 0.4, color=color_map.get(data["color"], "grey"))
             )
             ax_indicator.axis("off")
-            ax_indicator.set_aspect('equal', 'box')
+            ax_indicator.set_aspect("equal", "box")
 
             # --- Status Text Column ---
             ax_text.axis("off")
@@ -121,7 +124,7 @@ class HealthChecker:
             if data.get("log_tail"):
                 status_text += f"\n\nLast Log Entries:\n{data['log_tail']}"
 
-            ax_text.text(0, 0.5, status_text, va='center', ha='left', wrap=True, fontsize=10)
+            ax_text.text(0, 0.5, status_text, va="center", ha="left", wrap=True, fontsize=10)
 
         plt.tight_layout(rect=[0, 0, 1, 0.95])
         report_path = Path(RESULTS_DIR, REPORT_FILENAME)
@@ -157,7 +160,7 @@ class HealthChecker:
             if status == "stopped":
                 health_info["status"] = "Stopped"
                 health_info["color"] = "grey"
-            elif not is_pid_active(pid):
+            elif not is_pid_active(pid, service):
                 health_info["status"] = "Crashed"
                 health_info["color"] = "red"
                 health_info["log_tail"] = get_log_tail(Path(LOGS_DIR, config["log"]))
@@ -168,7 +171,7 @@ class HealthChecker:
                 now = datetime.datetime.now()
                 last_heartbeat = datetime.datetime.fromisoformat(heartbeat_str)
                 time_since_heartbeat = (now - last_heartbeat).total_seconds()
-                allowed_time = config["interval"] * 1.5 # Allow a 50% buffer
+                allowed_time = config["interval"] * 1.5  # Allow a 50% buffer
 
                 if time_since_heartbeat > allowed_time:
                     health_info["status"] = "Hung / Stale Heartbeat"
@@ -180,8 +183,6 @@ class HealthChecker:
 
             health_data[service] = health_info
         return health_data
-
-        
 
     def _perform_health_check_cycle(self):
         """State machin logic for the health checker."""
@@ -208,7 +209,6 @@ class HealthChecker:
                             return
                         time.sleep(1)
 
-
             case HealthCheckerState.CHECKING_HEALTH:
                 logger.info("--- Starting Health Check Cycle ---")
                 try:
@@ -233,7 +233,7 @@ class HealthChecker:
         if settings is None:
             logger.debug("Configuration error. Halting.")
             return
-        
+
         if not ENABLE_HEALTH_CHECK:
             logger.info("Health checker is disabled in config. Exiting.")
             return
