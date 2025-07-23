@@ -7,10 +7,8 @@ number_of_subROIs = 0                                                           
 
 # --- File Paths ---
 [Paths]
-# remote_root_dir = "/mnt/storage/Lisa/GMR/Array/SpecialBox/Cuthbert/250716"      # Remote root directory for the project (all files will be copied here if 'syncer' is ran)
-# root_dir = "/mnt/ARGUS_data"                                                          # Root directory for the project (typically a mounted USB drive)
-remote_root_dir = "/mnt/storage/Lisa/GMR/Array/SpecialBox/Cuthbert/250716"      # Remote root directory for the project (all files will be copied here if 'syncer' is ran)
-root_dir = "."                                                                  # Root directory for the project
+remote_root_dir = "/mnt/storage/Lisa/GMR/Array/SpecialBox/Cuthbert/250723"      # Remote root directory for the project (all files will be copied here if 'syncer' is ran)
+root_dir = "/mnt/data"                                                          # Root directory for the project (typically a mounted USB drive)                                                                # Root directory for the project
 data_dir = "data"                                                               # Directory for raw data
 results_dir = "results"                                                         # Directory for processed results
 continuous_capture_dir = "continuous_capture"                                   # Directory for continuous capture data
