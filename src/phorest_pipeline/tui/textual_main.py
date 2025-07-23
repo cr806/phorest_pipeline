@@ -6,10 +6,10 @@ from pathlib import Path
 
 # --- Textual Imports ---
 from textual.app import App, ComposeResult
-from textual.containers import Container, Horizontal, Vertical
+from textual.containers import Container, Horizontal, Vertical, VerticalScroll
 from textual.reactive import reactive
 from textual.screen import ModalScreen, Screen
-from textual.widgets import Button, DataTable, Footer, Header, RichLog, Static
+from textual.widgets import Button, DataTable, Footer, Header, RichLog, Static, Markdown
 
 from phorest_pipeline.shared.metadata_manager import (
     get_pipeline_status,
@@ -18,7 +18,7 @@ from phorest_pipeline.shared.metadata_manager import (
 )
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
-
+TUI_HELP = Path(Path(__file__).resolve().parent, "TUI_help.md")
 
 # --- Helper functions for PID management ---
 def is_pid_active(pid):
@@ -44,7 +44,7 @@ FOREGROUND_SCRIPTS = [
     {"menu": "Find Camera Index", "script": "phorest-find-camera", "type": "foreground"},
     {
         "menu": "Locate Gratings in Image",
-        "script": "phorest-prepare-analysis",
+        "script": "phorest-generate-roi-manifest",
         "type": "foreground",
     },
     {"menu": "Check ROI listing", "script": "phorest-check-roi", "type": "foreground"},
@@ -64,6 +64,14 @@ BACKGROUND_SCRIPTS = [
         "type": "background",
     },
 ]
+
+class Help(Screen):
+    """The help screen for the application."""
+
+    BINDINGS = [("escape,space,q,question_mark", "app.pop_screen", "Close")]
+
+    def compose(self) -> ComposeResult:
+        yield Markdown(TUI_HELP.read_text())
 
 
 class ServiceControl(Static):
@@ -209,7 +217,11 @@ class PhorestTUI(App):
     """The main Textual application for the Phorest Pipeline."""
 
     CSS_PATH = "tui_styles.css"
-    BINDINGS = [("q", "quit", "Quit"), ("m", "manage", "Manage Processes")]
+    BINDINGS = [
+        ("q", "quit", "Quit"),
+        ("m", "manage", "Manage Processes"),
+        ("h", "help", "Help"),
+    ]
 
     def on_mount(self) -> None:
         """Set up a timer to refresh the status every few seconds."""
@@ -221,19 +233,19 @@ class PhorestTUI(App):
         yield Header("Phorest Pipeline TUI")
 
         # Use a scrollable container for all the buttons
-        with Container():
-            with Vertical(id="foreground_container"):
-                yield Static("Phorest single-use scripts", classes="group_header")
-                for item in FOREGROUND_SCRIPTS:
-                    yield Button(item["menu"], id=item["script"], classes="fg_button")
-
+        with VerticalScroll():
+            yield Static(
+                "Phorest data collection and processing services", classes="group_header"
+            )
             with Vertical(id="background_container"):
-                yield Static(
-                    "Phorest data collection and processing services", classes="group_header"
-                )
                 for item in BACKGROUND_SCRIPTS:
                     yield ServiceControl(name=item["menu"], script_id=item["script"])
-
+            
+            yield Static("Phorest single-use scripts", classes="group_header")
+            with Container(id="foreground_container"):
+                for item in FOREGROUND_SCRIPTS:
+                    yield Button(item["menu"], id=item["script"])
+    
         yield Footer()
     
     def refresh_status(self) -> None:
@@ -288,6 +300,10 @@ class PhorestTUI(App):
     def action_manage(self) -> None:
         """Action to show the process management screen."""
         self.push_screen(ManageProcessesScreen())
+    
+    def action_help(self) -> None:
+        """Action to show the help screen."""
+        self.push_screen(Help())
 
 
 def main():

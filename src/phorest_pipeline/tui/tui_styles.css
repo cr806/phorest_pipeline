@@ -2,18 +2,23 @@
 
 /* Style for the container holding the foreground script buttons */
 #foreground_container {
-    background: $panel-darken-1; /* A slightly darker background color */
+    layout: grid;
+    grid-size: 2; /* Two columns */
+    grid-gutter: 1; /* Spacing between columns and rows */
+    grid-columns: 1fr 1fr;
+    background: $panel-darken-1;
     padding: 1;
     margin: 1 2;
     border: round white;
+    height: auto;
 }
 
-/* Style for the container holding the background service buttons */
 #background_container {
-    background: $panel-darken-2; /* An even darker background color for separation */
+    background: $panel-darken-2;
     padding: 1;
     margin: 1 2;
     border: round white;
+    height: auto;
 }
 
 /* Style for the group headers */
@@ -36,4 +41,27 @@ Button {
     border: thick $primary;
     background: $surface;
     padding: 1;
+}
+
+ServiceControl {
+    layout: horizontal;
+    align: center middle;
+    padding: 0 1;
+    margin-bottom: 1;
+    height: 3;
+}
+
+.service_label {
+    width: 1fr;
+}
+
+ServiceControl Button {
+    width: 10;
+    margin-left: 1;
+}
+
+Button.-disabled {
+    background: $panel-lighten-2;
+    color: $text-muted;
+    border: round $background-lighten-2;
 }
