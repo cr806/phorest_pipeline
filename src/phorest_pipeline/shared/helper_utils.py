@@ -140,12 +140,9 @@ def snapshot_configs(logger: logging.Logger):
     """
     logger.info("Snapshotting config files to data directory for this run...")
 
-    source_roi_path = Path(GENERATED_FILES_DIR, ROI_MANIFEST_FILENAME)
-    source_config_path = CONFIG_FILEPATH
-
     files_to_snapshot = {
-        "ROI_manifest": source_roi_path,
-        "Phorest_config": source_config_path,
+        "ROI_manifest": Path(GENERATED_FILES_DIR, ROI_MANIFEST_FILENAME),
+        "Phorest_config": CONFIG_FILEPATH,
     }
 
     try:

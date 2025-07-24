@@ -75,6 +75,9 @@ try:
     RESULTS_DIR = get_path(settings, "Paths", "results_dir", "results")
     LOGS_DIR = get_path(settings, "Paths", "logs_dir", "logs")
     BACKUP_DIR = get_path(settings, "Paths", "backup_dir", "backup")
+    ROI_MANIFEST_FILENAME = Path(
+        settings.get("Paths", {}).get("roi_manifest_filename", "ROI_manifest.json")
+    )
 
     DATA_DIR = Path(ROOT_DIR, DATA_DIR)
     RESULTS_DIR = Path(ROOT_DIR, RESULTS_DIR)
@@ -171,9 +174,6 @@ try:
     LABEL_TEMPLATE_DIR = Path(PROJECT_ROOT, settings.get("Assets", {}).get("label_template_dir"))
     FEATURE_LOCATIONS_CONFIG_PATH = Path(
         PROJECT_ROOT, settings.get("Assets", {}).get("feature_locations_config")
-    )
-    ROI_MANIFEST_FILENAME = Path(
-        settings.get("Assets", {}).get("roi_manifest_filename", "ROI_manifest.json")
     )
     GENERATED_FILES_DIR = Path(PROJECT_ROOT, settings.get("Assets", {}).get("generated_files_dir"))
 
