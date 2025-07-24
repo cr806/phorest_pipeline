@@ -4,6 +4,7 @@ import fcntl  # For file locking (Unix/Linux specific)
 import json
 import shutil
 import subprocess
+import os
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -125,7 +126,7 @@ def _save_metadata(metadata_path: Path, metadata_list: list):
         raise  # Re-raise to propagate error
 
 
-def is_pid_active(pid: int | None, expected_name: str) -> bool:
+def _is_pid_active(pid: int | None, expected_name: str) -> bool:
     """
     Checks if a given PID is active AND is running the expected command.
     """
@@ -505,6 +506,26 @@ def get_pipeline_status() -> dict:
         return {}
 
 
+def _find_pid_by_name(service_name: str) -> int | None:
+    """
+    Finds the PID of a running process by its command name using pgrep.
+    This is used to self-heal the status file if it gets deleted.
+    """
+    try:
+        # Use 'pgrep -f' to search the full command line for the service name
+        result = subprocess.run(
+            ["pgrep", "-f", service_name],
+            capture_output=True,
+            text=True,
+            check=False
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return int(result.stdout.strip().splitlines()[0])
+    except (FileNotFoundError, ValueError, Exception) as e:
+        logger.warning(f"Could not find PID for '{service_name}' using pgrep: {e}")
+    return None
+
+
 def update_service_status(
     service_name: str, pid: int | None = None, status: str | None = None, heartbeat: bool = False
 ):
@@ -516,9 +537,22 @@ def update_service_status(
     try:
         current_status = get_pipeline_status()
 
-        # Ensure the service key exists
         if service_name not in current_status:
-            current_status[service_name] = {}
+            # If this is a heartbeat, it means the process is running.
+            if heartbeat:
+                found_pid = _find_pid_by_name(service_name)
+                if found_pid:
+                    logger.info(f"Re-registering running service '{service_name}' with PID {found_pid}.")
+                    current_status[service_name] = {
+                        "status": "running",
+                        "pid": found_pid,
+                        "last_heartbeat": None
+                    }
+                else:
+                    logger.warning(f"Heartbeat received for '{service_name}', but could not find its PID.")
+                    current_status[service_name] = { "status": "unknown", "pid": None, "last_heartbeat": None }
+            else:
+                current_status[service_name] = { "status": "stopped", "pid": None, "last_heartbeat": None }
 
         # Update the fields that were provided
         if pid is not None:
