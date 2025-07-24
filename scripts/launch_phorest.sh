@@ -22,7 +22,8 @@
 # After this, you can run 'phorest' from any terminal.
 
 # --- Find the Project Root ---
-PROJECT_ROOT=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )/.." &> /dev/null && pwd )
+REAL_SCRIPT_PATH=$(readlink -f "${BASH_SOURCE[0]}")
+PROJECT_ROOT=$( cd -- "$( dirname -- "$REAL_SCRIPT_PATH" )/.." &> /dev/null && pwd )
 echo "Project root found at: $PROJECT_ROOT"
 
 # --- Change to Project Directory ---
