@@ -136,7 +136,7 @@ class HealthChecker:
         finally:
             plt.close(fig)
 
-    def _perform_health_check(self):
+    def _perform_service_check(self):
         """The main logic for checking the status of all services."""
         status_path = Path(FLAG_DIR, STATUS_FILENAME)
         health_data = {}
@@ -212,7 +212,7 @@ class HealthChecker:
             case HealthCheckerState.CHECKING_HEALTH:
                 logger.info("--- Starting Health Check Cycle ---")
                 try:
-                    health_data = self._perform_health_check()
+                    health_data = self._perform_service_check()
                     if health_data:
                         self._generate_report(health_data)
                     logger.info("--- Health Check Cycle Finished ---")

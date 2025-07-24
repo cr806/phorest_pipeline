@@ -64,11 +64,8 @@ BACKGROUND_SCRIPTS = [
     {"menu": "Start Backup", "script": "phorest-backup", "type": "background"},
     {"menu": "Start Syncer", "script": "phorest-syncer", "type": "background"},
     {"menu": "Start Health Check", "script": "phorest-health-check", "type": "background"},
-    {
-        "menu": "Start Continuous Capture",
-        "script": "phorest-continuous-capture",
-        "type": "background",
-    },
+    {"menu": "Start Continuous Capture", "script": "phorest-continuous-capture", "type": "background"},
+    {"menu": "Capture Single Image", "script": "phorest-single-capture", "type": "background"},
 ]
 
 

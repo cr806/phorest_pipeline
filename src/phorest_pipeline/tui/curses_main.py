@@ -38,6 +38,7 @@ BACKGROUND_SCRIPTS = [
     {"menu": "\t\t( Start Sync to remote direcory Process )", "script": "phorest-syncer"},
     {"menu": "\t\t( Start Health Check Process )", "script": "phorest-health-check"},
     {"menu": "Start Continuous Image Capture", "script": "phorest-continuous-capture"},
+    {"menu": "Capture Single Image", "script": "phorest-single-capture"},
 ]
 
 

@@ -19,8 +19,8 @@ dependencies = [
 
 [project.scripts]
 # Main TUI Application
-phorest = "phorest_pipeline.tui.main:main"
-phorest-tui = "phorest_pipeline.tui.textual_main:main"
+phorest-tui-basic = "phorest_pipeline.tui.curses_main:main"
+phorest-tui-adv = "phorest_pipeline.tui.textual_main:main"
 
 # Pipeline Services
 phorest-collector = "phorest_pipeline.collector.logic:run_collector"
@@ -32,6 +32,7 @@ phorest-syncer = "phorest_pipeline.syncer.logic:run_syncer"
 phorest-health-check = "phorest_pipeline.health_check.logic:run_health_check"
 
 phorest-continuous-capture = "phorest_pipeline.collector.continuous_capture_logic:run_continuous_capture"
+phorest-single-capture = "phorest_pipeline.collector.single_capture_logic:main"
 phorest-check-roi = "phorest_pipeline.scripts.check_roi_listing:main"
 phorest-generate-roi-manifest = "phorest_pipeline.scripts.generate_roi_manifest:main"
 phorest-find-camera = "phorest_pipeline.scripts.find_camera_index:main"
