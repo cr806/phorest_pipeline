@@ -7,7 +7,7 @@ number_of_subROIs = 0                                                           
 
 # --- File Paths ---
 [Paths]
-remote_root_dir = "/mnt/storage/Lisa/GMR/Array/SpecialBox/Cuthbert/250723"      # Remote root directory for the project (all files will be copied here if 'syncer' is ran)
+remote_root_dir = "/mnt/storage/Lisa/GMR/Array/SpecialBox/Cuthbert/250724"      # Remote root directory for the project (all files will be copied here if 'syncer' is ran)
 root_dir = "/mnt/data"                                                          # Root directory for the project (typically a mounted USB drive)                                                                # Root directory for the project
 data_dir = "data"                                                               # Directory for raw data
 results_dir = "results"                                                         # Directory for processed results
@@ -44,7 +44,7 @@ collector_retry_delay_seconds = 3                                               
 
 # --- Data Buffer Settings ---
 [Buffer]
-image_buffer_size = 10                                                          # Maximum number of images to keep in the data directory
+image_buffer_size = 1000                                                        # Maximum number of images to keep in the data directory
 
 # --- Communication Settings ---
 [Communication]
