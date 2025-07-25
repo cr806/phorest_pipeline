@@ -24,10 +24,12 @@ from phorest_pipeline.shared.config import (
     settings,
 )
 from phorest_pipeline.shared.logger_config import configure_logger
-from phorest_pipeline.shared.metadata_manager import lock_and_manage_file
+from phorest_pipeline.shared.metadata_manager import lock_and_manage_file, update_service_status
 from phorest_pipeline.shared.states import HealthCheckerState  # Assuming you add this
 
 logger = configure_logger(name=__name__, rotate_daily=True, log_filename="health_checker.log")
+
+SCRIPT_NAME = 'phorest-health-check'
 
 # --- Configuration ---
 HEALTH_CHECK_INTERVAL = 30  # Check every 10 minutes by default
@@ -241,6 +243,9 @@ class HealthChecker:
         try:
             while not self.shutdown_requested:
                 self._perform_health_check_cycle()
+
+                # After a cycle is complete, send a heartbeat.
+                update_service_status(SCRIPT_NAME, heartbeat=True)
 
                 time.sleep(0.1)
         except Exception as e:
