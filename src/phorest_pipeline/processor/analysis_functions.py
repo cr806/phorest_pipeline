@@ -70,7 +70,7 @@ def extract_roi_data(data: np.ndarray, ID: str, ROIs: Dict) -> np.ndarray:
         logger.error(f'An error occured when reading ROI metadata - {e}')
         exit(1)
 
-    # Flip array left-to-right if it is the left grating of bow-tie
+    # Flip array left-to-right according to ROI manifest flag
     if ROIs[ID]['flip']:
         data = np.fliplr(data)
 
