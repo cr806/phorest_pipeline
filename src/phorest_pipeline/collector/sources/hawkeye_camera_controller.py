@@ -1,6 +1,5 @@
 import datetime
 import subprocess
-import time
 from pathlib import Path
 
 import cv2
@@ -48,9 +47,6 @@ def camera_controller(
         global RESOLTION
         RESOLTION = resolution
 
-    # Create a temporary file path for rpicam-jpeg to save its output
-    temp_jpeg_path = Path(data_dir, f"temp_capture_{int(time.time())}.jpg")
-
     try:
         capture_timestamp = datetime.datetime.now()
 
@@ -60,7 +56,7 @@ def camera_controller(
             "-c",
             str(CAMERA_INDEX),  # Camera 0-based ID (should be 0 for single camera)
             "--output",
-            str(temp_jpeg_path),  # Output path for the captured JPEG
+            "-",  # Output to STDOUT
             "--nopreview",  # Don't show preview on capture
             "--width",
             str(RESOLTION[0]),  # Set image width
@@ -86,7 +82,7 @@ def camera_controller(
         logger.info(f"[CAMERA] Executing libcamera capture command: {' '.join(rpicam_cmd)}")
 
         # --- Execute the command using subprocess ---
-        result = subprocess.run(rpicam_cmd, capture_output=True, text=True, check=False)
+        result = subprocess.run(rpicam_cmd, capture_output=True, check=False)
 
         if result.stderr:
             logger.info("[CAMERA] --- rpicam-jpeg STDERR Output (Diagnostics) ---")
@@ -105,23 +101,22 @@ def camera_controller(
 
         logger.info("[CAMERA] Image capture command executed successfully by rpicam-jpeg.")
 
-        # --- Load the captured JPEG using OpenCV ---
-        if not temp_jpeg_path.exists():
-            error_msg = f"[CAMERA] [ERROR] Captured JPEG file was not found at {temp_jpeg_path}."
+        # --- Decode the image from the in-memory buffer ---
+        image_bytes = result.stdout
+        if not image_bytes:
+            error_msg = "[CAMERA] [ERROR] rpicam-jpeg produced no image data."
             logger.error(error_msg)
             return (1, error_msg, None)
 
-        # Read the image file using OpenCV
-        frame_captured = cv2.imread(str(temp_jpeg_path), cv2.IMREAD_UNCHANGED)
+        # Use cv2.imdecode to convert the byte buffer into a NumPy array
+        frame_captured = cv2.imdecode(np.frombuffer(image_bytes, np.uint8), cv2.IMREAD_UNCHANGED)
 
         if frame_captured is None:
-            error_msg = f"[CAMERA] [ERROR] OpenCV failed to load image from {temp_jpeg_path}. File might be corrupt or empty."
+            error_msg = "[CAMERA] [ERROR] OpenCV failed to decode the image from memory buffer."
             logger.error(error_msg)
             return (1, error_msg, None)
 
-        logger.info(
-            f"[CAMERA] Frame loaded from JPEG. Shape: {frame_captured.shape}, dtype: {frame_captured.dtype}"
-        )
+        logger.info(f"[CAMERA] Frame decoded from memory. Shape: {frame_captured.shape}")
 
         # --- Convert to Grayscale (if needed) ---
         frame_gray_intermediate = None
@@ -218,13 +213,6 @@ def camera_controller(
         logger.exception(error_msg)
         return (1, error_msg, None)
     finally:
-        # Clean up the temporary JPEG file created by rpicam-jpeg
-        if temp_jpeg_path.exists():
-            try:
-                temp_jpeg_path.unlink()
-                logger.info(f"[CAMERA] Cleaned up temporary JPEG file: {temp_jpeg_path}")
-            except OSError as e:
-                logger.warning(f"Failed to remove temporary file {temp_jpeg_path}: {e}")
         logger.info("[CAMERA] --- Hawkeye Camera Controller Done ---")
 
 
