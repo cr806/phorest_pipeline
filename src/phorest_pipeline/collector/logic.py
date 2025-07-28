@@ -40,7 +40,9 @@ if ENABLE_CAMERA:
     elif CAMERA_TYPE == ImageSourceType.TIS:
         from phorest_pipeline.collector.sources.tis_camera_controller import camera_controller
     elif CAMERA_TYPE == ImageSourceType.HAWKEYE:
-        from phorest_pipeline.collector.sources.hawkeye_camera_controller import camera_controller
+        from phorest_pipeline.collector.sources.hawkeye_camera_controller_stream import (
+            camera_controller,
+        )
     elif CAMERA_TYPE == ImageSourceType.DUMMY:
         from phorest_pipeline.collector.sources.dummy_camera_controller import camera_controller
     elif CAMERA_TYPE == ImageSourceType.FILE_IMPORTER:
