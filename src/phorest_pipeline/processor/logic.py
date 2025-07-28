@@ -3,6 +3,7 @@ import datetime
 import signal
 import sys
 import time
+from multiprocessing import Pool, cpu_count
 from pathlib import Path
 
 from phorest_pipeline.processor.process_image import process_image
@@ -37,6 +38,65 @@ SCRIPT_NAME = "phorest-processor"
 POLL_INTERVAL = PROCESSOR_INTERVAL / 20 if PROCESSOR_INTERVAL > (5 * 20) else 5
 
 
+def process_image_worker(args: tuple) -> tuple[dict, dict]:
+    """
+    A wrapper function that takes a single argument tuple, processes one image,
+    and returns the results for both the results file and the manifest update.
+    """
+    entry_index, entry_data = args
+    logger.debug(f"Worker processing entry {entry_index}...")
+
+    image_results = None
+    img_proc_error_msg = None
+    processing_successful = False
+    try:
+        if ENABLE_CAMERA:
+            image_meta = entry_data.get("camera_data")
+            if image_meta and image_meta.get("filename"):
+                image_results, img_proc_error_msg = process_image(image_meta)
+            else:
+                img_proc_error_msg = "Camera enabled but no image data in entry."
+        else:
+            img_proc_error_msg = "Camera not enabled."
+
+        temperature_data = entry_data.get("temperature_data") if ENABLE_THERMOCOUPLE else None
+
+        if (ENABLE_CAMERA and image_results) or (
+            ENABLE_THERMOCOUPLE and temperature_data and not temperature_data.get("error_flag")
+        ):
+            processing_successful = True
+
+        if not processing_successful and not img_proc_error_msg:
+            img_proc_error_msg = "Processing failed for an unknown reason."
+
+        # Aggregate results for the results.jsonl file
+        result_for_append = {
+            "manifest_entry_timestamp": entry_data.get("entry_timestamp_iso"),
+            "image_timestamp": image_meta.get("timestamp_iso") if image_meta else None,
+            "temperature_timestamp": temperature_data.get("timestamp_iso")
+            if temperature_data
+            else None,
+            "image_filename": image_meta.get("filename") if image_meta else None,
+            "processing_timestamp_iso": datetime.datetime.now().isoformat(),
+            "processing_successful": processing_successful,
+            "processing_error_message": img_proc_error_msg,
+            "image_analysis": image_results,
+            "temperature_readings": temperature_data.get("data") if temperature_data else None,
+        }
+
+        # Aggregate results for the manifest update
+        result_for_manifest = {
+            "index": entry_index,
+            "status": "processed" if processing_successful else "failed",
+            "error_msg": img_proc_error_msg,
+        }
+        return result_for_append, result_for_manifest
+
+    except Exception as e:
+        logger.error(f"Critical error in worker for entry {entry_index}: {e}", exc_info=True)
+        return {}, {"index": entry_index, "status": "failed", "error_msg": f"Worker crashed: {e}"}
+
+
 def find_all_unprocessed_entries(metadata_list: list) -> list[tuple[int, dict]]:
     """
     Finds the index and data of all entries with 'processing_status': 'pending'.
@@ -64,7 +124,7 @@ def find_all_unprocessed_entries(metadata_list: list) -> list[tuple[int, dict]]:
 
 
 def save_results_out(all_results_for_append, all_results_for_manifest_update):
-    # Append collated results to the results.json file
+    # Append collated results to the results.jsonl file
     try:
         if all_results_for_append:
             append_metadata(Path(RESULTS_DIR, RESULTS_FILENAME), all_results_for_append)
@@ -110,6 +170,8 @@ class Processor:
         self.shutdown_requested = False
         self.current_state = ProcessorState.PROCESSING
         self.next_run_time = 0
+
+        self.num_workers = max(1, cpu_count() - 2)
 
         # Register signal handler
         signal.signal(signal.SIGINT, self._graceful_shutdown)
@@ -195,114 +257,27 @@ class Processor:
                     self.current_state = ProcessorState.IDLE  # Go idle and retry later
                     return
 
-                # 4. Process the claimed chunk
-                all_results_for_manifest_update = []
-                all_results_for_append = []
-
-                for entry_index, entry_data in process_chunk:
-                    if self.shutdown_requested:
-                        logger.info("Shutdown requested, breaking out of processing loop")
-                        try:
-                            update_metadata_manifest_entry(
-                                Path(DATA_DIR, METADATA_FILENAME),
-                                entry_index=indicies_to_claim,
-                                status="pending",
-                            )
-                        except Exception as e:
-                            logger.error(
-                                f"Failed to reset chunk back to 'pending': {e}", exc_info=True
-                            )
-                        self.current_state = ProcessorState.FATAL_ERROR
-                        break
-
-                    logger.debug(
-                        f"Processing entry {entry_index} (Image: {entry_data.get('camera_data', {}).get('filename')})..."
+                # 4. Use a worker pool to process chunk of work in parallel
+                if process_chunk:
+                    logger.info(
+                        f"--- Starting multiprocessing for batch of {len(process_chunk)} entries using {self.num_workers} workers ---"
                     )
 
-                    image_results = None
-                    img_proc_error_msg = None
-                    processing_successful = False
-                    try:
-                        if ENABLE_CAMERA:
-                            image_meta = entry_data.get("camera_data")
-                            if image_meta and image_meta.get("filename"):
-                                image_results, img_proc_error_msg = process_image(image_meta)
-                            else:
-                                img_proc_error_msg = (
-                                    "Camera enabled but no image data or filename found in entry."
-                                )
-                        else:
-                            img_proc_error_msg = "Camera not enabled, skipping image processing."
+                    all_results_for_append = []
+                    all_results_for_manifest_update = []
 
-                        temperature_data = (
-                            entry_data.get("temperature_data", {}) if ENABLE_THERMOCOUPLE else None
-                        )
+                    with Pool(processes=self.num_workers) as pool:
+                        results = pool.map(process_image_worker, process_chunk)
 
-                        if (ENABLE_CAMERA and image_results) or (
-                            ENABLE_THERMOCOUPLE
-                            and temperature_data
-                            and not temperature_data.get("error_flag")
-                        ):
-                            processing_successful = True
+                    for res_append, res_manifest in results:
+                        if res_append:
+                            all_results_for_append.append(res_append)
+                        if res_manifest:
+                            all_results_for_manifest_update.append(res_manifest)
 
-                        if not processing_successful and not img_proc_error_msg:
-                            img_proc_error_msg = "Processing failed for an unknown reason."
-
-                        logger.debug(
-                            f"Finished processing entry {entry_index}. Success: {processing_successful}"
-                        )
-
-                        # --- Aggregate results for this single entry ---
-                        final_result_entry = {
-                            "manifest_entry_timestamp": entry_data.get("entry_timestamp_iso"),
-                            "image_timestamp": image_meta.get("timestamp_iso")
-                            if image_meta
-                            else None,
-                            "temperature_timestamp": temperature_data.get("timestamp_iso")
-                            if temperature_data
-                            else None,
-                            "image_filename": image_meta.get("filename") if image_meta else None,
-                            "processing_timestamp_iso": datetime.datetime.now().isoformat(),
-                            "processing_successful": processing_successful,
-                            "processing_error_message": img_proc_error_msg,
-                            "image_analysis": image_results,
-                            "temperature_readings": temperature_data.get("data")
-                            if temperature_data
-                            else None,
-                        }
-                        all_results_for_append.append(final_result_entry)
-
-                        # --- Store data needed for the final manifest update ---
-                        all_results_for_manifest_update.append(
-                            {
-                                "index": entry_index,
-                                "status": "processed" if processing_successful else "failed",
-                                "error_msg": img_proc_error_msg,
-                            }
-                        )
-
-                    except Exception as e:
-                        logger.error(
-                            f"Critical error during image processing for entry {entry_index}: {e}",
-                            exc_info=True,
-                        )
-                        # Log failure for this specific entry and continue with the batch
-                        all_results_for_manifest_update.append(
-                            {
-                                "index": entry_index,
-                                "status": "failed",
-                                "error_msg": f"Critical processing error: {e}",
-                            }
-                        )
-
-                # 5. Collate results and perform a single batch update
-                logger.info("--- Collating results for batch update ---")
-                save_results_out(all_results_for_append, all_results_for_manifest_update)
-                # Ensure flag is present
-                try:
-                    RESULTS_READY_FLAG.touch()
-                except OSError as e:
-                    logger.error(f"Could not create flag {RESULTS_READY_FLAG}: {e}")
+                    # 5. Save all results for the entire chunk of work at once
+                    logger.info("--- Collating results for batch update ---")
+                    save_results_out(all_results_for_append, all_results_for_manifest_update)
 
                 # 6. Loop back immediately to check for next chunk of work
                 self.current_state = ProcessorState.PROCESSING
