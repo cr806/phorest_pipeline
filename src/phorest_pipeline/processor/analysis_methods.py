@@ -1,3 +1,4 @@
+import logging
 from typing import Dict
 
 import numpy as np
@@ -5,7 +6,9 @@ from scipy.optimize import curve_fit
 
 from phorest_pipeline.shared.logger_config import configure_logger
 
-logger = configure_logger(name=__name__, rotate_daily=True, log_filename='processor.log')
+logger = configure_logger(
+    name=__name__, level=logging.WARNING, rotate_daily=True, log_filename="processor.log"
+)
 
 
 def max_intensity(data: np.ndarray) -> Dict:
@@ -32,7 +35,7 @@ def max_intensity(data: np.ndarray) -> Dict:
     ----------
     Created function CR.
     """
-    return {'max_intensity': int(np.argmax(data))}
+    return {"max_intensity": int(np.argmax(data))}
 
 
 def centre(data: np.ndarray) -> Dict:
@@ -64,7 +67,7 @@ def centre(data: np.ndarray) -> Dict:
     threshold = (np.std(data) * 3.0) + np.mean(data)
     data = np.where(data < threshold, 0, data)
 
-    return {'centre': np.sum(data * np.arange(1, len(data) + 1)) / np.sum(data)}
+    return {"centre": np.sum(data * np.arange(1, len(data) + 1)) / np.sum(data)}
 
 
 def gaussian(data: np.ndarray) -> Dict:
@@ -101,16 +104,16 @@ def gaussian(data: np.ndarray) -> Dict:
     try:
         popt, _ = curve_fit(gaussian_func, xdata, data, p0=p0)
     except (RuntimeError, ValueError) as e:
-        logger.warning(f'[FUNCTION FITTING] Curve fitting failed: {e}')
+        logger.warning(f"[FUNCTION FITTING] Curve fitting failed: {e}")
         return {}
 
     error = RMSE(data, gaussian_func(xdata, *popt))
     return {
-        'amplitude': popt[0],
-        'mu': popt[1],
-        'sigma': popt[2],
-        'offset': popt[3],
-        'error': error,
+        "amplitude": popt[0],
+        "mu": popt[1],
+        "sigma": popt[2],
+        "offset": popt[3],
+        "error": error,
     }
 
 
@@ -150,17 +153,17 @@ def fano(data: np.ndarray) -> Dict:
     try:
         popt, _ = curve_fit(fano_func, xdata, data, p0=p0)
     except (RuntimeError, ValueError) as e:
-        logger.warning(f'[FUNCTION FITTING] Curve fitting failed: {e}')
+        logger.warning(f"[FUNCTION FITTING] Curve fitting failed: {e}")
         return {}
 
     error = RMSE(data, fano_func(xdata, *popt))
     return {
-        'amplitude': popt[0],
-        'assymetry': popt[1],
-        'resonance': popt[2],
-        'gamma': popt[3],
-        'offset': popt[4],
-        'error': error,
+        "amplitude": popt[0],
+        "assymetry": popt[1],
+        "resonance": popt[2],
+        "gamma": popt[3],
+        "offset": popt[4],
+        "error": error,
     }
 
 

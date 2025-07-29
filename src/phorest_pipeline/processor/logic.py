@@ -32,7 +32,7 @@ from phorest_pipeline.shared.metadata_manager import (
 )
 from phorest_pipeline.shared.states import ProcessorState
 
-logger = configure_logger(name=__name__, level=logging.WARNING, rotate_daily=True, log_filename="processor.log")
+logger = configure_logger(name=__name__, rotate_daily=True, log_filename="processor.log")
 
 SCRIPT_NAME = "phorest-processor"
 
