@@ -1,6 +1,5 @@
 # phorest_pipeline/processor/logic.py
 import datetime
-import logging
 import signal
 import sys
 import time

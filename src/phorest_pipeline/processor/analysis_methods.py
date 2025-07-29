@@ -1,8 +1,8 @@
 import logging
 from typing import Dict
-from numba import jit
 
 import numpy as np
+from numba import jit
 from scipy.optimize import curve_fit
 
 from phorest_pipeline.shared.logger_config import configure_logger
@@ -11,7 +11,8 @@ logger = configure_logger(
     name=__name__, level=logging.WARNING, rotate_daily=True, log_filename="processor.log"
 )
 
-@jit(nopython=True) 
+
+@jit(nopython=True)
 def max_intensity(data: np.ndarray) -> Dict:
     """
     Function Details
@@ -39,7 +40,7 @@ def max_intensity(data: np.ndarray) -> Dict:
     return {"max_intensity": int(np.argmax(data))}
 
 
-@jit(nopython=True) 
+@jit(nopython=True)
 def centre(data: np.ndarray) -> Dict:
     """
     Function Details
@@ -74,7 +75,7 @@ def centre(data: np.ndarray) -> Dict:
 
 @jit(nopython=True)
 def gaussian_func(x, a, mu, sigma, offset):
-        return (a * np.exp(-((x - mu) ** 2) / (2 * sigma**2))) + offset
+    return (a * np.exp(-((x - mu) ** 2) / (2 * sigma**2))) + offset
 
 
 def gaussian(data: np.ndarray) -> Dict:
@@ -171,7 +172,7 @@ def fano(data: np.ndarray) -> Dict:
     }
 
 
-@jit(nopython=True) 
+@jit(nopython=True)
 def RMSE(data1: np.ndarray, data2: np.ndarray) -> float:
     """
     Function Details
