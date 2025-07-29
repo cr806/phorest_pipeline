@@ -1,5 +1,6 @@
 import logging
 from typing import Dict
+from numba import jit
 
 import numpy as np
 from scipy.optimize import curve_fit
@@ -10,7 +11,7 @@ logger = configure_logger(
     name=__name__, level=logging.WARNING, rotate_daily=True, log_filename="processor.log"
 )
 
-
+@jit(nopython=True) 
 def max_intensity(data: np.ndarray) -> Dict:
     """
     Function Details
@@ -38,6 +39,7 @@ def max_intensity(data: np.ndarray) -> Dict:
     return {"max_intensity": int(np.argmax(data))}
 
 
+@jit(nopython=True) 
 def centre(data: np.ndarray) -> Dict:
     """
     Function Details
@@ -70,6 +72,7 @@ def centre(data: np.ndarray) -> Dict:
     return {"centre": np.sum(data * np.arange(1, len(data) + 1)) / np.sum(data)}
 
 
+@jit(nopython=True) 
 def gaussian(data: np.ndarray) -> Dict:
     """
     Function Details
@@ -117,6 +120,7 @@ def gaussian(data: np.ndarray) -> Dict:
     }
 
 
+@jit(nopython=True) 
 def fano(data: np.ndarray) -> Dict:
     """
     Function Details
@@ -167,6 +171,7 @@ def fano(data: np.ndarray) -> Dict:
     }
 
 
+@jit(nopython=True) 
 def RMSE(data1: np.ndarray, data2: np.ndarray) -> float:
     """
     Function Details
