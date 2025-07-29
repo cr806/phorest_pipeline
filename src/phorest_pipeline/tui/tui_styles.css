@@ -1,5 +1,18 @@
 /* src/phorest_pipeline/tui/tui_styles.css */
 
+/* Style for the main container (the entire app body) */
+#app-grid {
+    layout: vertical;
+    align: center top;
+}
+
+/* Style for the content colum */
+#main-content {
+    width: 80;
+    max-width: 100%;
+    height: 100%;
+}
+
 /* Style for the container holding the foreground script buttons */
 #foreground_container {
     layout: grid;
@@ -32,15 +45,6 @@
 /* Style for all buttons to make them take up the full width */
 Button {
     width: 100%;
-}
-
-#manage_dialog {
-    align: center middle;
-    width: 80%;
-    height: 80%;
-    border: thick $primary;
-    background: $surface;
-    padding: 1;
 }
 
 ServiceControl {

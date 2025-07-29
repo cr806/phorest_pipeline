@@ -80,8 +80,6 @@ class Help(Screen):
 
 class ServiceControl(Static):
     """A widget to display and control a single background service."""
-
-    # reactive() makes this attribute automatically update the UI when it changes
     is_running = reactive(False)
 
     def __init__(self, name: str, script_id: str) -> None:
@@ -98,13 +96,11 @@ class ServiceControl(Static):
 
     def watch_is_running(self, is_running: bool) -> None:
         """Called when the 'is_running' reactive attribute changes."""
-        # This is the core logic: disable/enable buttons based on the state
         self.query_one(f"#start_{self.script_id}", Button).disabled = is_running
         self.query_one(f"#stop_{self.script_id}", Button).disabled = not is_running
 
 
 # --- Screens ---
-# Textual uses "Screens" to manage different views, like a main menu or a dialog box.
 class CommandOutputScreen(Screen):
     """A screen to display the output of a foreground command."""
 
@@ -152,70 +148,6 @@ class CommandOutputScreen(Screen):
         self.app.pop_screen()
 
 
-class ManageProcessesScreen(ModalScreen):
-    """A screen for managing running background processes."""
-
-    BINDINGS = [("q", "app.pop_screen", "Back to Menu")]
-
-    def compose(self) -> ComposeResult:
-        with Vertical(id="manage_dialog"):
-            yield Header("Manage Background Scripts")
-            yield DataTable(id="process_table")
-            yield Button("Kill Selected Process", variant="error", id="kill_button")
-            yield Footer()
-
-    def on_mount(self) -> None:
-        """Called when the screen is mounted. Populates the table."""
-        table = self.query_one(DataTable)
-        table.add_columns("Command", "PID", "Status")
-        self.refresh_processes()
-
-    def refresh_processes(self) -> None:
-        """Clears and re-populates the process table."""
-        table = self.query_one(DataTable)
-        table.clear()
-
-        all_statuses = get_pipeline_status()
-        active_processes = []
-        for service, data in all_statuses.items():
-            if data.get("status") == "running" and is_pid_active(data.get("pid"), service):
-                active_processes.append({"name": service, "pid": data.get("pid")})
-
-        if not active_processes:
-            table.add_row("[dim]No active processes found.[/dim]")
-        else:
-            for proc in active_processes:
-                table.add_row(proc["name"], str(proc["pid"]), "[green]ACTIVE[/green]")
-
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        """Handles the kill button press."""
-        if event.button.id == "kill_button":
-            table = self.query_one(DataTable)
-
-            all_statuses = get_pipeline_status()
-            active_processes = [
-                p
-                for service, p in all_statuses.items()
-                if p.get("status") == "running" and is_pid_active(p.get("pid"), service)
-            ]
-            if not active_processes or table.cursor_row < 0:
-                self.app.bell()
-                return
-
-            row_data = table.get_row_at(table.cursor_row)
-            command_id = row_data[0]
-            pid_to_kill = int(row_data[1])
-
-            try:
-                os.kill(pid_to_kill, signal.SIGINT)
-                update_service_status(command_id, pid=pid_to_kill, status="stopped")
-                self.app.bell()  # Audible feedback
-                self.refresh_processes()
-            except Exception:
-                # You could show a proper dialog here
-                pass
-
-
 # --- The Main App ---
 class PhorestTUI(App):
     """The main Textual application for the Phorest Pipeline."""
@@ -223,7 +155,6 @@ class PhorestTUI(App):
     CSS_PATH = "tui_styles.css"
     BINDINGS = [
         ("q", "quit", "Quit"),
-        ("m", "manage", "Manage Processes"),
         ("h", "help", "Help"),
     ]
 
@@ -237,16 +168,17 @@ class PhorestTUI(App):
         yield Header("Phorest Pipeline TUI")
 
         # Use a scrollable container for all the buttons
-        with VerticalScroll():
-            yield Static("Phorest data collection and processing services", classes="group_header")
-            with Vertical(id="background_container"):
-                for item in BACKGROUND_SCRIPTS:
-                    yield ServiceControl(name=item["menu"], script_id=item["script"])
+        with Container(id="app-grid"):
+            with VerticalScroll(id="main-content"):
+                yield Static("Phorest data collection and processing services", classes="group_header")
+                with Vertical(id="background_container"):
+                    for item in BACKGROUND_SCRIPTS:
+                        yield ServiceControl(name=item["menu"], script_id=item["script"])
 
-            yield Static("Phorest single-use scripts", classes="group_header")
-            with Container(id="foreground_container"):
-                for item in FOREGROUND_SCRIPTS:
-                    yield Button(item["menu"], id=item["script"])
+                yield Static("Phorest single-use scripts", classes="group_header")
+                with Container(id="foreground_container"):
+                    for item in FOREGROUND_SCRIPTS:
+                        yield Button(item["menu"], id=item["script"])
 
         yield Footer()
 
@@ -301,10 +233,6 @@ class PhorestTUI(App):
                 except Exception:
                     pass  # Add error dialog
             self.refresh_status()
-
-    def action_manage(self) -> None:
-        """Action to show the process management screen."""
-        self.push_screen(ManageProcessesScreen())
 
     def action_help(self) -> None:
         """Action to show the help screen."""
