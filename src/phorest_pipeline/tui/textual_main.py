@@ -8,8 +8,8 @@ from pathlib import Path
 from textual.app import App, ComposeResult
 from textual.containers import Container, Horizontal, Vertical, VerticalScroll
 from textual.reactive import reactive
-from textual.screen import ModalScreen, Screen
-from textual.widgets import Button, DataTable, Footer, Header, Markdown, RichLog, Static
+from textual.screen import Screen
+from textual.widgets import Button, Footer, Header, Markdown, RichLog, Static
 
 from phorest_pipeline.shared.metadata_manager import (
     get_pipeline_status,
@@ -64,7 +64,11 @@ BACKGROUND_SCRIPTS = [
     {"menu": "Start Backup", "script": "phorest-backup", "type": "background"},
     {"menu": "Start Syncer", "script": "phorest-syncer", "type": "background"},
     {"menu": "Start Health Check", "script": "phorest-health-check", "type": "background"},
-    {"menu": "Start Continuous Capture", "script": "phorest-continuous-capture", "type": "background"},
+    {
+        "menu": "Start Continuous Capture",
+        "script": "phorest-continuous-capture",
+        "type": "background",
+    },
     {"menu": "Capture Single Image", "script": "phorest-single-capture", "type": "background"},
 ]
 
@@ -80,6 +84,7 @@ class Help(Screen):
 
 class ServiceControl(Static):
     """A widget to display and control a single background service."""
+
     is_running = reactive(False)
 
     def __init__(self, name: str, script_id: str) -> None:
@@ -170,7 +175,9 @@ class PhorestTUI(App):
         # Use a scrollable container for all the buttons
         with Container(id="app-grid"):
             with VerticalScroll(id="main-content"):
-                yield Static("Phorest data collection and processing services", classes="group_header")
+                yield Static(
+                    "Phorest data collection and processing services", classes="group_header"
+                )
                 with Vertical(id="background_container"):
                     for item in BACKGROUND_SCRIPTS:
                         yield ServiceControl(name=item["menu"], script_id=item["script"])
@@ -188,8 +195,7 @@ class PhorestTUI(App):
         for service_control in self.query(ServiceControl):
             status_data = all_statuses.get(service_control.script_id, {})
             is_running = status_data.get("status") == "running" and is_pid_active(
-                status_data.get("pid"),
-                service_control.script_id
+                status_data.get("pid"), service_control.script_id
             )
             service_control.is_running = is_running
 
