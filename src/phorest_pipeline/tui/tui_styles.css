@@ -57,6 +57,7 @@ ServiceControl {
 
 .service_label {
     width: 1fr;
+    content-align-vertical: middle;
 }
 
 ServiceControl Button {
