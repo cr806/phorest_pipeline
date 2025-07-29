@@ -1,3 +1,4 @@
+import logging
 from typing import Dict, Tuple
 
 import cv2
@@ -12,7 +13,7 @@ from phorest_pipeline.processor.analysis_methods import (
 from phorest_pipeline.shared.config import DEBUG_MODE
 from phorest_pipeline.shared.logger_config import configure_logger
 
-logger = configure_logger(name=__name__, rotate_daily=True, log_filename='processor.log')
+logger = configure_logger(name=__name__, level=logging.WARNING, rotate_daily=True, log_filename='processor.log')
 
 
 def get_image_brightness_contrast(data: np.ndarray) -> Tuple[float, float]:
@@ -188,7 +189,10 @@ def analyse_roi_data(data: np.ndarray, analysis_method: str) -> Dict:
                 continue
             results[key]['Values'].append(value)
 
-    logger.info(f'{error_count} / {data.shape[0]} rows excluded from analysis')
+    if error_count / data.shape[0] > 0.5:
+        logger.warning(f'{error_count} / {data.shape[0]} rows excluded from analysis')
+    else:
+        logger.info(f'{error_count} / {data.shape[0]} rows excluded from analysis')
     return results
 
 
