@@ -72,7 +72,11 @@ def centre(data: np.ndarray) -> Dict:
     return {"centre": np.sum(data * np.arange(1, len(data) + 1)) / np.sum(data)}
 
 
-@jit(nopython=True) 
+@jit(nopython=True)
+def gaussian_func(x, a, mu, sigma, offset):
+        return (a * np.exp(-((x - mu) ** 2) / (2 * sigma**2))) + offset
+
+
 def gaussian(data: np.ndarray) -> Dict:
     """
     Function Details
@@ -98,10 +102,6 @@ def gaussian(data: np.ndarray) -> Dict:
     ----------
     Created function CR.
     """
-
-    def gaussian_func(x, a, mu, sigma, offset):
-        return (a * np.exp(-((x - mu) ** 2) / (2 * sigma**2))) + offset
-
     xdata = np.arange(0, len(data))
     p0 = [np.max(data) - np.min(data), np.argmax(data), 1, np.mean(data)]
     try:
@@ -120,7 +120,13 @@ def gaussian(data: np.ndarray) -> Dict:
     }
 
 
-@jit(nopython=True) 
+@jit(nopython=True)
+def fano_func(x, amp, assym, res, gamma, offset):
+    num = ((assym * gamma) + (x - res)) * ((assym * gamma) + (x - res))
+    den = (gamma * gamma) + ((x - res) * (x - res))
+    return (amp * (num / den)) + offset
+
+
 def fano(data: np.ndarray) -> Dict:
     """
     Function Details
@@ -146,12 +152,6 @@ def fano(data: np.ndarray) -> Dict:
     ----------
     Created function CR.
     """
-
-    def fano_func(x, amp, assym, res, gamma, offset):
-        num = ((assym * gamma) + (x - res)) * ((assym * gamma) + (x - res))
-        den = (gamma * gamma) + ((x - res) * (x - res))
-        return (amp * (num / den)) + offset
-
     xdata = np.arange(0, len(data))
     p0 = [np.max(data) - np.min(data), 0, np.argmax(data), len(data) / 4, np.mean(data)]
     try:

@@ -21,10 +21,9 @@ logger = configure_logger(name=__name__, level=logging.WARNING, rotate_daily=Tru
 def get_image_brightness_contrast(data: np.ndarray) -> Tuple[float, float]:
     brightness = np.round(np.mean(data), 2)
     contrast = np.round(np.quantile(data, 0.95) - np.quantile(data, 0.05), 2)
-    return (brightness.astype(float), contrast.astype(float))
+    return (float(brightness), float(contrast))
 
 
-@jit(nopython=True) 
 def extract_roi_data(data: np.ndarray, ID: str, ROIs: Dict) -> np.ndarray:
     """
     Function Details
@@ -81,7 +80,6 @@ def extract_roi_data(data: np.ndarray, ID: str, ROIs: Dict) -> np.ndarray:
     return data
 
 
-@jit(nopython=True) 
 def preprocess_roi_data(data: np.ndarray, sub_rois: int) -> np.ndarray:
     """
     Function Details
@@ -129,7 +127,6 @@ def preprocess_roi_data(data: np.ndarray, sub_rois: int) -> np.ndarray:
         return cv2.resize(data, (width, sub_rois), interpolation=cv2.INTER_LINEAR)
 
 
-@jit(nopython=True) 
 def analyse_roi_data(data: np.ndarray, analysis_method: str) -> Dict:
     """
     Function Details
@@ -201,7 +198,6 @@ def analyse_roi_data(data: np.ndarray, analysis_method: str) -> Dict:
     return results
 
 
-@jit(nopython=True) 
 def postprocess_roi_results(data: Dict) -> Dict:
     """
     Function Details
