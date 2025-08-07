@@ -8,14 +8,14 @@ number_of_subROIs = 0                                                           
 # --- File Paths ---
 [Paths]
 remote_root_dir = "/mnt/storage/Lisa/GMR/Array/SpecialBox/Cuthbert/250724"      # Remote root directory for the project (all files will be copied here if 'syncer' is ran)
-root_dir = "/mnt/data"                                                          # Root directory for the project (typically a mounted USB drive)
-data_dir = "data"                                                               # Directory for raw data
-results_dir = "results_TEST"                                                         # Directory for processed results
+root_dir = "/Volumes/krauss/Lisa/GMR/Array/Speed_Test/Ethanol_steps/100_uLmin-1/ethanol_step_50_1"                                                          # Root directory for the project (typically a mounted USB drive)
+data_dir = "Pos0_Flipped"                                                               # Directory for raw data
+results_dir = "results"                                                         # Directory for processed results
 continuous_capture_dir = "continuous_capture"                                   # Directory for continuous capture data
 logs_dir = "logs"                                                               # Directory for log files
 backup_dir = "backup"                                                           # Directory for backup files
 brightfield_dir = "bright"                                                      # Example of a commented-out path
-roi_manifest_filename = "ROI_manifest_FULL.json"                                     # Output filename for the generated ROI manifest.
+roi_manifest_filename = "ROI_manifest.json"                                     # Output filename for the generated ROI manifest.
 
 # --- Service flags ---
 [Services]
@@ -53,7 +53,7 @@ method = "CSV_PLOT"                                                             
 
 # --- Camera Settings ---
 [Camera]
-camera_type = "hawkeye"                                                         # Type of camera: "dummy", "argus", "tis", "logitech", "hawkeye", "file_importer"
+camera_type = "file_importer"                                                         # Type of camera: "dummy", "argus", "tis", "logitech", "hawkeye", "file_importer"
 camera_id = 0                                                                   # Camera device ID
 camera_exposure = 5                                                             # Camera exposure setting
 camera_gain = 0                                                                 # Camera gain setting

@@ -7,6 +7,7 @@ logger = configure_logger(name=__name__, rotate_daily=True, log_filename='data_s
 
 SUPPORTED_EXT = ['.png', '.jpg', '.jpeg', '.tif', '.tiff']
 
+
 def image_file_importer(data_dir: Path) -> tuple[int, str, list[dict] | None]:
     """
     Scans a directory for existing images and generates a list of metadata entries.
@@ -29,7 +30,7 @@ def image_file_importer(data_dir: Path) -> tuple[int, str, list[dict] | None]:
         image_files.sort(key=lambda p: p.name)
         logger.info(f"Found {len(image_files)} images. Generating manifest entries...")
 
-        for image_path in image_files:
+        for idx, image_path in enumerate(image_files):
             capture_timestamp = datetime.datetime.fromtimestamp(image_path.stat().st_mtime)
             metadata_dict = {
                 'type': 'image',
@@ -41,6 +42,8 @@ def image_file_importer(data_dir: Path) -> tuple[int, str, list[dict] | None]:
                 'error_message': None,
             }
             all_metadata_entries.append(metadata_dict)
+            if idx % 50 == 0:
+                logger.info(f"Processed {idx} of {len(image_files)} files...")
 
         msg = f"Successfully generated {len(all_metadata_entries)} manifest entries from legacy data."
         logger.info(msg)
