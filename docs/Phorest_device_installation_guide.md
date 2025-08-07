@@ -26,7 +26,7 @@ This is a mandatory process to be performed after any new physical installation 
 ### 2.1. Launch the TUI
 From your SSH session on the Pi, launch the main TUI application.
 ```bash
-phorest
+phorest-tui
 ```
 
 ### 2.2. Pre-flight Checks
