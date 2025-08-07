@@ -2,7 +2,7 @@
 import sys
 from pathlib import Path
 
-from phorest_pipeline.analysis.file_utils import create_directory_with_error_handling
+from phorest_pipeline.analysis.file_utils import clear_and_create_directory_with_error_handling
 from phorest_pipeline.analysis.geometry import rotate_image
 from phorest_pipeline.analysis.image_utils import load_image_and_normalise
 from phorest_pipeline.analysis.io import (
@@ -49,7 +49,7 @@ def main():
         label_locations_image_path = Path(GENERATED_FILES_DIR, "Label_locations.png")
 
         # --- 2. Setup and load initial data ---
-        _, error = create_directory_with_error_handling(GENERATED_FILES_DIR)
+        _, error = clear_and_create_directory_with_error_handling(GENERATED_FILES_DIR)
         if error:
             raise RuntimeError(f"Directory setup failed: {error}")
 
