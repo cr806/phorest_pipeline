@@ -171,7 +171,7 @@ class Processor:
         self.current_state = ProcessorState.PROCESSING
         self.next_run_time = 0
 
-        self.num_workers = max(1, cpu_count() - 1)
+        self.num_workers = max(1, cpu_count() - 2)
 
         # Register signal handler
         signal.signal(signal.SIGINT, self._graceful_shutdown)
