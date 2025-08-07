@@ -37,20 +37,12 @@
 chip_type = "IMECII_2"
 
 [[features]]
-label = "A-Right"
-feature_location = [7905, 6432]
-
-[[features]]
-label = "B-Right"
-feature_location = [7905, 5007]
-
-[[features]]
 label = "C-Left"
-feature_location = [1413, 3603]
+feature_location = [45, 810]
 
 [[features]]
-label = "B-Left"
-feature_location = [1407, 5019]
+label = "D-Left"
+feature_location = [41, 85]
 
 
 
