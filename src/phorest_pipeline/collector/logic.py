@@ -114,9 +114,10 @@ class Collector:
                         cam_status, cam_msg, cam_data_from_controller = camera_controller(DATA_DIR)
                         if cam_status == 0:
                             cam_metadata_for_entry = cam_data_from_controller
-                            logger.info(
-                                f"Camera data collected: {cam_metadata_for_entry.get('filename')}"
-                            )
+                            if CAMERA_TYPE != ImageSourceType.FILE_IMPORTER:
+                                logger.info(
+                                    f"Camera data collected: {cam_metadata_for_entry.get('filename')}"
+                                )
                         else:
                             # Explicitly create error metadata
                             cam_metadata_for_entry = {
@@ -184,11 +185,12 @@ class Collector:
                 # --- Add entry to the metadata manifest ---
                 current_collection_successful = True
 
-                if ENABLE_CAMERA and (
-                    cam_metadata_for_entry is None
-                    or cam_metadata_for_entry.get("error_flag", True)
-                ):
-                    current_collection_successful = False
+                if CAMERA_TYPE != ImageSourceType.FILE_IMPORTER:
+                    if ENABLE_CAMERA and (
+                        cam_metadata_for_entry is None
+                        or cam_metadata_for_entry.get("error_flag", True)
+                    ):
+                        current_collection_successful = False
                 if ENABLE_THERMOCOUPLE and (
                     temps_metadata_for_entry is None
                     or temps_metadata_for_entry.get("error_flag", True)
