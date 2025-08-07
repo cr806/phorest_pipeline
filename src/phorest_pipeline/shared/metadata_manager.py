@@ -2,9 +2,9 @@
 import datetime
 import fcntl  # For file locking (Unix/Linux specific)
 import json
+import os
 import shutil
 import subprocess
-import os
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -455,7 +455,9 @@ def initialise_status_file(services: list[str]):
             # 2. Validate existing entries. If a service is marked "running" but
             # the PID is not active, mark it as "stopped".
             for service, data in current_status.items():
-                if data.get("status") == "running" and not _is_pid_active(data.get("pid"), service):
+                if data.get("status") == "running" and not _is_pid_active(
+                    data.get("pid"), service
+                ):
                     logger.warning(
                         f"Found stale process for '{service}' (PID: {data.get('pid')}). Marking as stopped."
                     )
@@ -514,10 +516,7 @@ def _find_pid_by_name(service_name: str) -> int | None:
     try:
         # Use 'pgrep -f' to search the full command line for the service name
         result = subprocess.run(
-            ["pgrep", "-f", service_name],
-            capture_output=True,
-            text=True,
-            check=False
+            ["pgrep", "-f", service_name], capture_output=True, text=True, check=False
         )
         if result.returncode == 0 and result.stdout.strip():
             return int(result.stdout.strip().splitlines()[0])
@@ -542,17 +541,29 @@ def update_service_status(
             if heartbeat:
                 found_pid = _find_pid_by_name(service_name)
                 if found_pid:
-                    logger.info(f"Re-registering running service '{service_name}' with PID {found_pid}.")
+                    logger.info(
+                        f"Re-registering running service '{service_name}' with PID {found_pid}."
+                    )
                     current_status[service_name] = {
                         "status": "running",
                         "pid": found_pid,
-                        "last_heartbeat": None
+                        "last_heartbeat": None,
                     }
                 else:
-                    logger.warning(f"Heartbeat received for '{service_name}', but could not find its PID.")
-                    current_status[service_name] = { "status": "unknown", "pid": None, "last_heartbeat": None }
+                    logger.warning(
+                        f"Heartbeat received for '{service_name}', but could not find its PID."
+                    )
+                    current_status[service_name] = {
+                        "status": "unknown",
+                        "pid": None,
+                        "last_heartbeat": None,
+                    }
             else:
-                current_status[service_name] = { "status": "stopped", "pid": None, "last_heartbeat": None }
+                current_status[service_name] = {
+                    "status": "stopped",
+                    "pid": None,
+                    "last_heartbeat": None,
+                }
 
         # Update the fields that were provided
         if pid is not None:
