@@ -1,5 +1,6 @@
 # src/phorest_pipeline/scripts/single_capture.py
 import sys
+from pathlib import Path
 
 from phorest_pipeline.shared.config import (
     CAMERA_TYPE,
@@ -24,9 +25,11 @@ if ENABLE_CAMERA:
     elif CAMERA_TYPE == ImageSourceType.DUMMY:
         from phorest_pipeline.collector.sources.dummy_camera_controller import camera_controller
     else:
+
         def camera_controller(_):
             return (1, "Invalid or no camera type specified for single capture.", None)
 else:
+
     def camera_controller(_):
         return (1, "Camera is not enabled in the configuration.", None)
 
@@ -43,7 +46,10 @@ def main():
         sys.exit(1)
 
     try:
-        status, msg, data = camera_controller(CONTINUOUS_DIR)
+        status, msg, data = camera_controller(
+            CONTINUOUS_DIR,
+            savename=Path("continuous_capture_frame.jpg"),
+        )
 
         if status == 0:
             filename = data.get("filename", "Unknown file")
