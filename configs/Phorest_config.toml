@@ -8,8 +8,8 @@ number_of_subROIs = 0                                                           
 # --- File Paths ---
 [Paths]
 remote_root_dir = "/mnt/storage/Lisa/GMR/Array/Speed_Test/Ethanol_steps/10_mLmin-1/ethanol_step_10_1/Pos0_Flipped"      # Remote root directory for the project (all files will be copied here if 'syncer' is ran)
-root_dir = "/mnt/storage/Lisa/GMR/Array/Speed_Test/Ethanol_steps/10_mLmin-1/ethanol_step_10_1"                                                          # Root directory for the project (typically a mounted USB drive)
-data_dir = "Pos0_Flipped"                                                               # Directory for raw data
+root_dir = "./DELTAFLYER"                                                          # Root directory for the project (typically a mounted USB drive)
+data_dir = "data"                                                               # Directory for raw data
 results_dir = "results"                                                         # Directory for processed results
 continuous_capture_dir = "continuous_capture"                                   # Directory for continuous capture data
 logs_dir = "logs"                                                               # Directory for log files

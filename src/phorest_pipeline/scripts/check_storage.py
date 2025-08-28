@@ -11,10 +11,7 @@ from phorest_pipeline.shared.config import (
 )
 from phorest_pipeline.shared.logger_config import configure_logger
 
-LOG_FILEPATH = Path(ROOT_DIR, "logs", "storage_check.log")
-logger = configure_logger(
-    name=__name__, rotate_daily=False, log_filename=LOG_FILEPATH, log_to_terminal=True
-)
+logger = configure_logger(name=__name__, rotate_daily=True, log_filename="storage_check.log")
 
 TEST_FILE_NAME = Path(".usb_health_check_temp")
 

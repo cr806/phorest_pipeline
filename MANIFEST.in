@@ -1,0 +1,3 @@
+recursive-include src/phorest_pipeline/tui *.css
+
+recursive-include src/phorest_pipeline/tui *.md

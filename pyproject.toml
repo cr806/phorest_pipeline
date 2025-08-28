@@ -20,8 +20,8 @@ dependencies = [
 
 [project.scripts]
 # Main TUI Application
-phorest-tui-basic = "phorest_pipeline.tui.curses_main:main"
-phorest-tui-adv = "phorest_pipeline.tui.textual_main:main"
+phorest-basic = "phorest_pipeline.tui.curses_main:main"
+phorest = "phorest_pipeline.tui.textual_main:main"
 
 # Pipeline Services
 phorest-collector = "phorest_pipeline.collector.logic:run_collector"
@@ -46,6 +46,7 @@ tui = ["textual"]
 [tool.setuptools]
 # Tell setuptools exactly which top-level directories are packages
 packages = { find = { where = ["src"] } }
+include-package-data = true
 
 [tool.ruff]
 lint.ignore = [

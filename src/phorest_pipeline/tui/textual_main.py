@@ -1,4 +1,5 @@
 # src/phorest_pipeline/tui/textual_main.py
+import importlib.resources
 import os
 import signal
 import subprocess
@@ -17,8 +18,12 @@ from phorest_pipeline.shared.metadata_manager import (
     update_service_status,
 )
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
-TUI_HELP = Path(Path(__file__).resolve().parent, "TUI_help.md")
+from .. import PROJECT_ROOT
+
+# PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+# TUI_HELP = Path(Path(__file__).resolve().parent, "TUI_help.md")
+# TUI_HELP = Path(PROJECT_ROOT, 'src', 'phorest-pipeline', 'tui', "TUI_help.md")
+TUI_HELP = importlib.resources.files("phorest_pipeline.tui").joinpath("TUI_help.md")
 
 
 # --- Helper functions for PID management ---
