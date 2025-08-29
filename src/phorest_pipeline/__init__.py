@@ -1,4 +1,4 @@
 from pathlib import Path
 
-PHOREST_DATA_ROOT = Path('/home/chris/Python/phorest_pipeline')
-PROJECT_ROOT = Path('/home/chris/Python/phorest_pipeline')
+PHOREST_DATA_ROOT = Path('/home/phorest/phorest-metadata')
+PROJECT_ROOT = Path('/home/phorest/Development/phorest_pipeline')

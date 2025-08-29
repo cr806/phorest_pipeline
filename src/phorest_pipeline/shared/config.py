@@ -163,12 +163,14 @@ try:
 
     # --- Advanced config entries ---
     # --- Flags ---
-    FLAG_DIR = get_path(settings, "Flags", "flag_dir", "flags")
+    FLAG_DIR = Path(PROJECT_ROOT, get_path(settings, "Flags", "flag_dir", "flags"))
+    check_or_create_dir(FLAG_DIR)
+
     DATA_READY_FLAG = get_path(settings, "Flags", "data_ready", "data_ready.flag")
     RESULTS_READY_FLAG = get_path(settings, "Flags", "results_ready", "results_ready.flag")
     
-    DATA_READY_FLAG = Path(PHOREST_DATA_ROOT, FLAG_DIR, DATA_READY_FLAG)
-    RESULTS_READY_FLAG = Path(PHOREST_DATA_ROOT, FLAG_DIR, RESULTS_READY_FLAG)
+    DATA_READY_FLAG = Path(FLAG_DIR, DATA_READY_FLAG)
+    RESULTS_READY_FLAG = Path(FLAG_DIR, RESULTS_READY_FLAG)
 
     # --- Static Asset Paths ---
     ROI_GENERATION_IMAGE_PATH = Path(
@@ -179,6 +181,7 @@ try:
         PHOREST_DATA_ROOT, "configs", settings.get("Assets", {}).get("feature_locations_config")
     )
     GENERATED_FILES_DIR = Path(PHOREST_DATA_ROOT, settings.get("Assets", {}).get("generated_files_dir"))
+    check_or_create_dir(GENERATED_FILES_DIR)
 
     # --- Storage Check Settings ---
     USB_UUID = settings.get("Storage", {}).get("usb_uuid", "")
