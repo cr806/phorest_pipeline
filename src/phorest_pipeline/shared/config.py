@@ -9,11 +9,11 @@ from phorest_pipeline.shared.image_sources import (
     ImageTransform,
 )
 
-from .. import PROJECT_ROOT
+from .. import PROJECT_ROOT, PHOREST_DATA_ROOT
 
 # PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 
-CONFIG_FILEPATH = Path(PROJECT_ROOT, "configs", "Phorest_config.toml")
+CONFIG_FILEPATH = Path(PHOREST_DATA_ROOT, "configs", "Phorest_config.toml")
 
 METADATA_FILENAME = Path("metadata_manifest.json")
 RESULTS_FILENAME = Path("processing_results.jsonl")
@@ -85,6 +85,7 @@ try:
     RESULTS_DIR = Path(ROOT_DIR, RESULTS_DIR)
     LOGS_DIR = Path(ROOT_DIR, LOGS_DIR)
     BACKUP_DIR = Path(ROOT_DIR, BACKUP_DIR)
+    CONTINUOUS_DIR = Path(ROOT_DIR, CONTINUOUS_DIR)
 
     check_or_create_dir(DATA_DIR)
     check_or_create_dir(CONTINUOUS_DIR)
@@ -166,18 +167,18 @@ try:
     DATA_READY_FLAG = get_path(settings, "Flags", "data_ready", "data_ready.flag")
     RESULTS_READY_FLAG = get_path(settings, "Flags", "results_ready", "results_ready.flag")
     
-    DATA_READY_FLAG = Path(FLAG_DIR, DATA_READY_FLAG)
-    RESULTS_READY_FLAG = Path(FLAG_DIR, RESULTS_READY_FLAG)
+    DATA_READY_FLAG = Path(PHOREST_DATA_ROOT, FLAG_DIR, DATA_READY_FLAG)
+    RESULTS_READY_FLAG = Path(PHOREST_DATA_ROOT, FLAG_DIR, RESULTS_READY_FLAG)
 
     # --- Static Asset Paths ---
     ROI_GENERATION_IMAGE_PATH = Path(
-        PROJECT_ROOT, settings.get("Assets", {}).get("roi_generation_image")
+        CONTINUOUS_DIR, settings.get("Assets", {}).get("roi_generation_image")
     )
     LABEL_TEMPLATE_DIR = Path(PROJECT_ROOT, settings.get("Assets", {}).get("label_template_dir"))
     FEATURE_LOCATIONS_CONFIG_PATH = Path(
-        PROJECT_ROOT, settings.get("Assets", {}).get("feature_locations_config")
+        PHOREST_DATA_ROOT, "configs", settings.get("Assets", {}).get("feature_locations_config")
     )
-    GENERATED_FILES_DIR = Path(PROJECT_ROOT, settings.get("Assets", {}).get("generated_files_dir"))
+    GENERATED_FILES_DIR = Path(PHOREST_DATA_ROOT, settings.get("Assets", {}).get("generated_files_dir"))
 
     # --- Storage Check Settings ---
     USB_UUID = settings.get("Storage", {}).get("usb_uuid", "")

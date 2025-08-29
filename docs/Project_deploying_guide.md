@@ -16,7 +16,7 @@ This guide explains the complete workflow for deploying the Phorest pipeline as 
    * You will need `git` to clone the repository and `uv` to manage the Python environment.
        ```bash
        sudo apt-get install git -y
-       curl -LsSf [https://astral.sh/uv/install.sh](https://astral.sh/uv/install.sh) | sh
+       curl -LsSf https://astral.sh/uv/install.sh | sh
        ```
 
 ### Step 2: Clone the Project Repository
@@ -68,6 +68,7 @@ Install the project's exact dependencies using the `uv.lock` file. This ensures 
 Finally, install the project's scripts (i.e. the `phorest` command) so they can be run from any directory on your machine without needing to activate the virtual environment each time.
 
 1.  **Install the Tool**:
+    * Note: Ensure that the repository is on the correct branch before installing
     * From the root of your project directory, run the `uv tool install` command. The example below includes an optional dependency group (`tui`), which you should adjust as needed.
         ```bash
         uv tool install ".[tui]"

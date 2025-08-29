@@ -83,9 +83,9 @@ results_ready = "results_ready.flag"                                            
 
 # --- Static Asset Paths ---
 [Assets]
-roi_generation_image = "continuous_capture/continuous_capture_frame.jpg"        # Image used as the reference for generating the ROI map.
+roi_generation_image = "continuous_capture_frame.jpg"                           # Image used as the reference for generating the ROI map.
 label_template_dir = "assets/Label_templates"                                   # Directory containing templates for finding features.
-feature_locations_config = "configs/Feature_locations.toml"                     # Configuration file defining which features to locate.
+feature_locations_config = "Feature_locations.toml"                             # Configuration file defining which features to locate.
 generated_files_dir = "generated_files"                                         # Directory for output from generate ROI scripts.
 
 [Storage]
